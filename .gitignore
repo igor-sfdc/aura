@@ -1,7 +1,5 @@
 .metadata/
 target
-.project
-.classpath
 release.properties
 pom.xml.releaseBackup
 *.log
