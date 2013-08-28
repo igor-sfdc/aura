@@ -27,11 +27,15 @@ import org.auraframework.def.ComponentDef;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.StyleDef;
 import org.auraframework.def.ThemeDef;
+import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.impl.css.parser.ThemeValueProviderImpl;
 import org.auraframework.service.DefinitionService;
 import org.auraframework.system.AuraContext;
 import org.auraframework.throwable.quickfix.QuickFixException;
 
+import aQute.bnd.annotation.component.Component;
+
+@Component (provide=AuraServiceProvider.class)
 public class StyleAdapterImpl implements StyleAdapter {
 
     @Override

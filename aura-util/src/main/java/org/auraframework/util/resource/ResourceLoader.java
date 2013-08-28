@@ -32,6 +32,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 
+import org.auraframework.ds.log.AuraDSLog;
+import org.auraframework.ds.resourceloader.StaticResourceAccessor;
 import org.auraframework.util.IOUtil;
 import org.auraframework.util.MD5InputStream;
 
@@ -73,6 +75,7 @@ public class ResourceLoader extends ClassLoader {
     private static final String hashFileName = ".%s.version";
     private static final String JAR_PROTOCOL = "jar";
     private static final String FILE_PROTOCOL = "file";
+    private static final String BUNDLE_PROTOCOL = "bundleresource";
     private final ClassLoader parent;
     private final File cache;
 
@@ -80,17 +83,29 @@ public class ResourceLoader extends ClassLoader {
             .initialCapacity(CACHE_SIZE_MIN).maximumSize(CACHE_SIZE_MAX).build(new Computer());
 
     private final ResourceURLStreamHandler handler = new ResourceURLStreamHandler();
+    private final StaticResourceAccessor staticResourceAccessor;
 
-    public ResourceLoader(String tmpDir, boolean deleteCacheOnStart) throws MalformedURLException {
-        this(tmpDir, ResourceLoader.class.getClassLoader(), deleteCacheOnStart);
+    public ResourceLoader(String tmpDir, boolean deleteCacheOnStart, StaticResourceAccessor staticResourceAccessor) throws MalformedURLException {
+        this(tmpDir, ResourceLoader.class.getClassLoader(), deleteCacheOnStart, staticResourceAccessor);
     }
 
+    @Deprecated
+    public ResourceLoader(String tmpDir, boolean deleteCacheOnStart) throws MalformedURLException {
+        this(tmpDir, deleteCacheOnStart, null /*no staticResourceAccessor will disable OSGi capabilities*/);
+    }
+
+    @Deprecated
     public ResourceLoader(String tmpDir, ClassLoader parent, boolean deleteCacheOnStart) throws MalformedURLException {
+        this(tmpDir, parent, deleteCacheOnStart, null /*no staticResourceAccessor will disable OSGi capabilities*/);
+    }
+
+    public ResourceLoader(String tmpDir, ClassLoader parent, boolean deleteCacheOnStart, StaticResourceAccessor staticResourceAccessor) throws MalformedURLException {
         super(parent);
         Preconditions.checkNotNull(tmpDir, "Cache dir name must be specified");
         this.cache = new File(tmpDir, RESOURCE_CACHE_NAME);
         Preconditions.checkNotNull(parent, "ClassLoader must be specified");
         this.parent = parent;
+        this.staticResourceAccessor = staticResourceAccessor;
 
         if (deleteCacheOnStart) {
             try {
@@ -171,11 +186,40 @@ public class ResourceLoader extends ClassLoader {
         if (entry == null) {
             return null;
         }
-        try {
-            return new URL("file", "", new File(cache, entry.getResourceUrl().getPath()).getAbsolutePath());
-        } catch (MalformedURLException e) {
-            throw new RuntimeException("A malformed URL here is (wrongly) believed to be impossible.", e);
+
+        if (BUNDLE_PROTOCOL.equals(entry.getOriginalUrl().getProtocol())) {
+            return entry.getOriginalUrl();
+        } else {
+            try {
+                return new URL("file", "", new File(cache, entry.getResourceUrl().getPath()).getAbsolutePath());
+            } catch (MalformedURLException e) {
+                throw new RuntimeException("A malformed URL here is (wrongly) believed to be impossible.", e);
+            }
         }
+    }
+
+    @Override
+    public InputStream getResourceAsStream(String resource) {
+        InputStream resourceStream = super.getResourceAsStream(resource);
+        if (resourceStream == null) {
+            try {
+                // FIXME: osgi - null is possible if constructor did not get the value
+                resourceStream = staticResourceAccessor != null ? staticResourceAccessor.getResource(resource, this.getClass()) : null;
+            } catch (IOException e) {
+                AuraDSLog.get().error("Error loading resource " + resource, e);
+                return null;
+            }
+        }
+        return resourceStream;
+    }
+
+    /**
+     * Exposes StaticResourceAccessor for other clients
+     *
+     * @return staticResourceAccessor
+     */
+    public StaticResourceAccessor getStaticResourceAccessor() {
+        return staticResourceAccessor;
     }
 
     private class Computer extends CacheLoader<String, Optional<CacheEntry>> {
@@ -184,12 +228,18 @@ public class ResourceLoader extends ClassLoader {
         @Override
         public Optional<CacheEntry> load(String resourcePath) throws Exception {
             URL originalUrl = parent.getResource(resourcePath);
-            if (originalUrl == null || !isFile(originalUrl)) {
-                return Optional.absent();
+            if (originalUrl != null) {
+                if (isFile(originalUrl)) {
+                    refreshCache(resourcePath, originalUrl);
+                    return Optional.of(new CacheEntry(originalUrl, new URL(null, String.format(urlPattern, resourcePath),
+                            handler)));
+                } else if (isBundleResource(resourcePath)) {
+                    refreshCache(resourcePath, originalUrl);
+                    // TODO: osgi Do we really need the separate second parameter for bundle case? The original URL itself should be sufficient
+                    return Optional.of(new CacheEntry(originalUrl, originalUrl));
+                }
             }
-            refreshCache(resourcePath, originalUrl);
-            return Optional.of(new CacheEntry(originalUrl, new URL(null, String.format(urlPattern, resourcePath),
-                    handler)));
+            return Optional.absent();
         }
     }
 
@@ -231,6 +281,11 @@ public class ResourceLoader extends ClassLoader {
             // We currently only handle jar: and file: protocols
             return false;
         }
+    }
+
+    private boolean isBundleResource(String resourcePath) throws IOException {
+        // FIXME: osgi We need to be careful with the class context (currently the assumption is this is a core bundle class)
+        return staticResourceAccessor.exists(resourcePath, this.getClass());
     }
 
     private byte[] cache(URL orig, File cachefile, File hashFile) throws IOException {

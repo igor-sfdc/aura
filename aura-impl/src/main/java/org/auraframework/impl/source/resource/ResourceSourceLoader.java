@@ -39,7 +39,6 @@ import org.auraframework.throwable.AuraRuntimeException;
 import org.auraframework.util.AuraTextUtil;
 import org.auraframework.util.IOUtil;
 import org.auraframework.util.resource.ResourceLoader;
-
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -71,12 +70,22 @@ public class ResourceSourceLoader extends BaseSourceLoader {
         try {
             try {
                 InputStream is = resourceLoader.getResourceAsStream(resourcePrefix + "/.index");
+                String indexStr = null;
                 if (is != null) {
                     reader = new InputStreamReader(is);
                     StringWriter sw = new StringWriter();
                     IOUtil.copyStream(reader, sw);
-
-                    Matcher matcher = pattern.matcher(sw.toString());
+                    indexStr = sw.toString();
+                }  
+                
+                // REVIEWME: osgi Maven has a problem generating .index file on Windows. Adding runtime index generation as a backup
+                // The stream approach either did not work or the index file was empty
+                if (indexStr == null || indexStr.indexOf(":") == -1) {
+                	indexStr = resourceLoader.getStaticResourceAccessor().getBundleIndex(basePackage, this.getClass()).toString();
+                }
+                
+                if (indexStr != null && !indexStr.isEmpty()) {
+                    Matcher matcher = pattern.matcher(indexStr);
                     while (matcher.find()) {
                         String name = matcher.group(1);
 
@@ -94,6 +103,12 @@ public class ResourceSourceLoader extends BaseSourceLoader {
                             name = "js://" + AuraTextUtil.replaceChar(name, ':', ".");
                         } else {
                             name = "markup://" + name;
+                        }
+                        
+                        // REVIEWME: osgi Avoids NPE if defType is null
+                        // This happens for .js resources: for some reason .js is not present in extensions EnumMap. Is this a bug?
+                        if(defType == null) {
+                        	continue;
                         }
 
                         DefDescriptor<?> desc = DefDescriptorImpl.getInstance(name, defType.getPrimaryInterface());

@@ -1,0 +1,24 @@
+This fork of Aura repo contains changes required to build and run Aura in OSGi mode.
+
+The code is very preliminary, has not been fully tested and can be viewed as a POC only.
+
+Here are the steps to generate and run Aura as an OSGi bundle:
+
+1. Download the source code
+2. Install Bndtools and m2e into your Eclipse IDE. Make sure you have the latest version of Maven and Bndtools
+3. Import aura-xxx projects into Eclipse as Maven module projects. It is recommended that your Eclipse workspace should be in a different location from Git repo folder.
+4. Import osgi-launcher project as a regular Eclipse Java project
+5. You should be prompted by Bndtools to create a cnf project (local Bndtools repo). Make sure it is located under Git repo/aura folder and not in the Eclipse workspace
+6. Build projects in Eclipse or run Maven from command line:
+
+mvn clean install --DskipUnitTests
+
+(skipping the tests b/c the application is not ready for rigorous testing yet)
+
+7. A newly created aura-osgi-xxx.jar bundle should be automatically copied to Git repo/aura/osgi-launcher/launcherHome/loadApp folder. If for some reason it did not get there you can try copying it manually either from aura-osgi/target or from aura-osgi/generated folder (these two versions should be identical, one is built by Maven bundle plugin and the other by Bndtools).
+8. Look at readme.txt in osgi-launcher folder for instructions on how to start the application
+
+Future steps planned
+
+1. More rigorous testing and bug fixes
+2. Ability to extend Aura framework by adding an application artifacts in a separate bundle

@@ -1,0 +1,10 @@
+<project name="tolauncher" default="release_to_launcher" basedir=".">
+	<import file="../cnf/build.xml" />
+    <target name="release_to_launcher" depends="init">
+	    <property name="bundle.file" value="./generated/${project.name}.jar"/>
+	    <property name="launcher-home-load" location="../osgi-launcher/launcherHome/loadApp"/>
+    	<echo>released-bundle-file: ${bundle.file}</echo>
+    	<echo>launcher-home-load: ${launcher-home-load}</echo>
+        <copy file="${bundle.file}" todir="${launcher-home-load}"/>
+    </target>
+</project>

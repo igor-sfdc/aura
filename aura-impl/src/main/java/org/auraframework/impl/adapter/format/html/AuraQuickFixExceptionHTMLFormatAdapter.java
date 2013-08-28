@@ -22,6 +22,7 @@ import javax.annotation.concurrent.ThreadSafe;
 
 import org.auraframework.Aura;
 import org.auraframework.def.ComponentDef;
+import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.instance.Component;
 import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.throwable.AuraError;
@@ -32,6 +33,7 @@ import com.google.common.collect.Maps;
 /**
  */
 @ThreadSafe
+@aQute.bnd.annotation.component.Component (provide=AuraServiceProvider.class)
 public class AuraQuickFixExceptionHTMLFormatAdapter extends HTMLFormatAdapter<QuickFixException> {
 
     @Override

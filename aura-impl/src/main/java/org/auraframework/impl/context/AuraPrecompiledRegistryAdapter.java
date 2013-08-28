@@ -30,6 +30,8 @@ import org.auraframework.system.DefRegistry;
 import org.auraframework.system.SourceLoader;
 import org.auraframework.throwable.AuraRuntimeException;
 
+// TODO: osgi - This class has no no-argument constructor. Not being used at the moment
+//@Component (provide=AuraDSService.class)
 public class AuraPrecompiledRegistryAdapter implements RegistryAdapter {
 
     private final DefRegistry<?>[] registries;

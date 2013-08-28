@@ -16,6 +16,9 @@
 package org.auraframework.impl.adapter;
 
 import org.auraframework.adapter.MockConfigAdapter;
+import org.auraframework.ds.serviceloader.AuraServiceProvider;
+
+import aQute.bnd.annotation.component.Component;
 
 /**
  * ConfigAdapter for Aura tests.
@@ -23,6 +26,7 @@ import org.auraframework.adapter.MockConfigAdapter;
  * 
  * @since 0.0.178
  */
+@Component (provide=AuraServiceProvider.class)
 public class MockConfigAdapterImpl extends ConfigAdapterImpl implements MockConfigAdapter {
 
     private Boolean isClientAppcacheEnabled = null;

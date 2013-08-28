@@ -21,6 +21,7 @@ import java.util.Map;
 
 import org.auraframework.Aura;
 import org.auraframework.adapter.JsonSerializerAdapter;
+import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.impl.context.AuraContextImpl;
 import org.auraframework.impl.java.controller.JavaAction;
 import org.auraframework.instance.Action;
@@ -34,11 +35,14 @@ import org.auraframework.util.json.JsonSerializer;
 import org.auraframework.util.json.JsonSerializer.NoneSerializer;
 import org.auraframework.util.json.JsonSerializers;
 
+import aQute.bnd.annotation.component.Component;
+
 import com.google.common.collect.Maps;
 
 /**
  * the basics
  */
+@Component (provide=AuraServiceProvider.class)
 public class JsonSerializerAdapterImpl implements JsonSerializerAdapter {
 
     @Override

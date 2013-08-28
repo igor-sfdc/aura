@@ -26,6 +26,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import org.auraframework.Aura;
 import org.auraframework.def.ActionDef;
 import org.auraframework.def.ComponentDef;
+import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.instance.Action;
 import org.auraframework.instance.Event;
 import org.auraframework.system.AuraContext;
@@ -34,11 +35,14 @@ import org.auraframework.throwable.quickfix.QuickFixException;
 import org.auraframework.util.json.Json;
 import org.auraframework.util.json.JsonReader;
 
+import aQute.bnd.annotation.component.Component;
+
 import com.google.common.collect.Lists;
 
 /**
  */
 @ThreadSafe
+@Component (provide=AuraServiceProvider.class)
 public class MessageJSONFormatAdapter extends JSONFormatAdapter<Message<?>> {
 
     @SuppressWarnings("rawtypes")

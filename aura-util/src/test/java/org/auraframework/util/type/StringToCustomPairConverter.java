@@ -17,8 +17,12 @@ package org.auraframework.util.type;
 
 import java.util.List;
 
+import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.util.AuraTextUtil;
 
+import aQute.bnd.annotation.component.Component;
+
+@Component (provide=AuraServiceProvider.class)
 public class StringToCustomPairConverter implements Converter<String, CustomPairType> {
 
     @Override

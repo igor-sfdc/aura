@@ -24,12 +24,16 @@ import javax.annotation.concurrent.ThreadSafe;
 
 import org.auraframework.Aura;
 import org.auraframework.def.StyleDef;
+import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.throwable.quickfix.QuickFixException;
+
+import aQute.bnd.annotation.component.Component;
 
 /**
  */
 @ThreadSafe
+@Component (provide=AuraServiceProvider.class)
 public class StyleDefCSSFormatAdapter extends CSSFormatAdapter<StyleDef> {
 
     private static final Pattern pattern1 = Pattern.compile("\\s*([{};,:])\\s*");

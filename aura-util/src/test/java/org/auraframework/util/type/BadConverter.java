@@ -15,6 +15,11 @@
  */
 package org.auraframework.util.type;
 
+import org.auraframework.ds.serviceloader.AuraServiceProvider;
+
+import aQute.bnd.annotation.component.Component;
+
+@Component (provide=AuraServiceProvider.class)
 public class BadConverter implements Converter<CustomPairType, String> {
 
     @Override

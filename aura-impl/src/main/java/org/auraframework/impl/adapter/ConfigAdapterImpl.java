@@ -24,6 +24,8 @@ import java.util.*;
 import org.apache.log4j.Logger;
 import org.auraframework.Aura;
 import org.auraframework.adapter.ConfigAdapter;
+import org.auraframework.ds.resourceloader.StaticResourceAccessor;
+import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.impl.javascript.AuraJavascriptGroup;
 import org.auraframework.impl.javascript.AuraJavascriptResourceGroup;
 import org.auraframework.impl.util.AuraImplFiles;
@@ -36,8 +38,13 @@ import org.auraframework.util.*;
 import org.auraframework.util.javascript.JavascriptGroup;
 import org.auraframework.util.resource.ResourceLoader;
 
+import aQute.bnd.annotation.component.Activate;
+import aQute.bnd.annotation.component.Component;
+import aQute.bnd.annotation.component.Reference;
+
 import com.google.common.collect.Lists;
 
+@Component (provide=AuraServiceProvider.class)
 public class ConfigAdapterImpl implements ConfigAdapter {
 
     private static final String TIMESTAMP_FORMAT_PROPERTY = "aura.build.timestamp.format";
@@ -46,12 +53,13 @@ public class ConfigAdapterImpl implements ConfigAdapter {
     private static final String VALIDATE_CSS_CONFIG = "aura.css.validate";
 
     protected final Set<Mode> allModes = EnumSet.allOf(Mode.class);
-    private final JavascriptGroup jsGroup;
-    private final ResourceLoader resourceLoader;
-    private final Long buildTimestamp;
+    private JavascriptGroup jsGroup;
+    private ResourceLoader resourceLoader;
+    private Long buildTimestamp;
     private String auraVersionString;
     private boolean lastGenerationHadCompilationErrors = false;
-    private final boolean validateCss;
+    private boolean validateCss;
+	private String resourceCacheDir;
 
     public ConfigAdapterImpl() {
         this(getDefaultCacheDir());
@@ -63,13 +71,24 @@ public class ConfigAdapterImpl implements ConfigAdapter {
     }
 
     protected ConfigAdapterImpl(String resourceCacheDir) {
+    	this.resourceCacheDir = resourceCacheDir;
+    }
+    
+    private StaticResourceAccessor staticResourceAccessor;
+    @Reference
+    protected void setStaticResourceAccessor(StaticResourceAccessor staticResourceAccessor) {
+    	this.staticResourceAccessor = staticResourceAccessor;
+    }
+    
+    @Activate
+    protected void activate() {
         // can this initialization move to some sort of common initialization dealy?
         try {
-            this.resourceLoader = new ResourceLoader(resourceCacheDir, true);
+            this.resourceLoader = new ResourceLoader(resourceCacheDir, true, staticResourceAccessor);
         } catch (MalformedURLException e) {
             throw new AuraRuntimeException(e);
         }
-
+        
         JavascriptGroup tempGroup = null;
         try {
             tempGroup = newAuraJavascriptGroup();
@@ -107,7 +126,6 @@ public class ConfigAdapterImpl implements ConfigAdapter {
         String validateCssString = config.getProperty(VALIDATE_CSS_CONFIG);
         validateCss = AuraTextUtil.isNullEmptyOrWhitespace(validateCssString)
                 || Boolean.parseBoolean(validateCssString.trim());
-
     }
 
     @Override

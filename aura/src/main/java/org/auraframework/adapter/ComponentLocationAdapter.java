@@ -61,6 +61,17 @@ public interface ComponentLocationAdapter extends AuraAdapter {
             }
         }
 
+        // REVIEWME: osgi Added this constructor to be able to create file-less location adapter with package name only
+        public Impl(String componentSourcePackage) {
+            if (componentSourcePackage == null || componentSourcePackage.isEmpty()) {
+                throw new IllegalArgumentException("componentSourcePackage is null or empty: " + componentSourcePackage);
+            }
+
+            this.componentSourcePackage = componentSourcePackage;
+            this.componentSourceDir = null;
+            this.javaGeneratedSourceDir = null;
+        }
+
         public Impl(SourceLoader loader) {
             if (loader != null) {
                 loaders.add(loader);

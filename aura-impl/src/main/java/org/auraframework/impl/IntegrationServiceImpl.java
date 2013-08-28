@@ -15,11 +15,15 @@
  */
 package org.auraframework.impl;
 
+import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.impl.integration.IntegrationImpl;
 import org.auraframework.integration.Integration;
 import org.auraframework.service.IntegrationService;
 import org.auraframework.system.AuraContext.Mode;
 
+import aQute.bnd.annotation.component.Component;
+
+@Component (provide=AuraServiceProvider.class)
 public class IntegrationServiceImpl implements IntegrationService {
 
     @Override

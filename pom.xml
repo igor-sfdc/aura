@@ -102,6 +102,8 @@
         </snapshotRepository>
     </distributionManagement>
     <modules>
+        <module>aura-osgi-api</module>
+        <module>aura-osgi-extensions</module>
         <module>aura-util</module>
         <module>aura</module>
         <module>aura-impl</module>
@@ -113,6 +115,7 @@
         <module>aura-integration-test</module>
         <module>auradocs-integration-test</module>
         <module>aura-archetype</module>
+        <module>aura-osgi</module>
     </modules>
     <scm>
         <connection>scm:git:git@github.com:forcedotcom/lumen-beta.git</connection>
@@ -134,6 +137,16 @@
     </dependencies>
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>org.auraframework</groupId>
+                <artifactId>aura-osgi-api</artifactId>
+                <version>0.280-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>org.auraframework</groupId>
+                <artifactId>aura-osgi-extensions</artifactId>
+                <version>0.280-SNAPSHOT</version>
+            </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura</artifactId>
@@ -372,6 +385,26 @@
 		      <artifactId>phloc-css</artifactId>
 		      <version>3.5.5</version>
 		    </dependency>
+            <dependency>
+                <groupId>biz.aQute</groupId>
+                <artifactId>bnd</artifactId>
+                <version>1.50.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.osgi</groupId>
+                <artifactId>core</artifactId>
+                <version>4.3.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.osgi</groupId>
+                <artifactId>org.osgi.compendium</artifactId>
+                <version>4.2.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.equinox</groupId>
+                <artifactId>org.eclipse.equinox.http.servlet</artifactId>
+                <version>1.1.300</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
     <build>

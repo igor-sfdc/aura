@@ -16,11 +16,15 @@
 package org.auraframework.impl;
 
 import org.auraframework.adapter.LoggingAdapter;
+import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.service.LoggingService;
 import org.auraframework.system.LoggingContext;
 
+import aQute.bnd.annotation.component.Component;
+
 /**
  */
+@Component (provide=AuraServiceProvider.class)
 public class LoggingServiceImpl implements LoggingService {
 
     /**

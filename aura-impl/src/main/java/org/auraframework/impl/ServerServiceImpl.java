@@ -25,6 +25,7 @@ import org.auraframework.Aura;
 import org.auraframework.def.ActionDef;
 import org.auraframework.def.BaseComponentDef;
 import org.auraframework.def.DefDescriptor;
+import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.instance.Action;
 import org.auraframework.instance.Event;
 import org.auraframework.service.ContextService;
@@ -36,8 +37,11 @@ import org.auraframework.system.Message;
 import org.auraframework.throwable.AuraExecutionException;
 import org.auraframework.throwable.quickfix.QuickFixException;
 
+import aQute.bnd.annotation.component.Component;
+
 import com.google.common.collect.Lists;
 
+@Component (provide=AuraServiceProvider.class)
 public class ServerServiceImpl implements ServerService {
 
     private static final long serialVersionUID = -2779745160285710414L;
