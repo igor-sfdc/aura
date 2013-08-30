@@ -2,20 +2,39 @@ This fork of Aura repo contains changes required to build and run Aura in OSGi m
 
 The code is very preliminary, has not been fully tested and can be considered a POC only.
 
+
+
 Here are the steps to generate and run Aura as an OSGi bundle:
 
 1. Download the source code
-2. Install Bndtools and m2e into your Eclipse IDE. Make sure you have the latest version of Maven
-3. Create an empty Eclipse workspace. It is _recommended_ to have your workspace in a different location from Git repo folder
-4. Import the existing cnf project as Import->General->Existing Projects into the Workspace. Do not copy files
-4. Import the remaining Maven projects into Eclipse as Import->Maven->Existing Maven Projects
-5. Right click on Maven projects in Eclipse and chose Maven->Update Project then click on Select All button, then click OK. Wait until Eclipse auto-build finishes
-6. Now you should be able to right click on Launcher class and Run it As Java
-7. Alternatively [to steps #1-#6] you can just start Aura from the command line:
 
-mvn install -DskipUnitTests -DstartBrowser=true -DhttpPort=9090
+2. Install Bndtools and m2e into your Eclipse IDE. 
+Make sure you have the latest version of Maven
+
+3. Create an empty Eclipse workspace. It is _recommended_ 
+to have your workspace in a different location from Git repo folder
+
+4. Import the existing cnf project as Import->General->Existing 
+Projects into the Workspace. Do not copy files
+
+5. Import the remaining Maven projects into Eclipse as 
+Import->Maven->Existing Maven Projects
+
+6. Right click on Maven projects in Eclipse and chose Maven->Update 
+Project then click on Select All button, then click OK. 
+Wait until Eclipse auto-build finishes
+
+7. Now you should be able to right click on Launcher class 
+and Run it As Java
+
+8. Alternatively [to steps #2-#7] you can just download the 
+source code, then build and run Aura from the command line:
+
+    mvn install -DskipUnitTests -DstartBrowser=true -DhttpPort=9090
 
 Your default browser should automatically open up Auradocs application
+
+
 
 Future steps planned
 
