@@ -18,8 +18,8 @@ package org.auraframework.ds.http.whiteboard.proxy;
 import javax.servlet.Filter;
 
 public interface FilterProxy<T extends Filter> extends Filter, HttpServiceProviderProxy {
-	
-	String getPattern();
-	
-	int getRanking();
+    
+    String getPattern();
+    
+    int getRanking();
 }

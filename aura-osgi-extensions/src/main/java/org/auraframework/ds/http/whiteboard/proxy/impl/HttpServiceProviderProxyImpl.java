@@ -25,65 +25,65 @@ import org.auraframework.ds.log.AuraDSLog;
 
 
 public abstract class HttpServiceProviderProxyImpl<T> implements HttpServiceProviderProxy {
-	
-	private boolean isRegistered;
-	private AtomicBoolean isInitialized = new AtomicBoolean();
-	private AtomicReference<T> realProviderReference = new AtomicReference<T>();
+    
+    private boolean isRegistered;
+    private AtomicBoolean isInitialized = new AtomicBoolean();
+    private AtomicReference<T> realProviderReference = new AtomicReference<T>();
 
-	@Override
-	public boolean isRegistered() {
-		return isRegistered;		
-	}
-	
-	@Override
-	public void setRegistered(boolean registered) {
-		this.isRegistered = registered;
-	}
+    @Override
+    public boolean isRegistered() {
+        return isRegistered;        
+    }
+    
+    @Override
+    public void setRegistered(boolean registered) {
+        this.isRegistered = registered;
+    }
 
-	/**
-	 * Do not force to instantiate
-	 * 
-	 * @return real provider or null if has not been instantiated
-	 */
-	protected T getRealProviderOptional() {
-		return realProviderReference.get();
-	}
+    /**
+     * Do not force to instantiate
+     * 
+     * @return real provider or null if has not been instantiated
+     */
+    protected T getRealProviderOptional() {
+        return realProviderReference.get();
+    }
 
-	protected T getRealProvider() {
-		T realProvider = getRealProviderOptional();
-		if (realProvider == null) {
-			if (!isInitialized.get()) {
-				throw new IllegalStateException("Cannot access real provider unless proxy has beend initialized");
-			}
-			
-			synchronized (this) {
-				realProvider = realProviderReference.get();
-				if (realProvider == null) {
-					try {
-						realProvider = newInstance();
-				    	init(realProvider);
-						realProviderReference.set(realProvider);
-					} catch (Throwable th) {
-				    	Class<?> clazz = realProvider !=null ? realProvider.getClass() : null;
-				    	String className = clazz != null ? clazz.getSimpleName() : "Unknown";
-						AuraDSLog.get().error("[" + className + "] " + " Failed to register " + realProvider, th);
-					}
-				}
-			}
-		}
-		return realProvider;
-	}
-	
-	protected void setInitialized() {
-		isInitialized.set(true);
-	}
-	
-	protected void reset() {
-		isInitialized.set(false);
-		realProviderReference.set(null);
-	}
+    protected T getRealProvider() {
+        T realProvider = getRealProviderOptional();
+        if (realProvider == null) {
+            if (!isInitialized.get()) {
+                throw new IllegalStateException("Cannot access real provider unless proxy has beend initialized");
+            }
+            
+            synchronized (this) {
+                realProvider = realProviderReference.get();
+                if (realProvider == null) {
+                    try {
+                        realProvider = newInstance();
+                        init(realProvider);
+                        realProviderReference.set(realProvider);
+                    } catch (Throwable th) {
+                        Class<?> clazz = realProvider !=null ? realProvider.getClass() : null;
+                        String className = clazz != null ? clazz.getSimpleName() : "Unknown";
+                        AuraDSLog.get().error("[" + className + "] " + " Failed to register " + realProvider, th);
+                    }
+                }
+            }
+        }
+        return realProvider;
+    }
+    
+    protected void setInitialized() {
+        isInitialized.set(true);
+    }
+    
+    protected void reset() {
+        isInitialized.set(false);
+        realProviderReference.set(null);
+    }
 
-	protected abstract T newInstance();
+    protected abstract T newInstance();
 
-	protected abstract void init(T realProvider) throws ServletException;
+    protected abstract void init(T realProvider) throws ServletException;
 }

@@ -5,9 +5,9 @@
     <property name="target" value="1.7"/>
     <property name="source" value="1.7"/>
     <!-- For Eclipse builds build.compiler property is needed to avoid error like 
-		"com.sun.tools.javac.Main is not on the classpath.
-		Perhaps JAVA_HOME does not point to the JDK."
-		For non-Eclipse builds JAVA_HOME pointing to Java 1.7 JDK must be set.
+        "com.sun.tools.javac.Main is not on the classpath.
+        Perhaps JAVA_HOME does not point to the JDK."
+        For non-Eclipse builds JAVA_HOME pointing to Java 1.7 JDK must be set.
     -->
     <condition property="build.compiler" value="org.eclipse.jdt.core.JDTCompilerAdapter">
         <isset property="eclipse.buildId" />
@@ -29,9 +29,11 @@
     </target>
     <target name="clean">
         <delete dir="bin"/>
-        <delete dir="generated"/>
         <delete>
-    	    <fileset dir="launcherHome/loadApp" includes="*"/>
+            <fileset dir="launcherHome/loadApp" includes="aura-osgi*.jar"/>
+        </delete>
+        <delete>
+            <fileset dir="launcherHome" includes="osgi-launcher.jar"/>
         </delete>
     </target>
     <target depends="clean" name="cleanall"/>
@@ -46,7 +48,7 @@
     </target>
     <target description="Build all projects which reference this project. Useful to propagate changes." name="build-refprojects"/>
     <target name="create_launcher_jar" depends="build">
-        <jar destfile="generated/osgi-launcher.jar">
+        <jar destfile="target/osgi-launcher.jar">
             <manifest>
                 <attribute name="Main-Class" value="org.eclipse.jdt.internal.jarinjarloader.JarRsrcLoader"/>
                 <attribute name="Rsrc-Main-Class" value="launcher.Launcher"/>

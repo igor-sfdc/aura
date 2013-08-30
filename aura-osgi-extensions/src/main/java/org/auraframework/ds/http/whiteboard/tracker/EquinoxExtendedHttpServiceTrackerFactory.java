@@ -34,64 +34,64 @@ import aQute.bnd.annotation.component.Reference;
 @Component (provide=HttpServiceTrackerFactory.class)
 public class EquinoxExtendedHttpServiceTrackerFactory extends AbstractHttpServiceTrackerFactory<ExtendedHttpService> {
 
-	private static final String HTTP_SERVICE_NAME = ExtendedHttpService.class.getName();
+    private static final String HTTP_SERVICE_NAME = ExtendedHttpService.class.getName();
 
-	@Reference
-	@Override
-	protected void setLogService(AuraDSLogService logServiceValue) {
-		logService = logServiceValue;
-	}
+    @Reference
+    @Override
+    protected void setLogService(AuraDSLogService logServiceValue) {
+        logService = logServiceValue;
+    }
 
-	@Override
-	protected void unsetLogService(AuraDSLogService logServiceValue) {
-		logService = null;
-	}
+    @Override
+    protected void unsetLogService(AuraDSLogService logServiceValue) {
+        logService = null;
+    }
 
-	@Reference (multiple=true, dynamic=true)
-	protected void addHttpServiceProvider(HttpServiceProviderProxy httpServiceProvider) {
-		handleHttpServiceProviderAdded(httpServiceProvider);
-	}
+    @Reference (multiple=true, dynamic=true)
+    protected void addHttpServiceProvider(HttpServiceProviderProxy httpServiceProvider) {
+        handleHttpServiceProviderAdded(httpServiceProvider);
+    }
 
-	protected void removeHttpServiceProvider(HttpServiceProviderProxy httpServiceProvider) {
-		handleHttpServiceProviderRemoved(httpServiceProvider);
-	}
+    protected void removeHttpServiceProvider(HttpServiceProviderProxy httpServiceProvider) {
+        handleHttpServiceProviderRemoved(httpServiceProvider);
+    }
 
-	public EquinoxExtendedHttpServiceTrackerFactory() {
-		super(HTTP_SERVICE_NAME);
-	}
-	
-	@Activate
-	protected void activate() {
-		logService.info(getClass().getSimpleName() + " Activated");
-	}
+    public EquinoxExtendedHttpServiceTrackerFactory() {
+        super(HTTP_SERVICE_NAME);
+    }
+    
+    @Activate
+    protected void activate() {
+        logService.info(getClass().getSimpleName() + " Activated");
+    }
 
-	protected void deactivate() {
-		logService.info(getClass().getSimpleName() + " Deactivated");
-	}
+    protected void deactivate() {
+        logService.info(getClass().getSimpleName() + " Deactivated");
+    }
 
-	@Override
-	protected void register(ExtendedHttpService service,
-			ServletProxy<? extends Servlet> servlet) throws ServletException, NamespaceException {
-		service.registerServlet(servlet.getAlias(), servlet, null, null);
-	}
+    @Override
+    protected void register(ExtendedHttpService service,
+            ServletProxy<? extends Servlet> servlet) throws ServletException, NamespaceException {
+        service.registerServlet(servlet.getAlias(), servlet, null, null);
+    }
 
-	@Override
-	protected void register(ExtendedHttpService service, FilterProxy<? extends Filter> filter) 
-			throws ServletException, NamespaceException {
-		// To abstract the differences b/w Equinox and Felix implementations filters are initially 
-		// bound to "/" and then FilterProxy implementation handles the actual pattern matching
-		service.registerFilter("/", filter, null, null);
-	}
+    @Override
+    protected void register(ExtendedHttpService service, FilterProxy<? extends Filter> filter) 
+            throws ServletException, NamespaceException {
+        // To abstract the differences b/w Equinox and Felix implementations filters are initially 
+        // bound to "/" and then FilterProxy implementation handles the actual pattern matching
+        service.registerFilter("/", filter, null, null);
+    }
 
-	@Override
-	protected void unregister(ExtendedHttpService service, FilterProxy<? extends Filter> filter) {
-		service.unregisterFilter(filter);
-		filter.destroy();
-	}
+    @Override
+    protected void unregister(ExtendedHttpService service, FilterProxy<? extends Filter> filter) {
+        service.unregisterFilter(filter);
+        filter.destroy();
+    }
 
-	@Override
-	protected void unregister(ExtendedHttpService service, ServletProxy<? extends Servlet> servlet) {
-		service.unregister(servlet.getAlias());
-		servlet.destroy();
-	}
+    @Override
+    protected void unregister(ExtendedHttpService service, ServletProxy<? extends Servlet> servlet) {
+        service.unregister(servlet.getAlias());
+        servlet.destroy();
+    }
 }

@@ -32,59 +32,59 @@ import org.osgi.framework.BundleContext;
  *
  */
 public class BundleIndex {
-	private static final String BUNDLE_PATH_SEPARATOR = "/";
-	private static final int NAMESPACE_GROUP = 1;
-	private static final int ENTRY_NAME_GROUP = 2;
-	private static final String NAMESPACE_SEPARATOR = ":";
-	private static final String ENTRIES_SEPARATOR = ",";
-	private final StringBuilder indexBuffer = new StringBuilder();
-	private static final Pattern indexEntryPattern = Pattern.compile(".*/([^/]*)/[^/]*/([^/]+[.][^/]+)");
-			
-	protected BundleIndex(String basePackage, Class<?> clientClass) throws IOException {
-		this(basePackage, BundleUtil.getBundleContext(clientClass));
-	}
+    private static final String BUNDLE_PATH_SEPARATOR = "/";
+    private static final int NAMESPACE_GROUP = 1;
+    private static final int ENTRY_NAME_GROUP = 2;
+    private static final String NAMESPACE_SEPARATOR = ":";
+    private static final String ENTRIES_SEPARATOR = ",";
+    private final StringBuilder indexBuffer = new StringBuilder();
+    private static final Pattern indexEntryPattern = Pattern.compile(".*/([^/]*)/[^/]*/([^/]+[.][^/]+)");
+            
+    protected BundleIndex(String basePackage, Class<?> clientClass) throws IOException {
+        this(basePackage, BundleUtil.getBundleContext(clientClass));
+    }
 
-	protected BundleIndex(String basePackage, BundleContext bundleContext) throws IOException {
-		if (bundleContext != null) {
-			Bundle bundle = bundleContext.getBundle();
-			locateEntries(bundle, indexBuffer, basePackage);
-		}
-	}
-	
-	static String createKey(String packageName, Class<?> clientClass) {
-		BundleContext bundleContext = BundleUtil.getBundleContext(clientClass);
-		if (bundleContext == null) {
-			return packageName;
-		}
+    protected BundleIndex(String basePackage, BundleContext bundleContext) throws IOException {
+        if (bundleContext != null) {
+            Bundle bundle = bundleContext.getBundle();
+            locateEntries(bundle, indexBuffer, basePackage);
+        }
+    }
+    
+    static String createKey(String packageName, Class<?> clientClass) {
+        BundleContext bundleContext = BundleUtil.getBundleContext(clientClass);
+        if (bundleContext == null) {
+            return packageName;
+        }
 
-		return packageName + bundleContext.getBundle().getBundleId();
-	}
+        return packageName + bundleContext.getBundle().getBundleId();
+    }
 
-	private static void locateEntries(Bundle bundle, StringBuilder indexBuffer, String parent) throws IOException {
-		Enumeration<URL> entries = bundle.findEntries(parent, "*", true);
-		while (entries != null && entries.hasMoreElements()) {
-			URL entryURL = entries.nextElement();
-			String entry = entryURL.toString();
-			if (!entry.endsWith(BUNDLE_PATH_SEPARATOR)) {
-				addToIndex(indexBuffer, entry);
-			}
-		}
-	}
-	
-	private static void addToIndex(StringBuilder indexBuffer, String entry) throws IOException {
-		Matcher matcher = indexEntryPattern.matcher(entry);
-		if (matcher.matches()) {
-			if (indexBuffer.length() > 0) {
-				indexBuffer.append(ENTRIES_SEPARATOR);
-			}
-			indexBuffer.append(matcher.group(NAMESPACE_GROUP));
-			indexBuffer.append(NAMESPACE_SEPARATOR);
-			indexBuffer.append(matcher.group(ENTRY_NAME_GROUP));
-		}
-	}
+    private static void locateEntries(Bundle bundle, StringBuilder indexBuffer, String parent) throws IOException {
+        Enumeration<URL> entries = bundle.findEntries(parent, "*", true);
+        while (entries != null && entries.hasMoreElements()) {
+            URL entryURL = entries.nextElement();
+            String entry = entryURL.toString();
+            if (!entry.endsWith(BUNDLE_PATH_SEPARATOR)) {
+                addToIndex(indexBuffer, entry);
+            }
+        }
+    }
+    
+    private static void addToIndex(StringBuilder indexBuffer, String entry) throws IOException {
+        Matcher matcher = indexEntryPattern.matcher(entry);
+        if (matcher.matches()) {
+            if (indexBuffer.length() > 0) {
+                indexBuffer.append(ENTRIES_SEPARATOR);
+            }
+            indexBuffer.append(matcher.group(NAMESPACE_GROUP));
+            indexBuffer.append(NAMESPACE_SEPARATOR);
+            indexBuffer.append(matcher.group(ENTRY_NAME_GROUP));
+        }
+    }
 
-	@Override
-	public String toString() {
-		return indexBuffer.toString();
-	}
+    @Override
+    public String toString() {
+        return indexBuffer.toString();
+    }
 }

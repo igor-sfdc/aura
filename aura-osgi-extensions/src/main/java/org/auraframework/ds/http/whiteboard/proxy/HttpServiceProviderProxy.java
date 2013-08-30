@@ -16,9 +16,9 @@
 package org.auraframework.ds.http.whiteboard.proxy;
 
 public interface HttpServiceProviderProxy {
-	
-	boolean isRegistered();
-	
-	void setRegistered(boolean registered);
-	
+    
+    boolean isRegistered();
+    
+    void setRegistered(boolean registered);
+    
 }

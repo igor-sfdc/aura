@@ -25,15 +25,15 @@ import aQute.bnd.annotation.component.Component;
 
 @Component (provide=HttpServiceProviderProxy.class)
 public class AuraContextFilterResourceProxy extends FilterProxyImpl<AuraContextFilter> {
-	private static final int AURA_CONTEXT_FILTER_RESOURCE_RANKING = 100;
-	private static final String AURA_CONTEXT_FILTER_RESOURCE_PATTERN = "/auraResource.*";
+    private static final int AURA_CONTEXT_FILTER_RESOURCE_RANKING = 100;
+    private static final String AURA_CONTEXT_FILTER_RESOURCE_PATTERN = "/auraResource.*";
 
-	public AuraContextFilterResourceProxy() {
-		super(AURA_CONTEXT_FILTER_RESOURCE_PATTERN, AURA_CONTEXT_FILTER_RESOURCE_RANKING);
-	}
+    public AuraContextFilterResourceProxy() {
+        super(AURA_CONTEXT_FILTER_RESOURCE_PATTERN, AURA_CONTEXT_FILTER_RESOURCE_RANKING);
+    }
 
-	@Override
-	protected AuraContextFilter newInstance() {
-		return new AuraContextFilter();
-	}
+    @Override
+    protected AuraContextFilter newInstance() {
+        return new AuraContextFilter();
+    }
 }

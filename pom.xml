@@ -116,6 +116,7 @@
         <module>auradocs-integration-test</module>
         <module>aura-archetype</module>
         <module>aura-osgi</module>
+        <module>osgi-launcher</module>
     </modules>
     <scm>
         <connection>scm:git:git@github.com:forcedotcom/lumen-beta.git</connection>
@@ -145,6 +146,11 @@
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-osgi-extensions</artifactId>
+                <version>0.280-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>org.auraframework</groupId>
+                <artifactId>aura-osgi</artifactId>
                 <version>0.280-SNAPSHOT</version>
             </dependency>
             <dependency>

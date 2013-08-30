@@ -24,10 +24,10 @@ import org.osgi.service.log.LogService;
  *
  */
 public interface AuraDSLogService extends LogService {
-	void info(String message);
-	void debug(String message);
-	void warning(String message);
-	void warning(String message, Throwable th);
-	void error(String message);
-	void error(String message, Throwable th);
+    void info(String message);
+    void debug(String message);
+    void warning(String message);
+    void warning(String message, Throwable th);
+    void error(String message);
+    void error(String message, Throwable th);
 }

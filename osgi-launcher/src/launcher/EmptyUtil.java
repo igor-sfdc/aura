@@ -20,7 +20,7 @@ package launcher;
  *
  */
 public class EmptyUtil {
-	public static boolean is(String str) {
-		return str == null || str.isEmpty();
-	}
+    public static boolean is(String str) {
+        return str == null || str.isEmpty();
+    }
 }

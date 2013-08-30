@@ -37,84 +37,84 @@ import org.auraframework.ds.log.AuraDSLog;
  * @param <T> real servlet type
  */
 public abstract class ServletProxyImpl<T extends Servlet> 
-		extends HttpServiceProviderProxyImpl<T> implements ServletProxy<T>, Comparable<Object> {
+        extends HttpServiceProviderProxyImpl<T> implements ServletProxy<T>, Comparable<Object> {
 
-	private ServletConfig servletConfig;
-	private final String alias;
+    private ServletConfig servletConfig;
+    private final String alias;
 
-	protected ServletProxyImpl(String alias) {
-		this.alias = alias;
-		AuraDSLog.get().info(getClass().getSimpleName() + " Instantiated");
-	}
+    protected ServletProxyImpl(String alias) {
+        this.alias = alias;
+        AuraDSLog.get().info(getClass().getSimpleName() + " Instantiated");
+    }
 
-	@Override
-	public void destroy() {
-		T realServlet = getRealProviderOptional();
-		if (realServlet != null) {
-			realServlet.destroy();
-		}
-		reset();
-	}
+    @Override
+    public void destroy() {
+        T realServlet = getRealProviderOptional();
+        if (realServlet != null) {
+            realServlet.destroy();
+        }
+        reset();
+    }
 
-	@Override
-	public ServletConfig getServletConfig() {
-		return getRealProvider().getServletConfig();
-	}
+    @Override
+    public ServletConfig getServletConfig() {
+        return getRealProvider().getServletConfig();
+    }
 
-	@Override
-	public String getServletInfo() {
-		return getRealProvider().getServletInfo();
-	}
+    @Override
+    public String getServletInfo() {
+        return getRealProvider().getServletInfo();
+    }
 
-	@Override
-	public void init(ServletConfig servletConfig) throws ServletException {
-		this.servletConfig = servletConfig;
-		setInitialized();
-	}
-	
-	@Override
-	protected void init(T realServlet) throws ServletException {
-		AuraDSLog.get().info("[" + realServlet.getClass().getSimpleName() + "] " + " Istantiated for " + alias);
-		realServlet.init(servletConfig);
-		AuraDSLog.get().info("[" + realServlet.getClass().getSimpleName() + "] " + " Initialized for " + alias);
-	}
+    @Override
+    public void init(ServletConfig servletConfig) throws ServletException {
+        this.servletConfig = servletConfig;
+        setInitialized();
+    }
+    
+    @Override
+    protected void init(T realServlet) throws ServletException {
+        AuraDSLog.get().info("[" + realServlet.getClass().getSimpleName() + "] " + " Istantiated for " + alias);
+        realServlet.init(servletConfig);
+        AuraDSLog.get().info("[" + realServlet.getClass().getSimpleName() + "] " + " Initialized for " + alias);
+    }
 
-	@Override
-	public void service(ServletRequest request, ServletResponse response)
-			throws ServletException, IOException {
-		T realServlet = getRealProvider();
-		logServiceRequest(request, realServlet);
-		realServlet.service(request, response);
-	}
+    @Override
+    public void service(ServletRequest request, ServletResponse response)
+            throws ServletException, IOException {
+        T realServlet = getRealProvider();
+        logServiceRequest(request, realServlet);
+        realServlet.service(request, response);
+    }
 
-	private void logServiceRequest(ServletRequest request, T realServlet) {
-		HttpServletRequest httRequest = (HttpServletRequest)request;
-		String uri = httRequest.getRequestURI();
-		String qs = httRequest.getQueryString();
-		qs = qs != null && !qs.isEmpty() ? "?" + qs : "";
-		AuraDSLog.get().info("[" + realServlet.getClass().getSimpleName() + "] service request for " + uri + qs);
-	}
+    private void logServiceRequest(ServletRequest request, T realServlet) {
+        HttpServletRequest httRequest = (HttpServletRequest)request;
+        String uri = httRequest.getRequestURI();
+        String qs = httRequest.getQueryString();
+        qs = qs != null && !qs.isEmpty() ? "?" + qs : "";
+        AuraDSLog.get().info("[" + realServlet.getClass().getSimpleName() + "] service request for " + uri + qs);
+    }
 
-	@Override
-	public String getAlias() {
-		return alias;
-	}
+    @Override
+    public String getAlias() {
+        return alias;
+    }
 
-	@Override
-	public int compareTo(Object otherObject) {
-		return 0;
-	}
-	
-	@Override
-	public String toString() {
-		StringBuilder buffer = new StringBuilder();
-		buffer
-			.append("[")
-			.append(getClass().getSimpleName())
-			.append("] alias: ")
-			.append(alias);
-		return buffer.toString();
-	}
+    @Override
+    public int compareTo(Object otherObject) {
+        return 0;
+    }
+    
+    @Override
+    public String toString() {
+        StringBuilder buffer = new StringBuilder();
+        buffer
+            .append("[")
+            .append(getClass().getSimpleName())
+            .append("] alias: ")
+            .append(alias);
+        return buffer.toString();
+    }
 
-	abstract protected T newInstance();
+    abstract protected T newInstance();
 }

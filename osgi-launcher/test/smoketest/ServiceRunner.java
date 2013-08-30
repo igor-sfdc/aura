@@ -35,118 +35,116 @@ import launcher.EmptyUtil;
  *
  */
 public class ServiceRunner {
-	static final int OSGI_LAUNCHER_LOCAL_PORT = 9090;
-	static final String OSGI_LAUNCHER_LAUNCHER_HOME = "../osgi-launcher/launcherHome";
-	private static final String JAVA7_HOME = System.getenv("JAVA7_HOME");
-	private static final String JAVA7_HOME_DEFAULT = "/opt/java/jre1.7.0";
-	private static final String JAVA7_COMMAND = !EmptyUtil.is(JAVA7_HOME) ? JAVA7_HOME + "/bin/java" : JAVA7_HOME_DEFAULT + "/bin/java";
-	private static final String LAUNCHER_JAR_FILE_NAME = "osgi-launcher.jar";
+    static final int OSGI_LAUNCHER_LOCAL_PORT = 9090;
+    static final String OSGI_LAUNCHER_LAUNCHER_HOME = "../osgi-launcher/launcherHome";
+    private static final String JAVA7_HOME = System.getenv("JAVA7_HOME");
+    private static final String JAVA7_HOME_DEFAULT = "/opt/java/jre1.7.0";
+    private static final String JAVA7_COMMAND = !EmptyUtil.is(JAVA7_HOME) ? JAVA7_HOME + "/bin/java" : JAVA7_HOME_DEFAULT + "/bin/java";
+    private static final String LAUNCHER_JAR_FILE_NAME = "osgi-launcher.jar";
 
-	public static void main(String[] args) throws IOException {
-		launchService(OSGI_LAUNCHER_LOCAL_PORT, true);
-	}
-	
-	public static Process launchOsgiService(int httpPort) throws IOException {
-		return launchService(httpPort, false);
-	}
-		
-	public static Process launchService(int httpPort, boolean openConsole) throws IOException {
-		assertFile("Is your JAVA7_HOME variable set correctly? Java executable", new File(JAVA7_COMMAND));
-		
-		File launcherJarHome = getAssertedFolder("../osgi-launcher/generated/", "Launcher Jar Home directory");
+    public static void main(String[] args) throws IOException {
+        launchService(OSGI_LAUNCHER_LOCAL_PORT, true);
+    }
+    
+    public static Process launchOsgiService(int httpPort) throws IOException {
+        return launchService(httpPort, false);
+    }
+        
+    public static Process launchService(int httpPort, boolean openConsole) throws IOException {
+        assertFile("Is your JAVA7_HOME variable set correctly? Java executable", new File(JAVA7_COMMAND));
+        
+        File launcherHome = getAssertedFolder(OSGI_LAUNCHER_LAUNCHER_HOME, "Launcher Home directory");
+        getAssertedFolder(launcherHome, "loadFirst", "Launcher loadFirst directory");        
+        getAssertedFolder(launcherHome, "load", "Launcher load directory");
+        getAssertedFolder(launcherHome, "loadApp", "Launcher loadApp directory");        
 
-		File launcherHome = getAssertedFolder(OSGI_LAUNCHER_LAUNCHER_HOME, "Launcher Home directory");
-		getAssertedFolder(launcherHome, "loadFirst", "Launcher loadFirst directory");		
-		getAssertedFolder(launcherHome, "load", "Launcher load directory");
-		getAssertedFolder(launcherHome, "loadApp", "Launcher loadApp directory");		
+        String [] commandElements = {
+                JAVA7_COMMAND,
+                "-jar",
+                LAUNCHER_JAR_FILE_NAME,
+                "launcherHome=" + launcherHome.getAbsolutePath(),
+                "httpPort=" + httpPort, 
+                "openConsole=" + openConsole,
+                "cleanInstallFolder=true"                
+        };
 
-		String [] commandElements = {
-				JAVA7_COMMAND,
-				"-jar",
-				LAUNCHER_JAR_FILE_NAME,
-				"launcherHome=" + launcherHome.getAbsolutePath(),
-				"httpPort=" + httpPort, 
-				"openConsole=" + openConsole,
-				"cleanInstallFolder=true"				
-		};
+        ProcessBuilder pb = new ProcessBuilder(commandElements);
+         Map<String, String> env = pb.environment();
+            env.put("PROXY_PORT", "" + httpPort);
+        pb.directory(launcherHome);
+        pb.redirectErrorStream(true);
+        Process process = pb.start();
+        copyInThread(process.getInputStream(), System.out);
+        copyInThread(process.getErrorStream(), System.err);
+        return process;
+    }
 
-		ProcessBuilder pb = new ProcessBuilder(commandElements);
-		 Map<String, String> env = pb.environment();
-			env.put("PROXY_PORT", "" + httpPort);
-		pb.directory(launcherJarHome);
-		pb.redirectErrorStream(true);
-		Process process = pb.start();
-		copyInThread(process.getInputStream(), System.out);
-		copyInThread(process.getErrorStream(), System.err);
-		return process;
-	}
+    @SuppressWarnings("unused")
+    private static File getAssertedFile(File parentFolder, String fileName, String fileDescription) {
+        File file = new File(parentFolder, fileName);
+        assertFile(fileDescription, file);
+        return file;
+    }
 
-	@SuppressWarnings("unused")
-	private static File getAssertedFile(File parentFolder, String fileName, String fileDescription) {
-		File file = new File(parentFolder, fileName);
-		assertFile(fileDescription, file);
-		return file;
-	}
+    private static void assertFile(String fileDescription, File file) {
+    }
 
-	private static void assertFile(String fileDescription, File file) {
-	}
+    private static File getAssertedFolder(String folderPath, String folderDescription) {
+        File folder = new File(folderPath);
+        assertFolder(folderDescription, folder);
+        return folder;
+    }
 
-	private static File getAssertedFolder(String folderPath, String folderDescription) {
-		File folder = new File(folderPath);
-		assertFolder(folderDescription, folder);
-		return folder;
-	}
+    private static File getAssertedFolder(File parentFolder, String folderName, String folderDescription) {
+        File folder = new File(parentFolder, folderName);
+        assertFolder(folderDescription, folder);
+        return folder;
+    }
 
-	private static File getAssertedFolder(File parentFolder, String folderName, String folderDescription) {
-		File folder = new File(parentFolder, folderName);
-		assertFolder(folderDescription, folder);
-		return folder;
-	}
+    private static void assertFolder(String folderDescription, File folder) {
+    }
 
-	private static void assertFolder(String folderDescription, File folder) {
-	}
+    @SuppressWarnings("unused")
+    private static void copyFile(File sourceFile, File destFile) throws IOException {
+        if(!destFile.exists()) {
+            destFile.createNewFile();
+        }
 
-	@SuppressWarnings("unused")
-	private static void copyFile(File sourceFile, File destFile) throws IOException {
-		if(!destFile.exists()) {
-			destFile.createNewFile();
-		}
+        FileChannel source = null;
+        FileChannel destination = null;
 
-		FileChannel source = null;
-		FileChannel destination = null;
+        try {
+            source = new FileInputStream(sourceFile).getChannel();
+            destination = new FileOutputStream(destFile).getChannel();
+            destination.transferFrom(source, 0, source.size());
+        }
+        finally {
+            if(source != null) {
+                source.close();
+            }
+            if(destination != null) {
+                destination.close();
+            }
+        }
+    }
 
-		try {
-			source = new FileInputStream(sourceFile).getChannel();
-			destination = new FileOutputStream(destFile).getChannel();
-			destination.transferFrom(source, 0, source.size());
-		}
-		finally {
-			if(source != null) {
-				source.close();
-			}
-			if(destination != null) {
-				destination.close();
-			}
-		}
-	}
-
-	private static void copyInThread(final InputStream in, final OutputStream out) {
-		new Thread() {
-			public void run() {
-				try {
-					while (true) {
-						int x = in.read();
-						if (x < 0) {
-							return;
-						}
-						if (out != null) {
-							out.write(x);
-						}
-					}
-				} catch (Exception e) {
-					throw new RuntimeException(e);
-				}
-			}
-		} .start();
-	}
+    private static void copyInThread(final InputStream in, final OutputStream out) {
+        new Thread() {
+            public void run() {
+                try {
+                    while (true) {
+                        int x = in.read();
+                        if (x < 0) {
+                            return;
+                        }
+                        if (out != null) {
+                            out.write(x);
+                        }
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        } .start();
+    }
 }

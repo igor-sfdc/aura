@@ -23,14 +23,14 @@ import aQute.bnd.annotation.component.Component;
 
 @Component (provide=HttpServiceProviderProxy.class)
 public class AuraNoopServletProxy  extends ServletProxyImpl<AuraNoopServlet> {
-	private static final String AURA_NOOP_SERVLET_ALIAS = "/";
+    private static final String AURA_NOOP_SERVLET_ALIAS = "/";
 
-	public AuraNoopServletProxy() {
-		super(AURA_NOOP_SERVLET_ALIAS);
-	}
+    public AuraNoopServletProxy() {
+        super(AURA_NOOP_SERVLET_ALIAS);
+    }
 
-	@Override
-	protected AuraNoopServlet newInstance() {
-		return new AuraNoopServlet();
-	}
+    @Override
+    protected AuraNoopServlet newInstance() {
+        return new AuraNoopServlet();
+    }
 }

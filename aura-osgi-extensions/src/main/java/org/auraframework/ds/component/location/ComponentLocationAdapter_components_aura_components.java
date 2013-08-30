@@ -30,8 +30,8 @@ import aQute.bnd.annotation.component.Component;
  */
 @Component (provide=AuraServiceProvider.class)
 public class ComponentLocationAdapter_components_aura_components extends Impl {
-	private static final String DEFAULT_COMPONENT_PACKAGE = "components_aura_components";
-	public ComponentLocationAdapter_components_aura_components() {
-		super(DEFAULT_COMPONENT_PACKAGE);
-	}
+    private static final String DEFAULT_COMPONENT_PACKAGE = "components_aura_components";
+    public ComponentLocationAdapter_components_aura_components() {
+        super(DEFAULT_COMPONENT_PACKAGE);
+    }
 }

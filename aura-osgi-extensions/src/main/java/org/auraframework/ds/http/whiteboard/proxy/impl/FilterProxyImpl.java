@@ -40,103 +40,103 @@ import org.auraframework.ds.log.AuraDSLog;
  * @param <T> real filter type
  */
 public abstract class FilterProxyImpl<T extends Filter> 
-		extends HttpServiceProviderProxyImpl<T> implements FilterProxy<T>, Comparable<Object> {
+        extends HttpServiceProviderProxyImpl<T> implements FilterProxy<T>, Comparable<Object> {
 
-	private FilterConfig filterConfig;
-	final String patternStr;
-	private final Pattern pattern;
-	private final int ranking;
-	
-	protected FilterProxyImpl(String patternStr, int ranking) {
-		this.patternStr = patternStr;
-		pattern = Pattern.compile(patternStr);
-		this.ranking = ranking;
-		AuraDSLog.get().info(getClass().getSimpleName() + " Instantiated");
-	}
-	
-	@Override
-	public void destroy() {
-		T realFilter = getRealProviderOptional();
-		if (realFilter != null) {
-			realFilter.destroy();
-		}
-		reset();
-	}
+    private FilterConfig filterConfig;
+    final String patternStr;
+    private final Pattern pattern;
+    private final int ranking;
+    
+    protected FilterProxyImpl(String patternStr, int ranking) {
+        this.patternStr = patternStr;
+        pattern = Pattern.compile(patternStr);
+        this.ranking = ranking;
+        AuraDSLog.get().info(getClass().getSimpleName() + " Instantiated");
+    }
+    
+    @Override
+    public void destroy() {
+        T realFilter = getRealProviderOptional();
+        if (realFilter != null) {
+            realFilter.destroy();
+        }
+        reset();
+    }
 
-	@Override
-	protected void init(T realFilter) throws ServletException {
-		AuraDSLog.get().info("[" + realFilter.getClass().getSimpleName() + "] " + " Istantiated for " + patternStr);
-		realFilter.init(filterConfig);
-		AuraDSLog.get().info("[" + realFilter.getClass().getSimpleName() + "] " + " Initialized for " + patternStr);
-	}
+    @Override
+    protected void init(T realFilter) throws ServletException {
+        AuraDSLog.get().info("[" + realFilter.getClass().getSimpleName() + "] " + " Istantiated for " + patternStr);
+        realFilter.init(filterConfig);
+        AuraDSLog.get().info("[" + realFilter.getClass().getSimpleName() + "] " + " Initialized for " + patternStr);
+    }
 
-	@Override
-	public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain)
-			throws IOException, ServletException {
-		HttpServletRequest httRequest = (HttpServletRequest)request;
-		if (matchesPattern(request, response, filterChain, httRequest)) {
-			T realFilter = getRealProvider();
-			logFilterRequest(httRequest, realFilter);
-			realFilter.doFilter(request, response, filterChain);
-		} else {
-			filterChain.doFilter(request, response);
-		}
-	}
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain)
+            throws IOException, ServletException {
+        HttpServletRequest httRequest = (HttpServletRequest)request;
+        if (matchesPattern(request, response, filterChain, httRequest)) {
+            T realFilter = getRealProvider();
+            logFilterRequest(httRequest, realFilter);
+            realFilter.doFilter(request, response, filterChain);
+        } else {
+            filterChain.doFilter(request, response);
+        }
+    }
 
-	private boolean matchesPattern(ServletRequest request,
-			ServletResponse response, FilterChain filterChain,
-			HttpServletRequest httRequest) throws IOException, ServletException {
-		String uri = httRequest.getRequestURI();
-		Matcher matcher = pattern.matcher(uri);
-		return matcher.matches();
-	}
+    private boolean matchesPattern(ServletRequest request,
+            ServletResponse response, FilterChain filterChain,
+            HttpServletRequest httRequest) throws IOException, ServletException {
+        String uri = httRequest.getRequestURI();
+        Matcher matcher = pattern.matcher(uri);
+        return matcher.matches();
+    }
 
-	private void logFilterRequest(HttpServletRequest httRequest, T realFilter) {
-		String qs = httRequest.getQueryString();
-		qs = qs != null && !qs.isEmpty() ? "?" + qs : "";
-    	AuraDSLog.get().info("[" + realFilter.getClass().getSimpleName() + "] " + patternStr + " : " + " doFilter() for " + httRequest.getRequestURI() + qs );
-	}
+    private void logFilterRequest(HttpServletRequest httRequest, T realFilter) {
+        String qs = httRequest.getQueryString();
+        qs = qs != null && !qs.isEmpty() ? "?" + qs : "";
+        AuraDSLog.get().info("[" + realFilter.getClass().getSimpleName() + "] " + patternStr + " : " + " doFilter() for " + httRequest.getRequestURI() + qs );
+    }
 
-	protected abstract T newInstance();
+    protected abstract T newInstance();
 
-	@Override
-	public void init(FilterConfig filterConfig) throws ServletException {
-		this.filterConfig = filterConfig;
-		setInitialized();
-	}
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+        this.filterConfig = filterConfig;
+        setInitialized();
+    }
 
-	@Override
-	public String getPattern() {
-		return patternStr;
-	}
+    @Override
+    public String getPattern() {
+        return patternStr;
+    }
 
-	@Override
-	public int getRanking() {
-		return ranking;
-	}
+    @Override
+    public int getRanking() {
+        return ranking;
+    }
 
-	@Override
-	public int compareTo(Object otherObject) {
-		if (otherObject instanceof FilterProxy) {
-			@SuppressWarnings("unchecked")
-			FilterProxy<T> otherFilterProxy = (FilterProxy<T>)otherObject;
-			int otherRanking = otherFilterProxy.getRanking();
-			return ranking < otherRanking ? 1 : ranking == otherRanking ? 0 : -1;
-		} else {
-			return 1;
-		}
-	}
-	
-	@Override
-	public String toString() {
-		StringBuilder buffer = new StringBuilder();
-		buffer
-			.append("[")
-			.append(getClass().getSimpleName())
-			.append("] pattern: ")
-			.append(patternStr)
-			.append(", ranking: ")
-			.append(ranking);
-		return buffer.toString();
-	}
+    @Override
+    public int compareTo(Object otherObject) {
+        if (otherObject instanceof FilterProxy) {
+            @SuppressWarnings("unchecked")
+            FilterProxy<T> otherFilterProxy = (FilterProxy<T>)otherObject;
+            int otherRanking = otherFilterProxy.getRanking();
+            return ranking < otherRanking ? 1 : ranking == otherRanking ? 0 : -1;
+        } else {
+            return 1;
+        }
+    }
+    
+    @Override
+    public String toString() {
+        StringBuilder buffer = new StringBuilder();
+        buffer
+            .append("[")
+            .append(getClass().getSimpleName())
+            .append("] pattern: ")
+            .append(patternStr)
+            .append(", ranking: ")
+            .append(ranking);
+        return buffer.toString();
+    }
 }

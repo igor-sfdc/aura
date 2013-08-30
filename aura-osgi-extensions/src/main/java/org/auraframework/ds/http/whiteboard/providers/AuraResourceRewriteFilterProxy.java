@@ -25,15 +25,15 @@ import aQute.bnd.annotation.component.Component;
 
 @Component (provide=HttpServiceProviderProxy.class)
 public class AuraResourceRewriteFilterProxy extends FilterProxyImpl<AuraResourceRewriteFilter> {
-	private static final int AURA_RESOURCE_REWRITE_FILTER_RANKING = 200;
-	private static final String AURA_RESOURCE_REWRITE_FILTER_PATTERN = "/l/.*";
+    private static final int AURA_RESOURCE_REWRITE_FILTER_RANKING = 200;
+    private static final String AURA_RESOURCE_REWRITE_FILTER_PATTERN = "/l/.*";
 
-	public AuraResourceRewriteFilterProxy() {
-		super(AURA_RESOURCE_REWRITE_FILTER_PATTERN, AURA_RESOURCE_REWRITE_FILTER_RANKING);
-	}
+    public AuraResourceRewriteFilterProxy() {
+        super(AURA_RESOURCE_REWRITE_FILTER_PATTERN, AURA_RESOURCE_REWRITE_FILTER_RANKING);
+    }
 
-	@Override
-	protected AuraResourceRewriteFilter newInstance() {
-		return new AuraResourceRewriteFilter();
-	}
+    @Override
+    protected AuraResourceRewriteFilter newInstance() {
+        return new AuraResourceRewriteFilter();
+    }
 }

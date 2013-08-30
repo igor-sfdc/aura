@@ -18,6 +18,6 @@ package org.auraframework.ds.http.whiteboard.proxy;
 import javax.servlet.Servlet;
 
 public interface ServletProxy <T extends Servlet> extends Servlet, HttpServiceProviderProxy {
-	
-	String getAlias();
+    
+    String getAlias();
 }

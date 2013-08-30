@@ -26,8 +26,8 @@ import org.osgi.framework.BundleContext;
  *
  */
 public interface BundleResourceLoader {
-	
-	InputStream getResource(String resourceLocation, BundleContext bundleContext) throws IOException;
-	
-	String getResourceAsString(String resourceLocation, BundleContext bundleContext) throws IOException;
+    
+    InputStream getResource(String resourceLocation, BundleContext bundleContext) throws IOException;
+    
+    String getResourceAsString(String resourceLocation, BundleContext bundleContext) throws IOException;
 }

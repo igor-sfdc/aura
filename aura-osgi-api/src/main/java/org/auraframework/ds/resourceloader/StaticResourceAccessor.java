@@ -20,11 +20,11 @@ import java.io.InputStream;
 
 public interface StaticResourceAccessor {
 
-	InputStream getResource(String resource, Class<?> clientClass) throws IOException;
+    InputStream getResource(String resource, Class<?> clientClass) throws IOException;
 
-	boolean exists(String resource, Class<?> clientClass) throws IOException;
+    boolean exists(String resource, Class<?> clientClass) throws IOException;
 
-	BundleIndex getBundleIndex(String packageName, Class<?> clientClass)
-			throws IOException;
+    BundleIndex getBundleIndex(String packageName, Class<?> clientClass)
+            throws IOException;
 
 }

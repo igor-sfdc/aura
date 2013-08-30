@@ -1,7 +1,0 @@
-<project name="Package OSGi Launcher"> 
-    <import file="build-launcher.xml"/>
-    <import file="build.xml"/>
-    <target name="package" depends="create_launcher_jar, build">
-          <echo>Packaging ${ant.project.name}</echo>
-    </target>
-</project>

@@ -31,80 +31,80 @@ import aQute.bnd.annotation.component.Reference;
  */
 @Component
 public class AuraDSLog {
-	private static AuraDSLogService INSTANCE = new NullLogService();
+    private static AuraDSLogService INSTANCE = new NullLogService();
 
-	@Reference
-	protected void setLogService(AuraDSLogService logServiceValue) {
-		INSTANCE = logServiceValue;
-		INSTANCE.info("AuraTestLogService started");
-	}
+    @Reference
+    protected void setLogService(AuraDSLogService logServiceValue) {
+        INSTANCE = logServiceValue;
+        INSTANCE.info("AuraTestLogService started");
+    }
 
-	protected void unsetLogService(AuraDSLogService logServiceValue) {
-		INSTANCE.info("AuraTestLogService terminated");
-		INSTANCE = new NullLogService();
-	}
-	
-	// FIXME: osgi DS Antipattern
-	public static AuraDSLogService get() {
-		return INSTANCE;
-	}
-	
-	/**
-	 * Provides "no-op" functionality until real implementation is loaded
-	 *
-	 *
-	 */
-	static class NullLogService implements AuraDSLogService {
-		@Override
-		public void log(int level, String message) {
-			AuraDSLogServiceImpl.handleLog(level, "[" + getClass().getSimpleName() + "] " + message, null);
-		}
+    protected void unsetLogService(AuraDSLogService logServiceValue) {
+        INSTANCE.info("AuraTestLogService terminated");
+        INSTANCE = new NullLogService();
+    }
+    
+    // FIXME: osgi DS Antipattern
+    public static AuraDSLogService get() {
+        return INSTANCE;
+    }
+    
+    /**
+     * Provides "no-op" functionality until real implementation is loaded
+     *
+     *
+     */
+    static class NullLogService implements AuraDSLogService {
+        @Override
+        public void log(int level, String message) {
+            AuraDSLogServiceImpl.handleLog(level, "[" + getClass().getSimpleName() + "] " + message, null);
+        }
 
-		@Override
-		public void log(int level, String message, Throwable exception) {
-			AuraDSLogServiceImpl.handleLog(level, "[" + getClass().getSimpleName() + "] " + message, exception);
-		}
+        @Override
+        public void log(int level, String message, Throwable exception) {
+            AuraDSLogServiceImpl.handleLog(level, "[" + getClass().getSimpleName() + "] " + message, exception);
+        }
 
-		@SuppressWarnings("rawtypes")
-		@Override
-		public void log(ServiceReference sr, int level, String message) {
-			AuraDSLogServiceImpl.handleLog(level, "[" + getClass().getSimpleName() + "] " + message, null);
-		}
+        @SuppressWarnings("rawtypes")
+        @Override
+        public void log(ServiceReference sr, int level, String message) {
+            AuraDSLogServiceImpl.handleLog(level, "[" + getClass().getSimpleName() + "] " + message, null);
+        }
 
-		@SuppressWarnings("rawtypes")
-		@Override
-		public void log(ServiceReference sr, int level, String message, Throwable exception) {
-			AuraDSLogServiceImpl.handleLog(level, "[" + getClass().getSimpleName() + "] " + message, exception);
-		}
+        @SuppressWarnings("rawtypes")
+        @Override
+        public void log(ServiceReference sr, int level, String message, Throwable exception) {
+            AuraDSLogServiceImpl.handleLog(level, "[" + getClass().getSimpleName() + "] " + message, exception);
+        }
 
-		@Override
-		public void info(String message) {
-			log(LOG_INFO, message);
-		}
+        @Override
+        public void info(String message) {
+            log(LOG_INFO, message);
+        }
 
-		@Override
-		public void warning(String message) {
-			log(LOG_WARNING, message);
-		}
+        @Override
+        public void warning(String message) {
+            log(LOG_WARNING, message);
+        }
 
-		@Override
-		public void warning(String message, Throwable th) {
-			log(LOG_WARNING, message, th);
-		}
+        @Override
+        public void warning(String message, Throwable th) {
+            log(LOG_WARNING, message, th);
+        }
 
-		@Override
-		public void debug(String message) {
-			log(LOG_DEBUG, message);
-		}
+        @Override
+        public void debug(String message) {
+            log(LOG_DEBUG, message);
+        }
 
-		@Override
-		public void error(String message) {
-			log(LOG_ERROR, message);
-		}
+        @Override
+        public void error(String message) {
+            log(LOG_ERROR, message);
+        }
 
-		@Override
-		public void error(String message, Throwable th) {
-			log(LOG_ERROR, message, th);
-		}
-	}
+        @Override
+        public void error(String message, Throwable th) {
+            log(LOG_ERROR, message, th);
+        }
+    }
 }

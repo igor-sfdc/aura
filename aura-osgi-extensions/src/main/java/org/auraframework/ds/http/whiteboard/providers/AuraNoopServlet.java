@@ -28,23 +28,23 @@ import org.auraframework.ds.resourceloader.StaticResourceAccessorFactory;
 import com.google.common.io.ByteStreams;
 
 public class AuraNoopServlet extends HttpServlet {
-	private static final long serialVersionUID = 8641565454202087224L;
+    private static final long serialVersionUID = 8641565454202087224L;
 
-	@Override
-	protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-			throws ServletException, IOException {
-		String resource = req.getRequestURI();
-		InputStream resourceStream = StaticResourceAccessorFactory.get().getResource(resource, this.getClass());
-		if (resourceStream != null) {
-			try {
-				ByteStreams.copy(resourceStream, resp.getOutputStream());
-			} finally {
-				resourceStream.close();
-			}
-		} else {
-			resp.getWriter().write("<script>");
-			resp.getWriter().write("window.location = '/auradocs/docs.app';");
-			resp.getWriter().write("</script>");
-		}
-	}	
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        String resource = req.getRequestURI();
+        InputStream resourceStream = StaticResourceAccessorFactory.get().getResource(resource, this.getClass());
+        if (resourceStream != null) {
+            try {
+                ByteStreams.copy(resourceStream, resp.getOutputStream());
+            } finally {
+                resourceStream.close();
+            }
+        } else {
+            resp.getWriter().write("<script>");
+            resp.getWriter().write("window.location = '/auradocs/docs.app';");
+            resp.getWriter().write("</script>");
+        }
+    }    
 }

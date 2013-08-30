@@ -25,68 +25,68 @@ import org.osgi.framework.FrameworkUtil;
 import com.google.common.collect.Maps;
 
 public class BundleUtil {
-	/**
-	 * Computes bundle context for the given bundle class. 
-	 * Use with caution and only if componentContext is not available
-	 * 
-	 * @param bundleClass bundle resource
-	 * @return bundle context or null if passed object reference is null
-	 */
-	public static BundleContext getBundleContext(Class<?> bundleClass) {
-    	Bundle bundle = getBundle(bundleClass);
-    	return bundle != null ? bundle.getBundleContext() : null;
-	}
+    /**
+     * Computes bundle context for the given bundle class. 
+     * Use with caution and only if componentContext is not available
+     * 
+     * @param bundleClass bundle resource
+     * @return bundle context or null if passed object reference is null
+     */
+    public static BundleContext getBundleContext(Class<?> bundleClass) {
+        Bundle bundle = getBundle(bundleClass);
+        return bundle != null ? bundle.getBundleContext() : null;
+    }
 
-	public static Bundle getBundle(Class<?> bundleClass) {
-		return bundleClass != null ? FrameworkUtil.getBundle(bundleClass) : null;
-	}
-	
-	/**
-	 * Provides for supposedly "missing" OSGi API. I guess the reason it is missing is the fact
-	 * that this logic can be quite expensive, so it should not be used more than once, or
-	 * otherwise we should provide a singled with the bundle map being cached and dynamically maintained
-	 * 
-	 * @param bundleSymbolicName symbolic bundle name
-	 * @param bundleContext bundle context
-	 * @return bundle bundle for symbolic name
-	 * @throws BundleException if bundle with requested symbolic name does not exist
-	 */
-	public static Bundle getBundleBySymbolicName(String bundleSymbolicName, BundleContext bundleContext) throws BundleException {
-		Bundle[] bundles = bundleContext.getBundles();
-		
-		Map<String, Bundle> bundleMap = Maps.newHashMap();
-		for (Bundle bundle : bundles) {
-			bundleMap.put(bundle.getSymbolicName(), bundle);
-		}
-		
-		Bundle bundle = bundleMap.get(bundleSymbolicName);
-		if (bundle == null) {
-			throw new BundleException("Bundle for symbolic name '" + bundleSymbolicName + "' not found");
-		}
-		return bundle;
-	}
-	
-	/**
-	 * A convenience method to start a bundle
-	 * 
-	 * @param bundleSymbolicName
-	 * @param bundleContext
-	 * @throws BundleException
-	 */
-	public static void startBundle(String bundleSymbolicName, BundleContext bundleContext) throws BundleException {
-		Bundle bundle = getBundleBySymbolicName(bundleSymbolicName, bundleContext);
-		bundle.start();
-	}
-	
-	/**
-	 * A convenience method to stop a bundle
-	 * 
-	 * @param bundleSymbolicName
-	 * @param bundleContext
-	 * @throws BundleException
-	 */
-	public static void stopBundle(String bundleSymbolicName, BundleContext bundleContext) throws BundleException {
-		Bundle bundle = getBundleBySymbolicName(bundleSymbolicName, bundleContext);
-		bundle.stop();
-	}
+    public static Bundle getBundle(Class<?> bundleClass) {
+        return bundleClass != null ? FrameworkUtil.getBundle(bundleClass) : null;
+    }
+    
+    /**
+     * Provides for supposedly "missing" OSGi API. I guess the reason it is missing is the fact
+     * that this logic can be quite expensive, so it should not be used more than once, or
+     * otherwise we should provide a singled with the bundle map being cached and dynamically maintained
+     * 
+     * @param bundleSymbolicName symbolic bundle name
+     * @param bundleContext bundle context
+     * @return bundle bundle for symbolic name
+     * @throws BundleException if bundle with requested symbolic name does not exist
+     */
+    public static Bundle getBundleBySymbolicName(String bundleSymbolicName, BundleContext bundleContext) throws BundleException {
+        Bundle[] bundles = bundleContext.getBundles();
+        
+        Map<String, Bundle> bundleMap = Maps.newHashMap();
+        for (Bundle bundle : bundles) {
+            bundleMap.put(bundle.getSymbolicName(), bundle);
+        }
+        
+        Bundle bundle = bundleMap.get(bundleSymbolicName);
+        if (bundle == null) {
+            throw new BundleException("Bundle for symbolic name '" + bundleSymbolicName + "' not found");
+        }
+        return bundle;
+    }
+    
+    /**
+     * A convenience method to start a bundle
+     * 
+     * @param bundleSymbolicName
+     * @param bundleContext
+     * @throws BundleException
+     */
+    public static void startBundle(String bundleSymbolicName, BundleContext bundleContext) throws BundleException {
+        Bundle bundle = getBundleBySymbolicName(bundleSymbolicName, bundleContext);
+        bundle.start();
+    }
+    
+    /**
+     * A convenience method to stop a bundle
+     * 
+     * @param bundleSymbolicName
+     * @param bundleContext
+     * @throws BundleException
+     */
+    public static void stopBundle(String bundleSymbolicName, BundleContext bundleContext) throws BundleException {
+        Bundle bundle = getBundleBySymbolicName(bundleSymbolicName, bundleContext);
+        bundle.stop();
+    }
 }

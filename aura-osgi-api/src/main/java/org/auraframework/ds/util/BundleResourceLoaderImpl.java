@@ -32,38 +32,38 @@ import com.google.common.io.CharStreams;
 @Component
 public class BundleResourceLoaderImpl implements BundleResourceLoader {
 
-	@Override
-	public InputStream getResource(String resourceLocation, BundleContext bundleContext) throws IOException {
-		return getResourceImpl(resourceLocation, bundleContext);
-	}
-	
-	@Override
-	public String getResourceAsString(String resourceLocation, BundleContext bundleContext) throws IOException {
-		return inputStreamToString(getResourceImpl(resourceLocation, bundleContext));
-	}
+    @Override
+    public InputStream getResource(String resourceLocation, BundleContext bundleContext) throws IOException {
+        return getResourceImpl(resourceLocation, bundleContext);
+    }
+    
+    @Override
+    public String getResourceAsString(String resourceLocation, BundleContext bundleContext) throws IOException {
+        return inputStreamToString(getResourceImpl(resourceLocation, bundleContext));
+    }
 
-	private static InputStream getResourceImpl(String resourceLocation, BundleContext bundleContext) throws IOException {
-		resourceLocation = resourceLocation.startsWith("/") ? resourceLocation.substring(1) : resourceLocation;
-		
-		URL resourceURL = bundleContext.getBundle().getEntry(resourceLocation);
-	    if (resourceURL != null) {
-	        return resourceURL.openStream();
-	    }
-		return null;
-	}
-	
-	private static String inputStreamToString(InputStream inputStream) throws IOException {
-		if (inputStream == null) {
-			return null;
-		}
-		
-    	try {
-			return CharStreams.toString(new InputStreamReader(inputStream, Charsets.UTF_8));
-		} catch (UnsupportedEncodingException e) {
-			// This is extremely unlikely
-			return CharStreams.toString(new InputStreamReader(inputStream));
-		} finally {
-			inputStream.close();
-		}
-	}
+    private static InputStream getResourceImpl(String resourceLocation, BundleContext bundleContext) throws IOException {
+        resourceLocation = resourceLocation.startsWith("/") ? resourceLocation.substring(1) : resourceLocation;
+        
+        URL resourceURL = bundleContext.getBundle().getEntry(resourceLocation);
+        if (resourceURL != null) {
+            return resourceURL.openStream();
+        }
+        return null;
+    }
+    
+    private static String inputStreamToString(InputStream inputStream) throws IOException {
+        if (inputStream == null) {
+            return null;
+        }
+        
+        try {
+            return CharStreams.toString(new InputStreamReader(inputStream, Charsets.UTF_8));
+        } catch (UnsupportedEncodingException e) {
+            // This is extremely unlikely
+            return CharStreams.toString(new InputStreamReader(inputStream));
+        } finally {
+            inputStream.close();
+        }
+    }
 }

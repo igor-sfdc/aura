@@ -25,15 +25,15 @@ import com.planetj.servlet.filter.compression.CompressingFilter;
 @Component (provide=HttpServiceProviderProxy.class)
 public class CompressingFilterProxy extends FilterProxyImpl<CompressingFilter> {
     private static final int COMPRESSING_FILTER_RANKING = 1000;
-	private static final String COMPRESSING_FILTER_PATTERN = "/.*";
+    private static final String COMPRESSING_FILTER_PATTERN = "/.*";
 
-	public CompressingFilterProxy() {
-		super(COMPRESSING_FILTER_PATTERN, COMPRESSING_FILTER_RANKING);
-	}
-	
-	@Override
-	protected CompressingFilter newInstance() {
-		return new CompressingFilter();
-	}
+    public CompressingFilterProxy() {
+        super(COMPRESSING_FILTER_PATTERN, COMPRESSING_FILTER_RANKING);
+    }
+    
+    @Override
+    protected CompressingFilter newInstance() {
+        return new CompressingFilter();
+    }
 }    
 

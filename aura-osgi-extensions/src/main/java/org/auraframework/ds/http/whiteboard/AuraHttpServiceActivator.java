@@ -30,47 +30,47 @@ import aQute.bnd.annotation.component.Reference;
 
 @Component
 public final class AuraHttpServiceActivator {
-	private static final String ORG_ECLIPSE_EQUINOX_HTTP_JETTY_BUNDLE = "org.eclipse.equinox.http.jetty";
+    private static final String ORG_ECLIPSE_EQUINOX_HTTP_JETTY_BUNDLE = "org.eclipse.equinox.http.jetty";
 
-	private ServiceTracker serviceTracker;
+    private ServiceTracker serviceTracker;
 
-	private HttpServiceTrackerFactory serviceTrackerFactory;	
-	@Reference
-	protected void setServiceTrackerFactory(HttpServiceTrackerFactory serviceTrackerFactory) {
-		this.serviceTrackerFactory = serviceTrackerFactory;
-	}
-	
-	protected void unsetServiceTrackerFactory(HttpServiceTrackerFactory serviceTrackerFactory) {
-		this.serviceTrackerFactory = null;
-	}
-	
-	private AuraDSLogService logService = null;	
-	@Reference
-	protected void setLogService(AuraDSLogService logServiceValue) {
-		logService = logServiceValue;
-	}
-	protected void unsetLogService(AuraDSLogService logServiceValue) {
-		logService = null;
-	}
-
-	@Activate
-    protected void activateHttpServiceProviders(ComponentContext componentContext) {
-		try {
-			BundleUtil.startBundle(ORG_ECLIPSE_EQUINOX_HTTP_JETTY_BUNDLE, componentContext.getBundleContext());
-			logService.info("Explicitly started " + ORG_ECLIPSE_EQUINOX_HTTP_JETTY_BUNDLE + " bundle.");
-		} catch (BundleException e) {
-			logService.error("Could not start " + ORG_ECLIPSE_EQUINOX_HTTP_JETTY_BUNDLE + " bundle.", e);
-		}
-
-		logService.info("[" + getClass().getSimpleName() + "] " + " Activation statrted");
-        serviceTracker = serviceTrackerFactory.getTracker(componentContext);
-		serviceTracker.open();
-		logService.info("[" + getClass().getSimpleName() + "] " + " Activation completed");
+    private HttpServiceTrackerFactory serviceTrackerFactory;    
+    @Reference
+    protected void setServiceTrackerFactory(HttpServiceTrackerFactory serviceTrackerFactory) {
+        this.serviceTrackerFactory = serviceTrackerFactory;
+    }
+    
+    protected void unsetServiceTrackerFactory(HttpServiceTrackerFactory serviceTrackerFactory) {
+        this.serviceTrackerFactory = null;
+    }
+    
+    private AuraDSLogService logService = null;    
+    @Reference
+    protected void setLogService(AuraDSLogService logServiceValue) {
+        logService = logServiceValue;
+    }
+    protected void unsetLogService(AuraDSLogService logServiceValue) {
+        logService = null;
     }
 
-	@Deactivate
-	protected void deactivateHttpServiceProviders(ComponentContext componentContext) {		
+    @Activate
+    protected void activateHttpServiceProviders(ComponentContext componentContext) {
+        try {
+            BundleUtil.startBundle(ORG_ECLIPSE_EQUINOX_HTTP_JETTY_BUNDLE, componentContext.getBundleContext());
+            logService.info("Explicitly started " + ORG_ECLIPSE_EQUINOX_HTTP_JETTY_BUNDLE + " bundle.");
+        } catch (BundleException e) {
+            logService.error("Could not start " + ORG_ECLIPSE_EQUINOX_HTTP_JETTY_BUNDLE + " bundle.", e);
+        }
+
+        logService.info("[" + getClass().getSimpleName() + "] " + " Activation statrted");
+        serviceTracker = serviceTrackerFactory.getTracker(componentContext);
+        serviceTracker.open();
+        logService.info("[" + getClass().getSimpleName() + "] " + " Activation completed");
+    }
+
+    @Deactivate
+    protected void deactivateHttpServiceProviders(ComponentContext componentContext) {        
         serviceTracker.close();
-    	logService.info("[" + getClass().getSimpleName() + "] " + " Deactivation Completed");
+        logService.info("[" + getClass().getSimpleName() + "] " + " Deactivation Completed");
     }
 }

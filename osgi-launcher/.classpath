@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="src" path="test"/>
-	<classpathentry kind="lib" path="lib/org.eclipse.osgi_3.8.1.v20120830-144521.jar" sourcepath="C:/Users/Igor/.m2/repository/org/eclipse/tycho/org.eclipse.osgi/3.8.1.v20120830-144521/org.eclipse.osgi-3.8.1.v20120830-144521-sources.jar"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="output" path="bin"/>
+    <classpathentry kind="src" path="src"/>
+    <classpathentry kind="src" path="test"/>
+    <classpathentry kind="lib" path="lib/org.eclipse.osgi_3.8.1.v20120830-144521.jar" sourcepath="C:/Users/Igor/.m2/repository/org/eclipse/tycho/org.eclipse.osgi/3.8.1.v20120830-144521/org.eclipse.osgi-3.8.1.v20120830-144521-sources.jar"/>
+    <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+    <classpathentry kind="lib" path="launcherHome/osgi-launcher.jar"/>
+    <classpathentry kind="output" path="bin"/>
 </classpath>

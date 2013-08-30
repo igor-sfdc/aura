@@ -24,15 +24,15 @@ import aQute.bnd.annotation.component.Component;
 
 @Component (provide=HttpServiceProviderProxy.class)
 public class AuraFrameworkServletProxy  extends ServletProxyImpl<AuraFrameworkServlet> {
-	private static final String AURA_FRAMEWORK_SERVLET_ALIAS = "/auraFW";
+    private static final String AURA_FRAMEWORK_SERVLET_ALIAS = "/auraFW";
 
-	public AuraFrameworkServletProxy() {
-		super(AURA_FRAMEWORK_SERVLET_ALIAS);
-	}
+    public AuraFrameworkServletProxy() {
+        super(AURA_FRAMEWORK_SERVLET_ALIAS);
+    }
 
-	@Override
-	protected AuraFrameworkServlet newInstance() {
-		return new AuraFrameworkServlet();
-	}
+    @Override
+    protected AuraFrameworkServlet newInstance() {
+        return new AuraFrameworkServlet();
+    }
 }
 
