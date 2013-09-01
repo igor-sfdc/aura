@@ -8,29 +8,79 @@
         <version>0.280-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
-    <packaging>pom</packaging>
+    <packaging>jar</packaging>
     <properties>
+        <!-- Default HTTP port -->
         <httpPort>9090</httpPort>
     </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.eclipse.tycho</groupId>
+            <artifactId>org.eclipse.osgi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>jar-in-jar</groupId>
+            <artifactId>jar-in-jar-loader</artifactId>
+            <version>1.0.0</version>
+            <scope>system</scope>
+            <!-- The source can be found here: 
+                 http://git.eclipse.org/c/jdt/eclipse.jdt.ui.git/plain/org.eclipse.jdt.ui/jar%20in%20jar%20loader/org/eclipse/jdt/internal/jarinjarloader/
+                 and the zip file itself is a part of this Elipse plugin: org.eclipse.jdt.ui_3.7.1.r371_v20110824-0800.jar
+                 (http://www.java2s.com/Code/Jar/o/Downloadorgeclipsejdtui371r371v201108240800jar.htm)
+                 -->
+            <systemPath>${project.basedir}/lib/jar-in-jar-loader.zip</systemPath>
+        </dependency>
+    </dependencies>
     <build>
         <plugins>
+            <plugin>
+                <artifactId>maven-clean-plugin</artifactId>
+                <configuration>
+                    <filesets>
+                        <fileset>
+                            <directory>launcherHome</directory>
+                            <includes>
+                                <include>osgi-launcher-start.jar</include>
+                            </includes>
+                            <followSymlinks>false</followSymlinks>
+                        </fileset>
+                        <fileset>
+                            <directory>launcherHome/configuration</directory>
+                            <includes>
+                                <include>**/*</include>
+                            </includes>
+                            <followSymlinks>false</followSymlinks>
+                        </fileset>
+                        <fileset>
+                            <directory>launcherHome/loadApp</directory>
+                            <includes>
+                                <include>aura-osgi.jar</include>
+                                <include>aura-osgi-${project.version}.jar</include>
+                            </includes>
+                            <followSymlinks>false</followSymlinks>
+                        </fileset>
+                    </filesets>
+                </configuration>
+            </plugin>
             <plugin>
                 <artifactId>maven-antrun-plugin</artifactId>
                 <executions>
                     <execution>
                         <id>build-launcher</id>
-                        <phase>prepare-package</phase>
+                        <phase>package</phase>
                         <goals>
                             <goal>run</goal>
                         </goals>
                         <configuration>
-                            <tasks>
-                                <property name="build.compiler" value="extJavac"/>
+                            <target>
+                                <property name="orgEclipseOsgi.path" value="${org.eclipse.tycho:org.eclipse.osgi:jar}" />
+                                <property name="jarInJarLoader.path" value="${jar-in-jar:jar-in-jar-loader:jar}" />
                                 <property name="compile_classpath" refid="maven.compile.classpath" />
+                                <property name="buildDir" value="${project.build.directory}" />
                                 <property name="outputDir" value="${project.build.outputDirectory}" />
                                 <property name="sourceDir" value="${project.build.sourceDirectory}" />
                                 <ant antfile="${basedir}/build.xml" target="create_launcher_jar" />
-                            </tasks>
+                            </target>
                         </configuration>
                     </execution>
                 </executions>
@@ -50,7 +100,7 @@
                                 <resource>
                                     <directory>${basedir}/../aura-osgi/target</directory>
                                     <includes>
-                                        <include>aura-osgi-${version}.jar</include>
+                                        <include>aura-osgi-${project.version}.jar</include>
                                     </includes>
                                 </resource>
                             </resources>
@@ -68,42 +118,13 @@
                                 <resource>
                                     <directory>${basedir}/target</directory>
                                     <includes>
-                                        <include>osgi-launcher.jar</include>
+                                        <include>osgi-launcher-start.jar</include>
                                     </includes>
                                 </resource>
                             </resources>
                         </configuration>
                     </execution>
                 </executions>
-            </plugin>
-            <plugin>
-                <artifactId>maven-clean-plugin</artifactId>
-                <configuration>
-                    <filesets>
-                        <fileset>
-                            <directory>launcherHome</directory>
-                            <includes>
-                                <include>osgi-launcher.jar</include>
-                            </includes>
-                            <followSymlinks>false</followSymlinks>
-                        </fileset>
-                        <fileset>
-                            <directory>launcherHome/configuration</directory>
-                            <includes>
-                                <include>**/*</include>
-                            </includes>
-                            <followSymlinks>false</followSymlinks>
-                        </fileset>
-                        <fileset>
-                            <directory>launcherHome/loadApp</directory>
-                            <includes>
-                                <include>aura-osgi.jar</include>
-                                <include>aura-osgi-${version}.jar</include>
-                            </includes>
-                            <followSymlinks>false</followSymlinks>
-                        </fileset>
-                    </filesets>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -119,10 +140,10 @@
                             <executable>java</executable>
                             <arguments>
                                 <argument>-jar</argument>
-                                <argument>${basedir}/launcherHome/osgi-launcher.jar</argument>
+                                <argument>${basedir}/launcherHome/osgi-launcher-start.jar</argument>
                                 <argument>httpPort=${httpPort}</argument>
                                 <argument>launcherHome=${basedir}/launcherHome</argument>
-                                <argument>-DstartBrowser=${startBrowser}</argument>                                
+                                <argument>-DstartBrowser=${startBrowser}</argument>
                             </arguments>
                         </configuration>
                     </execution>

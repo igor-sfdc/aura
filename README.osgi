@@ -6,37 +6,43 @@ The code is very preliminary, has not been fully tested and can be considered a 
 
 Here are the steps to generate and run Aura as an OSGi bundle:
 
-1. Download the source code
+1. Create a local clone of this repo:
 
-2. Install Bndtools and m2e into your Eclipse IDE. 
-Make sure you have the latest version of Maven
+    mkdir -p <path-to-local-repo>
+    git clone https://github.com/igor-sfdc/aura
+    cd <path-to-local-repo>/aura
 
-3. Create an empty Eclipse workspace. It is _recommended_ 
-to have your workspace in a different location from Git repo folder
-
-4. Import the existing cnf project as Import->General->Existing 
-Projects into the Workspace. Do not copy files
-
-5. Import the remaining Maven projects into Eclipse as 
-Import->Maven->Existing Maven Projects
-
-6. Right click on Maven projects in Eclipse and chose Maven->Update 
-Project then click on Select All button, then click OK. 
-Wait until Eclipse auto-build finishes
-
-7. Now you should be able to right click on Launcher class 
-and Run it As Java
-
-8. Alternatively [to steps #2-#7] you can just download the 
-source code, then build and run Aura from the command line:
+2. Build and run Aura from the command line (make sure to have the latest version of Maven):
 
     mvn install -DskipUnitTests -DstartBrowser=true -DhttpPort=9090
 
-Your default browser should automatically open up Auradocs application
+Your default browser should automatically open up Auradocs application. If
+it does not try opening it manually at http://localhost:9090/auradocs/docs.app#
+
+To use this with Eclipse:
+
+1. Install Bndtools and m2e into your Eclipse IDE. 
+
+
+2. Create an empty Eclipse workspace in a folder
+_different_ from <path-to-local-repo>/aura
+
+3. Import the existing cnf project as Import->General->Existing 
+Projects into the Workspace. Do not check "copy" checkbox
+
+4. Import the remaining Maven projects into Eclipse as 
+Import->Maven->Existing Maven Projects
+
+5. Right click on Maven projects in Eclipse and chose Maven->Update 
+Project then click on Select All button, then click OK. 
+Wait until Eclipse auto-build finishes
+
+6. Now you should be able to right-click on Launcher class 
+and Run it As Java, which should start Aura in OSGi mode
 
 
 
-Future steps planned
+Future steps planned:
 
 1. More rigorous testing and bug fixes
 2. Add ability to extend Aura framework by providing application artifacts in a separate bundle

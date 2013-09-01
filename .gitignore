@@ -1,5 +1,7 @@
 .metadata/
 target
+.project
+.classpath
 release.properties
 pom.xml.releaseBackup
 *.log
@@ -9,4 +11,3 @@ pom.xml.releaseBackup
 .idea/*
 *.iml
 version.properties
-
