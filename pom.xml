@@ -141,17 +141,17 @@
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-osgi-api</artifactId>
-                <version>0.280-SNAPSHOT</version>
+                <version>0.305-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-osgi-extensions</artifactId>
-                <version>0.280-SNAPSHOT</version>
+                <version>0.305-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-osgi</artifactId>
-                <version>0.280-SNAPSHOT</version>
+                <version>0.305-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
