@@ -18,17 +18,20 @@ package org.auraframework.impl;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.impl.integration.IntegrationImpl;
 import org.auraframework.integration.Integration;
+import org.auraframework.integration.IntegrationServiceObserver;
 import org.auraframework.service.IntegrationService;
 import org.auraframework.system.AuraContext.Mode;
+import org.auraframework.throwable.quickfix.QuickFixException;
 
 import aQute.bnd.annotation.component.Component;
 
 @Component (provide=AuraServiceProvider.class)
 public class IntegrationServiceImpl implements IntegrationService {
-
+ 
     @Override
-    public Integration createIntegration(String contextPath, Mode mode, boolean initializeAura, String userAgent) {
-        return new IntegrationImpl(contextPath, mode, initializeAura, userAgent);
+    public Integration createIntegration(String contextPath, Mode mode, boolean initializeAura, String userAgent, 
+            String application, IntegrationServiceObserver observer) throws QuickFixException {
+        return new IntegrationImpl(contextPath, mode, initializeAura, userAgent, application, observer);
     }
 
     private static final long serialVersionUID = -2650728458106333787L;

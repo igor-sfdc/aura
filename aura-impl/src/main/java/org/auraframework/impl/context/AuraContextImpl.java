@@ -258,8 +258,7 @@ public class AuraContextImpl implements AuraContext {
 
     public AuraContextImpl(Mode mode, MasterDefRegistry masterRegistry, Map<DefType, String> defaultPrefixes,
             Format format, Access access, JsonSerializationContext jsonContext,
-            Map<ValueProviderType, GlobalValueProvider> globalProviders,
-            DefDescriptor<? extends BaseComponentDef> appDesc, boolean isDebugToolEnabled) {
+            Map<ValueProviderType, GlobalValueProvider> globalProviders, boolean isDebugToolEnabled) {
         if (access == Access.AUTHENTICATED) {
             preloadedNamespaces.add("aura");
             preloadedNamespaces.add("ui");
@@ -274,7 +273,6 @@ public class AuraContextImpl implements AuraContext {
         this.access = access;
         this.jsonContext = jsonContext;
         this.globalProviders = globalProviders;
-        this.appDesc = appDesc;
         this.isDebugToolEnabled = isDebugToolEnabled;
     }
 
@@ -293,6 +291,7 @@ public class AuraContextImpl implements AuraContext {
         if (preloading) {
             return false;
         }
+        
         if (appDesc != null && !appLoaded) {
             appLoaded = true;
             try {
@@ -307,6 +306,7 @@ public class AuraContextImpl implements AuraContext {
                 }
             }
         }
+        
         if (app != null) {
             for (DependencyDef dd : app.getDependencies()) {
                 if (dd.getDependency().matchDescriptor(descriptor)) {
@@ -314,6 +314,7 @@ public class AuraContextImpl implements AuraContext {
                 }
             }
         }
+        
         return preloadedNamespaces.contains(descriptor.getNamespace());
     }
 

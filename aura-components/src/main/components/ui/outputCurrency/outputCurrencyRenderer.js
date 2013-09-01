@@ -21,7 +21,7 @@
         var currencyCode = cmp.get("v.currencyCode");
         var currencySymbol = cmp.get("v.currencySymbol") || currencyCode;
         var formatted;
-        if ($A.util.isNumber(num) || $A.util.isString(num)) {
+        if (($A.util.isNumber(num) || $A.util.isString(num)) && !$A.util.isEmpty(num)) {
             var hasFormat = !$A.util.isEmpty(f);
             if (hasFormat || currencySymbol) {
                 var nf;
@@ -32,7 +32,8 @@
                             currencyCode: currencyCode,
                             currency: currencySymbol,
                             decimalSeparator: $A.get("$Locale.decimal"),
-                            groupingSeparator: $A.get("$Locale.grouping")
+                            groupingSeparator: $A.get("$Locale.grouping"),
+                            zeroDigit: $A.get("$Locale.zero")
                         };
                     }
                     if (!hasFormat) {
@@ -65,7 +66,7 @@
             val = val.unwrap();
             currencyCode = currencyCode.unwrap();
             currencySymbol = currencySymbol.unwrap() || currencyCode;
-            if ($A.util.isNumber(val) || $A.util.isString(val)) {
+            if (($A.util.isNumber(val) || $A.util.isString(val)) && !$A.util.isEmpty(val)) {
                 var hasFormat = !$A.util.isEmpty(f);
                 if (hasFormat || currencySymbol) {
                     var nf;
@@ -76,7 +77,8 @@
                                 currencyCode: currencyCode,
                                 currency: currencySymbol,
                                 decimalSeparator: $A.get("$Locale.decimal"),
-                                groupingSeparator: $A.get("$Locale.grouping")
+                                groupingSeparator: $A.get("$Locale.grouping"),
+                                zeroDigit: $A.get("$Locale.zero")
                             };
                         }
                         if (!hasFormat) {

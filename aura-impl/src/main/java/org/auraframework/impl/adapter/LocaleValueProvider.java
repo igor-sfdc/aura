@@ -16,6 +16,7 @@
 package org.auraframework.impl.adapter;
 
 import java.text.*;
+import java.util.Currency;
 import java.util.Locale;
 import java.util.Map;
 
@@ -53,6 +54,7 @@ public class LocaleValueProvider implements GlobalValueProvider {
     public static String DECIMAL = "decimal";
     public static String GROUPING = "grouping";
     public static String CURRENCY = "currency";
+    public static String ZERO_DIGIT = "zero";
     
     public static String DEFAULT_DATE_FORMAT = "yyyy-MM-dd";
     public static String DEFAULT_DATETIME_FORMAT = "yyyy-MM-dd HH:mm";
@@ -106,6 +108,7 @@ public class LocaleValueProvider implements GlobalValueProvider {
             DecimalFormatSymbols dfs = df.getDecimalFormatSymbols();
             builder.put(DECIMAL, dfs.getDecimalSeparator());
             builder.put(GROUPING, dfs.getGroupingSeparator());
+            builder.put(ZERO_DIGIT, dfs.getZeroDigit());
         }
         
         nf = NumberFormat.getPercentInstance(al.getNumberLocale());
@@ -129,7 +132,8 @@ public class LocaleValueProvider implements GlobalValueProvider {
             DecimalFormat cf = (DecimalFormat) nf;
             builder.put(CURRENCY_FORMAT, cf.toPattern());
             DecimalFormatSymbols cdfs = cf.getDecimalFormatSymbols();
-            builder.put(CURRENCY_CODE, cdfs.getCurrency().getCurrencyCode());
+            Currency cur = cdfs.getCurrency();
+            builder.put(CURRENCY_CODE, cur != null ? cur.getCurrencyCode() : "");
             builder.put(CURRENCY, cdfs.getCurrencySymbol());
         }
 

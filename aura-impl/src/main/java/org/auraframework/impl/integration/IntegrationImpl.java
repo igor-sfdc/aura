@@ -28,6 +28,7 @@ import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.RegisterEventDef;
 import org.auraframework.instance.Action;
 import org.auraframework.integration.Integration;
+import org.auraframework.integration.IntegrationServiceObserver;
 import org.auraframework.integration.UnsupportedUserAgentException;
 import org.auraframework.service.ContextService;
 import org.auraframework.service.DefinitionService;
@@ -48,11 +49,13 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 public class IntegrationImpl implements Integration {
-    public IntegrationImpl(String contextPath, Mode mode, boolean initializeAura, String userAgent) {
+	public IntegrationImpl(String contextPath, Mode mode, boolean initializeAura, String userAgent, String application, IntegrationServiceObserver observer) throws QuickFixException {
         this.client = userAgent != null ? new Client(userAgent) : null;
         this.contextPath = contextPath;
         this.mode = mode;
         this.initializeAura = initializeAura;
+        this.application = application != null ? application : DEFAULT_APPLICATION;
+        this.observer = observer;
     }
 
     @Override
@@ -71,9 +74,9 @@ public class IntegrationImpl implements Integration {
 
         AuraContext context = getContext("is");
         try {
-            DefDescriptor<ComponentDef> descriptor = Aura.getDefinitionService().getDefDescriptor(tag,
-                    ComponentDef.class);
             DefinitionService definitionService = Aura.getDefinitionService();
+            DefDescriptor<ComponentDef> descriptor = definitionService.getDefDescriptor(tag,
+                    ComponentDef.class);
             ControllerDef componentControllerDef = definitionService.getDefDescriptor("aura://ComponentController",
                     ControllerDef.class).getDef();
 
@@ -149,7 +152,7 @@ public class IntegrationImpl implements Integration {
             releaseContext();
         }
     }
-
+    
     @Override
     @Deprecated
     public void addPreload(String namespace) {
@@ -169,15 +172,23 @@ public class IntegrationImpl implements Integration {
 
         integrationOwnsContext = !contextService.isEstablished();
 
+        DefDescriptor<ApplicationDef> applicationDescriptor = getApplicationDescriptor(application);
+
         AuraContext context;
         if (integrationOwnsContext) {
-            context = contextService.startContext(mode, Format.JSON, Access.AUTHENTICATED);
+            context = contextService.startContext(mode, Format.JSON, Access.AUTHENTICATED, applicationDescriptor);
         } else {
             context = contextService.getCurrentContext();
         }
-
-        DefDescriptor<ApplicationDef> applicationDescriptor = getApplicationDescriptor();
-        context.setApplicationDescriptor(applicationDescriptor);
+        
+        if (application != DEFAULT_APPLICATION) {
+        	// Check to insure that the app extends aura:integrationServiceApp
+            ApplicationDef def = applicationDescriptor.getDef();
+            if (!def.isInstanceOf(getApplicationDescriptor(DEFAULT_APPLICATION))) {
+        		throw new AuraRuntimeException("Application must extend aura:integrationServiceApp.");
+            }
+        }
+        
         context.setContextPath(contextPath);
         context.setFrameworkUID(Aura.getConfigAdapter().getAuraFrameworkNonce());
 
@@ -188,9 +199,10 @@ public class IntegrationImpl implements Integration {
         if (client != null) {
             context.setClient(client);
         }
-
-        // Always include ui: because we need ui:message etc for error handling
-        context.addPreload("ui");
+        
+        if (observer != null) {
+        	observer.contextEstablished(this, context);
+        }
 
         for (String preload : preloads) {
             context.addPreload(preload);
@@ -203,7 +215,7 @@ public class IntegrationImpl implements Integration {
         if (isSupportedClient(client)) {
             AuraContext context = getContext(null);
             try {
-                ApplicationDef appDef = getApplicationDescriptor().getDef();
+                ApplicationDef appDef = getApplicationDescriptor(application).getDef();
 
                 DefDescriptor<ApplicationDef> descriptor = appDef.getDescriptor();
                 context.addLoaded(descriptor, context.getDefRegistry().getUid(null, descriptor));
@@ -222,16 +234,21 @@ public class IntegrationImpl implements Integration {
         return client == null || (client.getType() != Type.IE6 && client.getType() != Type.OTHER);
     }
 
-    private static DefDescriptor<ApplicationDef> getApplicationDescriptor() {
+    private DefDescriptor<ApplicationDef> getApplicationDescriptor(String application) {
         DefinitionService definitionService = Aura.getDefinitionService();
-        return definitionService.getDefDescriptor("aura:integrationServiceApp", ApplicationDef.class);
+        return definitionService.getDefDescriptor(application, ApplicationDef.class);
     }
 
+    private static final String DEFAULT_APPLICATION = "aura:integrationServiceApp";
+    
     private final String contextPath;
     private final Mode mode;
     private final boolean initializeAura;
     private final Client client;
     private final Set<String> preloads = Sets.newHashSet();
+    private final String application;
+    private final IntegrationServiceObserver observer;
+
     private boolean hasApplicationBeenWritten;
-    private boolean integrationOwnsContext;
+    private boolean integrationOwnsContext;    
 }

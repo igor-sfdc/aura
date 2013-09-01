@@ -67,7 +67,6 @@
                 <auradocs:contentsNode text="Accessibility">
                 	<auradocs:contentsNode text="Aura and Accessibility" id="accessIntro"/>
                     <auradocs:contentsNode text="Accessibility Considerations" id="access"/>
-                    <auradocs:contentsNode text="Label" id="label"/>
                     <auradocs:contentsNode text="Images" id="img"/>
                 </auradocs:contentsNode>                
             </auradocs:contentsNode>
@@ -96,9 +95,9 @@
 
         <auradocs:contentsNode text="Creating Apps">
             <auradocs:contentsNode text="Overview" id="createApps"/>
-            <auradocs:contentsNode text="User Interface">
+            <auradocs:contentsNode text="Building the User Interface">
             	<auradocs:contentsNode text="Overview" id="overviewUI"/>
-            	<auradocs:contentsNode text="Input Components">
+            	<auradocs:contentsNode text="Using the Input Components">
 	            	<auradocs:contentsNode text="Overview" id="input"/>
 	            	<auradocs:contentsNode text="Buttons" id="uiButton"/>
 	            	<auradocs:contentsNode text="Date and Time Fields" id="uiDateTimeField"/>
@@ -111,10 +110,17 @@
 	            </auradocs:contentsNode>
 	            <auradocs:contentsNode text="Horizontal Layouts" id="uiLayout"/>
 	            <auradocs:contentsNode text="Vertical Layouts" id="uiVLayout"/>
+	            <auradocs:contentsNode text="Working with Auto-complete" id="uiAutocomplete"/>
+	             <auradocs:contentsNode text="Creating Lists" id="uiList"/>	            
             </auradocs:contentsNode>
             <auradocs:contentsNode text="Designing App UI" id="designAppLayout"/>
             <auradocs:contentsNode text="Creating App Templates" id="createAppTemplate"/>
             <auradocs:contentsNode text="Adding App Components" id="addAppComponents"/>
+            <auradocs:contentsNode text="Using Labels" >
+                <auradocs:contentsNode text="Input Component Labels" id="label"/>
+                <auradocs:contentsNode text="Setting Label Parameters" id="labelParameters"/>
+                <auradocs:contentsNode text="Customizing your Label Implementation" id="labelAdapter"/>
+            </auradocs:contentsNode>
             <auradocs:contentsNode text="Styling Apps" id="styleApp"/>
             <auradocs:contentsNode text="Handling App Navigation" >
                 <auradocs:contentsNode text="Introduction" id="urlNav" />
@@ -165,7 +171,7 @@
                     <auradocs:contentsNode text="Invoking Actions on Component Initialization" id="initHandler" />
                     <auradocs:contentsNode text="Adding and Removing Styles" id="addClass" />
                     <auradocs:contentsNode text="Dynamically Adding Event Handlers" id="dynamicHandler" />
-                    <auradocs:contentsNode text="Dynamically Constructing Labels" id="dynamicLabel" />
+                    <auradocs:contentsNode text="Dynamically Constructing Labels" id="dynamicLabel" />                    
                     <auradocs:contentsNode text="Modifying Components from External JavaScript" id="jsModCmpExternal" />
                     <auradocs:contentsNode text="Propagating an Event" id="evtRelay" />
                 </auradocs:contentsNode>
@@ -185,9 +191,13 @@
                     <auradocs:contentsNode text="Serializing Exceptions" id="serializeExceptions" />
                 </auradocs:contentsNode> 
                 <auradocs:contentsNode text="Server-Side Renderers" id="renderersServerSide" />
-                 <auradocs:contentsNode text="Server-Side Providers" id="oodProviders" />
+                <auradocs:contentsNode text="Server-Side Providers" id="oodProviders" />
                 <auradocs:contentsNode text="Aura Integration Service" id="auraIntegrationService"/>
-                <auradocs:contentsNode text="Label Adapters" id="labelAdapter"/>
+                <auradocs:contentsNode text="Adapters">
+                    <auradocs:contentsNode text="Introduction" id="adapters" />
+                    <auradocs:contentsNode text="Default Adapters" id="adaptersDefault" />
+                    <auradocs:contentsNode text="Overriding Default Adapters" id="adaptersOverride" />
+                </auradocs:contentsNode>
                 <auradocs:contentsNode text="Custom Converters" id="registerCustomConverter" />
                 <auradocs:contentsNode text="Java Cookbook">
                     <auradocs:contentsNode text="Introduction" id="javaCookbook" />
@@ -225,6 +235,10 @@
                 <auradocs:contentsNode text="Component Request Glossary" id="cycleRefs" />
             </auradocs:contentsNode>
             <auradocs:contentsNode text="Querying State and Statistics" id="queryLang"/>
+            <auradocs:contentsNode text="Advanced Debugging" >
+                <auradocs:contentsNode text="Aura Debug Tool" id="debugAuraDebugTool"/>
+                <auradocs:contentsNode text="Debugging with Network Traffic" id="debugNetworkTab"/>
+            </auradocs:contentsNode>
         </auradocs:contentsNode>
 
         <auradocs:contentsNode text="Reference" >
@@ -232,7 +246,6 @@
             <!-- need publicly available version <auradocs:contentsNode text="Javadoc" id="javadoc"/> -->
             <auradocs:contentsNode text="aura:if " id="tagIf" />
             <auradocs:contentsNode text="aura:iteration" id="tagIteration" />
-            <auradocs:contentsNode text="Setting Label Parameters" id="labelParameters"/>
             <auradocs:contentsNode text="System Tags">
                 <auradocs:contentsNode text="aura:application" id="appOverview"/>
                 <auradocs:contentsNode text="aura:dependency" id="tagDependency"/>

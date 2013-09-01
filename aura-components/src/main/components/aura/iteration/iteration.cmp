@@ -31,6 +31,7 @@
 <aura:handler name="change" value="{!v.start}" action="{!c.rangeChange}"/>
 <aura:handler name="change" value="{!v.end}" action="{!c.rangeChange}"/>
 
+
 <!--
 <aura:attribute name="page" type="Integer"/>
 <aura:attribute name="pageSize" type="Integer"/>
