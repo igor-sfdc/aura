@@ -15,12 +15,9 @@
  */
 package org.auraframework.ds.serviceloader.impl;
 
-import java.io.IOException;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.auraframework.ds.log.AuraDSLog;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
@@ -31,7 +28,6 @@ import aQute.bnd.annotation.component.Component;
 import aQute.bnd.annotation.component.Deactivate;
 import aQute.bnd.annotation.component.Reference;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -47,7 +43,7 @@ public class OSGiServiceLoaderImpl implements ServiceLoader {
     private static final ServiceMapHandler AURA_DS_SERVICE_HANDLER = new ServiceMapHandler();
     private final Map<Class<?>, Set<AuraServiceProvider>> serviceMap = Maps.newHashMap();
     private final Counters counters = new Counters();
-    private LoadingWatcher watcher = new LoadingWatcher();
+    private LoadingMonitor loadingMonitor = new LoadingMonitor();
     
     public OSGiServiceLoaderImpl() {
         AuraDSLog.get().info("[" + getClass().getSimpleName() + "] " + " Instantiated");
@@ -56,7 +52,7 @@ public class OSGiServiceLoaderImpl implements ServiceLoader {
     @Reference (multiple=true, dynamic=true)
     protected void addAuraServiceProvider(AuraServiceProvider auraServiceProvider) {
         AURA_DS_SERVICE_HANDLER.set(serviceMap, auraServiceProvider, counters);
-        watcher.update();
+        loadingMonitor.update();
     }
     
     protected void removeAuraServiceProvider(AuraServiceProvider auraServiceProvider) {
@@ -66,12 +62,12 @@ public class OSGiServiceLoaderImpl implements ServiceLoader {
     @Activate
     protected void activate() {
         AuraDSLog.get().info("Activated");
-        watcher.start();
+        loadingMonitor.startMonitoring();
     }
     
     @Deactivate
     protected void deactivateServiceImplFactory() {
-        watcher.stopBrowser();
+        loadingMonitor.stopMonitoring();
         serviceMap.clear();
         counters.reset();
         AuraDSLog.get().info("[" + getClass().getSimpleName() + "] " + " Deactivated");
@@ -190,105 +186,6 @@ public class OSGiServiceLoaderImpl implements ServiceLoader {
         public void reset() {
             added = 0;
             lookedAt = 0;
-        }
-    }
-    
-    /**
-     * Monitors the injection rate and helps determine when loading is completed 
-     * (i.e, when we do not get any new instance injected for awhile)
-     * Optionally auto-opens default browser with Auradocs URL upon completion.
-     *
-     */
-    private static class LoadingWatcher extends Thread {
-        enum BrowserExecutable {
-            WINDOWS ("cmd", "/c", "start", "chrome"),
-            LINUX("x-www-browser");
-            
-            private final List<String> commandELements = Lists.newArrayList();
-            
-            BrowserExecutable(String... elements) {
-                for (String commandElement : elements) {
-                    this.commandELements.add(commandElement);
-                }
-            }
-            
-            List<String> toList() {
-                return Lists.newArrayList(commandELements);
-            }
-            
-            public static BrowserExecutable get() {
-                String os = System.getenv("OS");
-                if (os != null && os.toLowerCase().contains("win")) {
-                    return WINDOWS;
-                } else {
-                    return LINUX;
-                }
-            }
-        }
-        
-        private static final long TIMEOUT = 1000;
-        private AtomicLong lastUpdate = new AtomicLong();
-        private Process process;
-        
-        void update() {
-            lastUpdate.set(System.currentTimeMillis());
-        }
-        
-        private boolean isReady() {
-            long currentTime = System.currentTimeMillis();
-            return currentTime - lastUpdate.get() > TIMEOUT;
-        }
-
-        @Override
-        public void run() {
-            while (!isReady()) {
-                try {
-                    Thread.sleep(TIMEOUT/10);
-                } catch (InterruptedException e) {
-                    // Ignore
-                }
-            }            
-            
-            AuraDSLog.get().info("######################################################################");
-            AuraDSLog.get().info("#                                                                    #");
-            AuraDSLog.get().info("#                     Aura application is ready                      #");
-            AuraDSLog.get().info("#                                                                    #");
-            AuraDSLog.get().info("######################################################################");
-            startBrowser();
-        }
-
-        @Override
-        public synchronized void start() {
-            lastUpdate.set(System.currentTimeMillis());
-            super.start();
-        }
-
-        private void startBrowser() {
-            // FIXME: Create relevant Java constants and share them with Launcher class
-            String port = System.getProperty("org.osgi.service.http.port", "8080");
-            port = (port == null || port.trim().isEmpty()) ? "" : ":" + port;
-            String auraDocsUrl = "http://localhost" + port + "/auradocs/docs.app#";
-            AuraDSLog.get().info("Listening on HTTP Port: " + port);
-            String startBrowser = System.getProperty("startBrowser");
-            if (startBrowser != null && "true".equals(startBrowser)) {
-                List<String> commandElements = BrowserExecutable.get().toList();
-                commandElements.add(auraDocsUrl);
-                ProcessBuilder builder = new ProcessBuilder(commandElements);
-                try {
-                    process = builder.start();
-                    AuraDSLog.get().info("Opened " + auraDocsUrl + " in your default browser");
-                } catch (IOException e) {
-                    AuraDSLog.get().error("Failed to start default browser", e);
-                }
-            } else {
-                AuraDSLog.get().info("Open this URL " + auraDocsUrl + " in your browser");
-            }
-        }
-        
-        private void stopBrowser() {
-            if (process != null) {
-                process.destroy();
-            }
         }
     }
 }

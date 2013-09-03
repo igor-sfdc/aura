@@ -13,21 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.auraframework.ds.component.location;
+package org.auraframework.ds.serviceloader.impl;
 
-import org.auraframework.adapter.ComponentLocationAdapter.Impl;
-import org.auraframework.ds.serviceloader.AuraServiceProvider;
-
-import aQute.bnd.annotation.component.Component;
-
-/**
- * Exposes Aura core components
- *
- */
-@Component (provide=AuraServiceProvider.class)
-public class ComponentLocationAdapter_components_aura_components extends Impl {
-    private static final String DEFAULT_COMPONENT_PACKAGE = "components_aura_components";
-    public ComponentLocationAdapter_components_aura_components() {
-        super(DEFAULT_COMPONENT_PACKAGE);
-    }
+public interface CompletionHandler {
+	void handleCompletion();
 }
