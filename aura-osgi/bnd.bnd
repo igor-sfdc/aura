@@ -156,6 +156,12 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.components.ui.listView,\
     org.auraframework.components.ui.menu
 Export-Package: org.auraframework.ds.serviceloader
+-runsystempackages: sun.reflect,\
+    sun.misc
+Import-Package: com.sun.xml.stream;resolution:=optional,\
+    sun.reflect;resolution:=optional,\
+    sun.misc;resolution:=optional,\
+    *
 #TODO: need to review which of these resources are really needed (or only needed for special cases)
 Include-Resource: ../aura-resources/target/src-gen/main/resources,\
     ../aura-resources/src/main/resources,\
@@ -163,5 +169,4 @@ Include-Resource: ../aura-resources/target/src-gen/main/resources,\
     ../aura/src/resources,\
     ../aura/target/resources/osgi-resources,\
     ../aura-impl/target/resources/osgi-resources,\
-    ../aura-impl-expression//target/resources/osgi-resources
-    
+    ../aura-impl-expression/target/resources/osgi-resources

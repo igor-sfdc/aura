@@ -28,6 +28,7 @@ import java.util.ServiceLoader;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
+import org.osgi.framework.Constants;
 import org.osgi.framework.launch.Framework;
 import org.osgi.framework.launch.FrameworkFactory;
 
@@ -155,7 +156,8 @@ public class Launcher {
             config.put("eclipse.ignoreApp", TRUE_STRING_VALUE);
             config.put("osgi.noShutdown", TRUE_STRING_VALUE);
             config.put("osgi.install.area", launcherHomeAbsolutePath);
-
+            config.put(Constants.FRAMEWORK_SYSTEMPACKAGES_EXTRA, "sun.reflect, sun.misc");
+            
             framework = frameworkFactory.newFramework(config);
             framework.start();
 
