@@ -77,6 +77,21 @@
                             <goal>run</goal>
                         </goals>
                     </execution>
+                    <!-- // TODO: osgi This execution should be made conditional on OSGi mode being enabled -->
+                    <execution>
+                        <id>postprocess-javascript</id>
+                        <phase>prepare-package</phase>
+                        <configuration>
+                            <target>
+                                <java classname="org.auraframework.tools.javascript.PostprocessJavascript" classpathref="maven.runtime.classpath" fork="true" failonerror="true">
+                                    <jvmarg value="-Daura.home=${basedir}/.." />
+                                </java>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
                 </executions>
             </plugin>
         </plugins>
