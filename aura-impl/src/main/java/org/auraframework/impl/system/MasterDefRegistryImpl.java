@@ -809,7 +809,8 @@ public class MasterDefRegistryImpl implements MasterDefRegistry {
         if (de != null) {
             return de.dependencies;
         }
-        return null;
+        
+        return Collections.emptySet();
     }
 
     /**
