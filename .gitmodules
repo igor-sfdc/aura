@@ -1,0 +1,3 @@
+[submodule "aura-note"]
+	path = aura-note
+	url = git://github.com/igor-sfdc/aura-note
