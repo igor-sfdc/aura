@@ -16,6 +16,7 @@
 package org.auraframework.http;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.net.URI;
@@ -37,6 +38,7 @@ import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.DefDescriptor.DefType;
 import org.auraframework.def.DependencyDef;
 import org.auraframework.def.DescriptorFilter;
+import org.auraframework.ds.resourceloader.BundleResourceAccessorFactory;
 import org.auraframework.http.RequestParam.EnumParam;
 import org.auraframework.http.RequestParam.StringParam;
 import org.auraframework.instance.Action;
@@ -64,6 +66,7 @@ import org.auraframework.util.json.JsonReader;
 import org.auraframework.util.json.JsonStreamReader.JsonParseException;
 
 import com.google.common.collect.Maps;
+import com.google.common.io.ByteStreams;
 
 // DCHASMAN TODO Move this into its own aura-heroku module
 /*
@@ -191,8 +194,15 @@ public class AuraServlet extends AuraBaseServlet {
         DefType defType;
 
         response.setCharacterEncoding(UTF_ENCODING);
+        context = Aura.getContextService().getCurrentContext();
+        // REVIEWME: osgi Added this fallback code to account for handling URL's like /aura/images/images/write_blog.png
+        // There is likely a better solution (i.e., these URL's should not have gotten here in the first place)
+        if (context == null) {
+            handleAsStaticResourceRequest(request, response);
+            return;
+        }
+        
         try {
-            context = Aura.getContextService().getCurrentContext();
             response.setContentType(getContentType(context.getFormat()));
         } catch (RuntimeException re) {
             //
@@ -270,6 +280,24 @@ public class AuraServlet extends AuraBaseServlet {
         default:
             break;
         }
+    }
+
+    private void handleAsStaticResourceRequest(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        // FIXME: osgi This code is similar to what AuraNoopServlet has and needs to be refactored (if it survives)
+        String resource = request.getRequestURI();
+        InputStream resourceStream = BundleResourceAccessorFactory.get().getResource(resource);
+        if (resourceStream != null) {
+            String mimeType = mimeTypesMap.getContentType(resource);
+            response.setContentType(mimeType);
+            try {
+                ByteStreams.copy(resourceStream, response.getOutputStream());
+            } finally {
+                resourceStream.close();
+            }
+        } else {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+        }
+        return;
     }
 
     /**

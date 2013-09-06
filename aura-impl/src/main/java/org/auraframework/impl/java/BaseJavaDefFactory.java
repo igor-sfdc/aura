@@ -21,6 +21,7 @@ import org.auraframework.builder.DefBuilder;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.Definition;
 import org.auraframework.impl.system.DefFactoryImpl;
+import org.auraframework.provider.api.ClassProviderFactory;
 import org.auraframework.system.CacheableDefFactory;
 import org.auraframework.system.DefFactory;
 import org.auraframework.system.Source;
@@ -57,14 +58,10 @@ public abstract class BaseJavaDefFactory<D extends Definition> extends DefFactor
 
     protected Class<?> getClazz(DefDescriptor<D> descriptor) {
         Class<?> clazz;
-        try {
-            if (descriptor.getNamespace() == null) {
-                clazz = Class.forName(descriptor.getName());
-            } else {
-                clazz = Class.forName(String.format("%s.%s", descriptor.getNamespace(), descriptor.getName()));
-            }
-        } catch (ClassNotFoundException e) {
-            return null;
+        if (descriptor.getNamespace() == null) {
+            clazz = ClassProviderFactory.getClazzForName(descriptor.getName());
+        } else {
+            clazz = ClassProviderFactory.getClazzForName(String.format("%s.%s", descriptor.getNamespace(), descriptor.getName()));
         }
         return clazz;
     }

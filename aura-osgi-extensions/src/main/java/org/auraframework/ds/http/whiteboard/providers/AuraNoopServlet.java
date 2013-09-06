@@ -23,7 +23,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.auraframework.ds.resourceloader.StaticResourceAccessorFactory;
+import org.auraframework.ds.resourceloader.BundleResourceAccessorFactory;
 
 import com.google.common.io.ByteStreams;
 
@@ -34,7 +34,7 @@ public class AuraNoopServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
         String resource = req.getRequestURI();
-        InputStream resourceStream = StaticResourceAccessorFactory.get().getResource(resource, this.getClass());
+        InputStream resourceStream = BundleResourceAccessorFactory.get().getResource(resource);
         if (resourceStream != null) {
             try {
                 ByteStreams.copy(resourceStream, resp.getOutputStream());

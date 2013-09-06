@@ -13,21 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.auraframework.ds.resourceloader;
+package org.auraframework.provider.api;
 
-import java.io.IOException;
-import java.io.InputStream;
 
-import org.osgi.framework.BundleContext;
-/**
- * A helper interface to provide resource loader for bundle resources
- * 
- * @author Igor
- *
- */
-public interface BundleResourceLoader {
-    
-    InputStream getResourceStream(String resourceLocation, BundleContext bundleContext) throws IOException;
-    
-    String getResourceAsString(String resourceLocation, BundleContext bundleContext) throws IOException;
+public interface ComponentPackageProvider {
+    String getComponentSourcePackage();
 }

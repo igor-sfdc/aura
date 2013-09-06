@@ -24,7 +24,7 @@ import java.util.*;
 import org.apache.log4j.Logger;
 import org.auraframework.Aura;
 import org.auraframework.adapter.ConfigAdapter;
-import org.auraframework.ds.resourceloader.StaticResourceAccessor;
+import org.auraframework.ds.resourceloader.BundleResourceAccessor;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.impl.javascript.AuraJavascriptGroup;
 import org.auraframework.impl.javascript.AuraJavascriptResourceGroup;
@@ -74,9 +74,9 @@ public class ConfigAdapterImpl implements ConfigAdapter {
     	this.resourceCacheDir = resourceCacheDir;
     }
     
-    private StaticResourceAccessor staticResourceAccessor;
+    private BundleResourceAccessor staticResourceAccessor;
     @Reference
-    protected void setStaticResourceAccessor(StaticResourceAccessor staticResourceAccessor) {
+    protected void setStaticResourceAccessor(BundleResourceAccessor staticResourceAccessor) {
     	this.staticResourceAccessor = staticResourceAccessor;
     }
     

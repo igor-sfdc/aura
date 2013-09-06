@@ -15,7 +15,7 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.def,\
     org.auraframework.def.optimizer,\
     org.auraframework.docs,\
-    org.auraframework.ds.component.location,\
+    org.auraframework.ds.component.location.providers,\
     org.auraframework.ds.http.whiteboard,\
     org.auraframework.ds.http.whiteboard.providers,\
     org.auraframework.ds.http.whiteboard.proxy,\
@@ -155,7 +155,17 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.components.ui.inputDate,\
     org.auraframework.components.ui.listView,\
     org.auraframework.components.ui.menu
-Export-Package: org.auraframework.ds.serviceloader
+Export-Package: org.auraframework.ds.serviceloader,\
+    org.auraframework.provider.api,\
+    org.auraframework.util.json,\
+    org.auraframework.system,\
+    org.auraframework.instance,\
+    org.auraframework.service,\
+    org.auraframework.util,\
+    org.auraframework.def,\
+    org.auraframework.adapter,\
+    org.auraframework,\
+    org.auraframework.ds.log
 -runsystempackages: sun.reflect,\
     sun.misc
 Import-Package: com.sun.xml.stream;resolution:=optional,\

@@ -26,7 +26,7 @@ import aQute.bnd.annotation.component.Component;
 @Component (provide=HttpServiceProviderProxy.class)
 public class AuraContextFilterProxy extends FilterProxyImpl<AuraContextFilter> {
     private static final int AURA_CONTEXT_FILTER_RANKING = 500;
-    private static final String AURA_CONTEXT_FILTER_PATTERN = "/aura.*";
+    private static final String AURA_CONTEXT_FILTER_PATTERN = "/aura$";
 
     public AuraContextFilterProxy() {
         super(AURA_CONTEXT_FILTER_PATTERN, AURA_CONTEXT_FILTER_RANKING);

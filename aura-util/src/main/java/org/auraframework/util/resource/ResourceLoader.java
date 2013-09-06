@@ -33,7 +33,7 @@ import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 
 import org.auraframework.ds.log.AuraDSLog;
-import org.auraframework.ds.resourceloader.StaticResourceAccessor;
+import org.auraframework.ds.resourceloader.BundleResourceAccessor;
 import org.auraframework.util.IOUtil;
 import org.auraframework.util.MD5InputStream;
 
@@ -83,9 +83,9 @@ public class ResourceLoader extends ClassLoader {
             .initialCapacity(CACHE_SIZE_MIN).maximumSize(CACHE_SIZE_MAX).build(new Computer());
 
     private final ResourceURLStreamHandler handler = new ResourceURLStreamHandler();
-    private final StaticResourceAccessor staticResourceAccessor;
+    private final BundleResourceAccessor bundleResourceAccessor;
 
-    public ResourceLoader(String tmpDir, boolean deleteCacheOnStart, StaticResourceAccessor staticResourceAccessor) throws MalformedURLException {
+    public ResourceLoader(String tmpDir, boolean deleteCacheOnStart, BundleResourceAccessor staticResourceAccessor) throws MalformedURLException {
         this(tmpDir, ResourceLoader.class.getClassLoader(), deleteCacheOnStart, staticResourceAccessor);
     }
 
@@ -99,13 +99,13 @@ public class ResourceLoader extends ClassLoader {
         this(tmpDir, parent, deleteCacheOnStart, null /*no staticResourceAccessor will disable OSGi capabilities*/);
     }
 
-    public ResourceLoader(String tmpDir, ClassLoader parent, boolean deleteCacheOnStart, StaticResourceAccessor staticResourceAccessor) throws MalformedURLException {
+    public ResourceLoader(String tmpDir, ClassLoader parent, boolean deleteCacheOnStart, BundleResourceAccessor staticResourceAccessor) throws MalformedURLException {
         super(parent);
         Preconditions.checkNotNull(tmpDir, "Cache dir name must be specified");
         this.cache = new File(tmpDir, RESOURCE_CACHE_NAME);
         Preconditions.checkNotNull(parent, "ClassLoader must be specified");
         this.parent = parent;
-        this.staticResourceAccessor = staticResourceAccessor;
+        this.bundleResourceAccessor = staticResourceAccessor;
 
         if (deleteCacheOnStart) {
             try {
@@ -204,7 +204,7 @@ public class ResourceLoader extends ClassLoader {
         if (resourceStream == null) {
             try {
                 // FIXME: osgi - null is possible if constructor did not get the value
-                resourceStream = staticResourceAccessor != null ? staticResourceAccessor.getResource(resource, this.getClass()) : null;
+                resourceStream = bundleResourceAccessor != null ? bundleResourceAccessor.getResource(resource, this.getClass()) : null;
             } catch (IOException e) {
                 AuraDSLog.get().error("Error loading resource " + resource, e);
                 return null;
@@ -218,8 +218,8 @@ public class ResourceLoader extends ClassLoader {
      *
      * @return staticResourceAccessor
      */
-    public StaticResourceAccessor getStaticResourceAccessor() {
-        return staticResourceAccessor;
+    public BundleResourceAccessor getStaticResourceAccessor() {
+        return bundleResourceAccessor;
     }
 
     private class Computer extends CacheLoader<String, Optional<CacheEntry>> {
@@ -227,7 +227,7 @@ public class ResourceLoader extends ClassLoader {
 
         @Override
         public Optional<CacheEntry> load(String resourcePath) throws Exception {
-            URL originalUrl = parent.getResource(resourcePath);
+            URL originalUrl = bundleResourceAccessor.getResourceUrl(parent, resourcePath);
             if (originalUrl != null) {
                 if (isFile(originalUrl)) {
                     refreshCache(resourcePath, originalUrl);
@@ -285,7 +285,7 @@ public class ResourceLoader extends ClassLoader {
 
     private boolean isBundleResource(String resourcePath) throws IOException {
         // FIXME: osgi We need to be careful with the class context (currently the assumption is this is a core bundle class)
-        return staticResourceAccessor.exists(resourcePath, this.getClass());
+        return bundleResourceAccessor.exists(resourcePath, this.getClass());
     }
 
     private byte[] cache(URL orig, File cachefile, File hashFile) throws IOException {

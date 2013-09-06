@@ -56,15 +56,15 @@ public class LoadingCompletionHandlerImpl implements CompletionHandler {
 
     private Process process;
 
-	@Override
-	public void handleCompletion() {
-		AuraDSLog.get().info("######################################################################");
+    @Override
+    public void handleCompletion() {
+        AuraDSLog.get().info("######################################################################");
         AuraDSLog.get().info("#                                                                    #");
         AuraDSLog.get().info("#                     Aura application is ready                      #");
         AuraDSLog.get().info("#                                                                    #");
         AuraDSLog.get().info("######################################################################");
-		startBrowser();
-	}
+        startBrowser();
+    }
     
     private void startBrowser() {
         // FIXME: Create relevant Java constants and share them with Launcher class
@@ -92,7 +92,7 @@ public class LoadingCompletionHandlerImpl implements CompletionHandler {
      * Not sure if we ever want to terminate browser process but here is a method for that...
      */
     @SuppressWarnings("unused")
-	private void stopBrowser() {
+    private void stopBrowser() {
         if (process != null) {
             process.destroy();
         }

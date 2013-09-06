@@ -13,12 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.auraframework.provider.api;
+package org.auraframework;
 
 import java.io.File;
 
-public interface ComponentLocationProvider {
-    File getComponentSourceDir();
-    File getJavaGeneratedSourceDir();
-    String getComponentSourcePackage();
+public class Constants {
+    public static final String AURA_COMPONENT_DIRECTORY_SYSTEM_PROPERTY = "aura.components.directory";
+    public static final String USER_HOME_SYSTEM_PROPERTY = "user.home";
+    public static final String DEFAULT_AURA_COMPONENT_DIRECTORY = System.getProperty(USER_HOME_SYSTEM_PROPERTY) + File.pathSeparator + "aura_components";
+    public static final String AURA_COMPONENT_DIRECTORY = System.getProperty(AURA_COMPONENT_DIRECTORY_SYSTEM_PROPERTY, DEFAULT_AURA_COMPONENT_DIRECTORY);
+    public static final String CORE_COMPONENT_PACKAGE = "components_aura_components";
 }

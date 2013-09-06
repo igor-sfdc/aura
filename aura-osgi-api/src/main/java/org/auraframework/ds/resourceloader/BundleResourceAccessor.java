@@ -13,12 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.auraframework.provider.api;
+package org.auraframework.ds.resourceloader;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 
+import org.osgi.framework.Bundle;
 
-public interface StaticResourceProvider {
-    InputStream getStaticResource(String resource) throws IOException;
+public interface BundleResourceAccessor {
+
+    InputStream getResource(String resource) throws IOException;
+
+    InputStream getResource(String resource, Class<?> clientClass) throws IOException;
+
+    boolean exists(String resource, Class<?> clientClass) throws IOException;
+
+    BundleIndex getBundleIndex(String packageName, Class<?> clientClass) throws IOException;
+
+    Bundle getPackageProviderBundle(String componentSourcePackage);
+
+    URL getResourceUrl(ClassLoader parent, String resourcePath) throws IOException;
+
 }

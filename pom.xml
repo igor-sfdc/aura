@@ -103,7 +103,6 @@
     </distributionManagement>
     <modules>
         <module>aura-osgi-api</module>
-        <module>aura-osgi-extensions</module>
         <module>aura-util</module>
         <module>aura</module>
         <module>aura-impl</module>
@@ -115,6 +114,7 @@
         <module>aura-integration-test</module>
         <module>auradocs-integration-test</module>
         <module>aura-archetype</module>
+        <module>aura-osgi-extensions</module>
         <module>aura-osgi</module>
         <module>osgi-launcher</module>
     </modules>

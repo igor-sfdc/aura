@@ -81,7 +81,7 @@ public class ResourceSourceLoader extends BaseSourceLoader {
                 // REVIEWME: osgi Maven has a problem generating .index file on Windows. Adding runtime index generation as a backup
                 // The stream approach either did not work or the index file was empty
                 if (indexStr == null || indexStr.indexOf(":") == -1) {
-                	indexStr = resourceLoader.getStaticResourceAccessor().getBundleIndex(basePackage, this.getClass()).toString();
+                    indexStr = resourceLoader.getStaticResourceAccessor().getBundleIndex(basePackage, this.getClass()).toString();
                 }
                 
                 if (indexStr != null && !indexStr.isEmpty()) {
@@ -108,7 +108,7 @@ public class ResourceSourceLoader extends BaseSourceLoader {
                         // REVIEWME: osgi Avoids NPE if defType is null
                         // This happens for .js resources: for some reason .js is not present in extensions EnumMap. Is this a bug?
                         if(defType == null) {
-                        	continue;
+                            continue;
                         }
 
                         DefDescriptor<?> desc = DefDescriptorImpl.getInstance(name, defType.getPrimaryInterface());
@@ -179,6 +179,8 @@ public class ResourceSourceLoader extends BaseSourceLoader {
             for (DefDescriptor<D> candidate : all) {
                 if (candidate.equals(descriptor)) {
                     ret = new ResourceSource<D>(candidate, resourcePrefix + "/" + getPath(candidate), Format.XML);
+                    // REVIEWME: osgi Supposedly we should break after the first match
+                    break;
                 }
             }
         }

@@ -27,6 +27,7 @@ import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.Definition;
 import org.auraframework.def.TestSuiteDef;
 import org.auraframework.impl.javascript.parser.handler.JavascriptHandler;
+import org.auraframework.provider.api.ClassProviderFactory;
 import org.auraframework.system.Source;
 import org.auraframework.test.mock.Answer;
 import org.auraframework.test.mock.Invocation;
@@ -265,12 +266,15 @@ public abstract class JavascriptMockHandler<D extends Definition> extends Javasc
             String className = matcher.group(1);
             Class<?> clazz = primitiveMap.get(className);
             if (clazz == null) {
-                try {
-                    // allow convenience of shorter Object alternatives
-                    clazz = Class.forName("java.lang." + className);
-                } catch (ClassNotFoundException e) {
-                    clazz = Class.forName(className);
+                // allow convenience of shorter Object alternatives
+                clazz = ClassProviderFactory.getClazzForName("java.lang." + className);
+                if (clazz == null) {
+                    clazz = ClassProviderFactory.getClazzForName(className);
                 }
+            }
+            
+            if (clazz == null) {
+                throw new ClassNotFoundException(className);
             }
             return (dims == 0) ? clazz : Array.newInstance(clazz, new int[dims]).getClass();
         }

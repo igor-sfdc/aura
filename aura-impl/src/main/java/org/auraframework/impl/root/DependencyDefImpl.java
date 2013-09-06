@@ -24,6 +24,7 @@ import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.DependencyDef;
 import org.auraframework.def.DescriptorFilter;
 import org.auraframework.def.RootDefinition;
+import org.auraframework.ds.log.AuraDSLog;
 import org.auraframework.impl.system.DefinitionImpl;
 import org.auraframework.system.MasterDefRegistry;
 import org.auraframework.throwable.quickfix.InvalidDefinitionException;
@@ -80,8 +81,9 @@ public final class DependencyDefImpl extends DefinitionImpl<DependencyDef> imple
         MasterDefRegistry mdf = Aura.getContextService().getCurrentContext().getDefRegistry();
         Set<DefDescriptor<?>> found = mdf.find(this.dependency);
         if (found.size() == 0) {
-            // TODO: QuickFix for broken dependency.
-            throw new InvalidDefinitionException("Invalid dependency " + this.dependency, getLocation());
+        	AuraDSLog.get().warning("No dependencies found for " + this.dependency.toString() + " from location " + getLocation());
+//            // TODO: QuickFix for broken dependency.
+//            throw new InvalidDefinitionException("Invalid dependency " + this.dependency, getLocation());
         }
         dependencies.addAll(found);
     }

@@ -16,9 +16,11 @@
 package org.auraframework.ds.serviceloader.impl;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.ClassUtils;
 import org.auraframework.ds.log.AuraDSLog;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.util.ServiceLoader;
@@ -116,14 +118,13 @@ public class OSGiServiceLoaderImpl implements ServiceLoader {
         void set(Map<Class<?>, Set<AuraServiceProvider>> serviceMap, AuraServiceProvider value, Counters counters) {
             counters.incrementLookedAt();
             Class<? extends Object> objectClass = value.getClass();
-            Class<?>[] implementedInterfaces = objectClass.getInterfaces();
-            // Check with superclass if no interfaces are found at this level
-            while (objectClass != Object.class && objectClass != null && implementedInterfaces.length == 0) {
-                objectClass = objectClass.getSuperclass();
-                implementedInterfaces = objectClass.getInterfaces();
-            }
+            List<Class<?>> implementedInterfaces = ClassUtils.getAllInterfaces(objectClass);
             
             for (Class<?> implementedInterface : implementedInterfaces) {
+                if (implementedInterface == AuraServiceProvider.class) {
+                    // Skip the marker interface
+                    continue;
+                }
                 addImplementation(serviceMap, implementedInterface, value, counters);
             }
             // Now add the class itself as key

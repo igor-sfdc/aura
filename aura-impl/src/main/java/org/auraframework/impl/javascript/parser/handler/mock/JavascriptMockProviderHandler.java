@@ -26,6 +26,7 @@ import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.ProviderDef;
 import org.auraframework.def.TestSuiteDef;
 import org.auraframework.instance.ComponentConfig;
+import org.auraframework.provider.api.ClassProviderFactory;
 import org.auraframework.system.Source;
 import org.auraframework.test.mock.Answer;
 import org.auraframework.test.mock.DelegatingStubHandler;
@@ -99,7 +100,10 @@ public class JavascriptMockProviderHandler extends JavascriptMockHandler<Provide
                             mockProvider = configProvider.substring("java://".length());
                         }
                         try{
-                            Class<?> providerClass = Class.forName(mockProvider);
+                            Class<?> providerClass = ClassProviderFactory.getClazzForName(mockProvider);
+                            if (providerClass == null) {
+                                throw new ClassNotFoundException(mockProvider);
+                            }
                             if(!ComponentConfigProvider.class.isAssignableFrom(providerClass)){
                                 throw new InvalidDefinitionException("Class specified as configProvider should implement ComponentConfigProvider", getLocation()); 
                             }

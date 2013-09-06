@@ -27,6 +27,7 @@ import org.auraframework.builder.DefBuilder;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.TypeDef;
 import org.auraframework.impl.java.BaseJavaDefFactory;
+import org.auraframework.provider.api.ClassProviderFactory;
 import org.auraframework.system.SourceLoader;
 import org.auraframework.throwable.AuraRuntimeException;
 import org.auraframework.util.AuraTextUtil;
@@ -60,7 +61,7 @@ public class JavaTypeDefFactory extends BaseJavaDefFactory<TypeDef> {
 
     /**
      * Return base of class name, truncating Generic qualifier, if included.
-     * Can't instantiate a class with parameters using Class.forName().
+     * Can't instantiate a class with parameters using ClassProviderFactory.getClazzForName().
      * 
      * @param className - the class name, with or without a < > clause
      * @return - the base class name minus generic parameters
@@ -75,42 +76,38 @@ public class JavaTypeDefFactory extends BaseJavaDefFactory<TypeDef> {
     @Override
     protected Class<?> getClazz(DefDescriptor<TypeDef> descriptor) {
         Class<?> clazz = null;
-        try {
-            String className = descriptor.getName();
-            if (descriptor.getNamespace() == null) {
+        String className = descriptor.getName();
+        if (descriptor.getNamespace() == null) {
 
-                if (className.equals("List") || className.startsWith("List<") || className.endsWith("[]")) {
-                    clazz = ArrayList.class;
-                } else if (className.equals("Map") || className.startsWith("Map<")) {
-                    clazz = HashMap.class;
-                } else if (className.equals("Set") || className.startsWith("Set<")) {
-                    clazz = HashSet.class;
-                } else if (className.equals("Decimal")) {
-                    clazz = BigDecimal.class;
-                } else if (className.equals("Date")) {
-                    clazz = Date.class;
-                } else if (className.equals("DateTime")) {
-                    clazz = Calendar.class;
-                } else if (className.equals("int")) {
-                    clazz = Integer.class;
-                } else if (className.equals("char")) {
-                    clazz = Character.class;
-                } else {
-                    try {
-                        clazz = Class.forName("java.lang." + AuraTextUtil.initCap(className));
-                    } catch (ClassNotFoundException e) {
-                        // ignore
-                    }
-                }
+            if (className.equals("List") || className.startsWith("List<") || className.endsWith("[]")) {
+                clazz = ArrayList.class;
+            } else if (className.equals("Map") || className.startsWith("Map<")) {
+                clazz = HashMap.class;
+            } else if (className.equals("Set") || className.startsWith("Set<")) {
+                clazz = HashSet.class;
+            } else if (className.equals("Decimal")) {
+                clazz = BigDecimal.class;
+            } else if (className.equals("Date")) {
+                clazz = Date.class;
+            } else if (className.equals("DateTime")) {
+                clazz = Calendar.class;
+            } else if (className.equals("int")) {
+                clazz = Integer.class;
+            } else if (className.equals("char")) {
+                clazz = Character.class;
             } else {
-                className = String.format("%s.%s", descriptor.getNamespace(), getRawClassName(className));
+                clazz = ClassProviderFactory.getClazzForName("java.lang." + AuraTextUtil.initCap(className));
             }
+        } else {
+            className = String.format("%s.%s", descriptor.getNamespace(), getRawClassName(className));
+        }
 
-            if (clazz == null) {
-                clazz = Class.forName(className);
-            }
-        } catch (ClassNotFoundException e) {
-            throw new AuraRuntimeException(e);
+        if (clazz == null) {
+            clazz = ClassProviderFactory.getClazzForName(className);
+        }
+        
+        if (clazz == null) {
+            throw new AuraRuntimeException("Class not found " + className);
         }
         return clazz;
     }

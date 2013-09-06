@@ -50,6 +50,10 @@ public class BundleIndex {
             locateEntries(bundle, indexBuffer, basePackage);
         }
     }
+
+    protected BundleIndex(String basePackage, Bundle providerBundle) throws IOException {
+        locateEntries(providerBundle, indexBuffer, basePackage);
+    }
     
     static String createKey(String packageName, Class<?> clientClass) {
         BundleContext bundleContext = BundleUtil.getBundleContext(clientClass);

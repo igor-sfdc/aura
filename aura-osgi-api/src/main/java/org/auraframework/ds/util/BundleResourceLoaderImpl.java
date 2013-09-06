@@ -33,7 +33,7 @@ import com.google.common.io.CharStreams;
 public class BundleResourceLoaderImpl implements BundleResourceLoader {
 
     @Override
-    public InputStream getResource(String resourceLocation, BundleContext bundleContext) throws IOException {
+    public InputStream getResourceStream(String resourceLocation, BundleContext bundleContext) throws IOException {
         return getResourceImpl(resourceLocation, bundleContext);
     }
     

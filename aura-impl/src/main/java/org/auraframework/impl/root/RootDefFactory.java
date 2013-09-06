@@ -23,6 +23,7 @@ import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.DefDescriptor.DefType;
 import org.auraframework.def.DescriptorFilter;
 import org.auraframework.def.RootDefinition;
+import org.auraframework.ds.log.AuraDSLog;
 import org.auraframework.impl.parser.ParserFactory;
 import org.auraframework.impl.source.SourceFactory;
 import org.auraframework.impl.system.DefDescriptorImpl;
@@ -64,6 +65,7 @@ public final class RootDefFactory extends DefFactoryImpl<RootDefinition> impleme
          * be null
          */
         if (source == null || (!source.exists() && descriptor.getDefType() != DefType.NAMESPACE)) {
+        	AuraDSLog.get().warning("Source for descriptor " + descriptor.toString() + " not found or does not exist");
             return null;
         }
 
