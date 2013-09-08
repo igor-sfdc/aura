@@ -79,7 +79,7 @@ public class Launcher {
                 String openConsoleStr = arg.substring(OPEN_CONSOLE_PARAM.length());
                 openConsole = Boolean.valueOf(openConsoleStr);
             } else if (arg.startsWith(SYSTEM_PROPERTY_PREFIX)) {
-                // Ignore
+                // Apply as system property
                 arg = arg.substring(SYSTEM_PROPERTY_PREFIX.length(), arg.length());
                 String[] keyValue = arg.split("=");
                 if (keyValue.length == 2) {
@@ -87,6 +87,9 @@ public class Launcher {
                         System.out.println("System property provided: " + keyValue[0] + "=" + keyValue[1]);
                         System.setProperty(keyValue[0], keyValue[1]);
                     }
+                } else if (keyValue.length == 1) {
+                    System.out.println("System property provided: " + keyValue[0] + "=");
+                    System.setProperty(keyValue[0], "");
                 } else {
                     System.out.println("Error interpreting system property '" + arg + "'");
                 }

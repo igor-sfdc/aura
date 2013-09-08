@@ -137,6 +137,7 @@
                             <goal>exec</goal>
                         </goals>
                         <configuration>
+                            <skip>${skipStartLauncher}</skip>
                             <executable>java</executable>
                             <arguments>
                                 <argument>-jar</argument>
@@ -149,6 +150,61 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>com.github.goldin</groupId>
+                <artifactId>properties-maven-plugin</artifactId>
+                <version>0.2.5</version>
+                <executions>
+                    <execution>
+                        <id>set-properties</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>set-properties</goal>
+                        </goals>
+                        <configuration>
+                            <properties>
+                                <property>
+                                    <name>skipStartLauncher</name>
+                                    <value>{{ System.getProperty("startLauncher") == null }}</value>
+                                </property>
+                                <property>
+                                    <name>startBrowser</name>
+                                    <value>{{ System.getProperty("startBrowser") != null }}</value>
+                                </property>
+                            </properties>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
+        <pluginManagement>
+            <plugins>
+                <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+                <plugin>
+                    <groupId>org.eclipse.m2e</groupId>
+                    <artifactId>lifecycle-mapping</artifactId>
+                    <version>1.0.0</version>
+                    <configuration>
+                        <lifecycleMappingMetadata>
+                            <pluginExecutions>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>com.github.goldin</groupId>
+                                        <artifactId>properties-maven-plugin</artifactId>
+                                        <versionRange>[0.2.5,)</versionRange>
+                                        <goals>
+                                            <goal>set-properties</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore />
+                                    </action>
+                                </pluginExecution>
+                            </pluginExecutions>
+                        </lifecycleMappingMetadata>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
 </project>
