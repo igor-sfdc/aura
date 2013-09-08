@@ -1,23 +1,43 @@
-This fork of Aura repo contains changes required to build and run Aura in OSGi mode.
+This fork of Aura repo contains changes required to build and run Aura framework in OSGi mode
+with ability to extend it by providing application artifacts in a separate bundle (e.g., Aura-note)
 
 The code is very preliminary, has not been fully tested and can be considered a POC only.
 
 
 
-Here are the steps to generate and run Aura as an OSGi bundle:
+Here are the steps to build and run Aura as an OSGi bundle:
 
-1. Create a local clone of this repo:
+1.  Install 3.0.5 version of Maven from http://apache.mirrors.pair.com/maven/maven-3/3.0.5/binaries/apache-maven-3.0.5-bin.tar.gz. 
+Version 3.1.0 has problems with one of the plugins being used here
+
+2. Create a local clone of this repo then build and run Aura from the command line:
 
     mkdir -p <path-to-local-repo>
     git clone https://github.com/igor-sfdc/aura
     cd <path-to-local-repo>/aura
+    mvn install -DskipUnitTests -DstartLauncher -DstartBrowser -DhttpPort=9090
 
-2. Build and run Aura from the command line (make sure to have the latest version of Maven):
+Your default browser should automatically open Auradocs application. If
+it does not manually navigating to: 
 
-    mvn install -DskipUnitTests -DstartBrowser=true -DhttpPort=9090
+    http://localhost:9090/auradocs/docs.app#
 
-Your default browser should automatically open up Auradocs application. If
-it does not try opening it manually at http://localhost:9090/auradocs/docs.app#
+3. Optionally, to include a separate Aura-note application bundle and run it alongside Aura framework replace #2 with:
+
+    mkdir -p <path-to-local-repo>
+    git clone https://github.com/igor-sfdc/aura
+    cd <path-to-local-repo>/aura
+    git submodule init
+    git submodule update
+    mvn install -DskipUnitTests
+    mvn install -f aura-note/pom.xml
+    mvn install -pl osgi-launcher -DstartLauncher -DstartBrowser -DhttpPort=9090
+
+After your default browser opens Auradocs page navigate to:
+
+    http://localhost:9090/auranote/notes.app#
+
+
 
 To use this with Eclipse:
 
@@ -39,7 +59,6 @@ Wait until Eclipse auto-build finishes
 
 6. Now you should be able to right-click on Launcher class 
 and Run it As Java, which should start Aura in OSGi mode
-
 
 
 Future steps planned:
