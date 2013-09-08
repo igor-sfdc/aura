@@ -5,26 +5,28 @@ The code is very preliminary, has not been fully tested and can be considered a 
 
 
 
-Here are the steps to build and run Aura as an OSGi bundle:
+Steps to build and run Aura as an OSGi bundle:
 
-1.  Install 3.0.5 version of Maven from http://apache.mirrors.pair.com/maven/maven-3/3.0.5/binaries/apache-maven-3.0.5-bin.tar.gz. 
-Version 3.1.0 has problems with one of the plugins being used here
+1.  Install Maven version 3.0.5 (http://apache.mirrors.pair.com/maven/maven-3/3.0.5/binaries/apache-maven-3.0.5-bin.tar.gz).
+The latest Maven version 3.1.0 has problems with one of the plugins being used here
 
-2. Create a local clone of this repo then build and run Aura from the command line:
+2. Clone this repo locally then build and run Aura from command line:
 
     mkdir -p <path-to-local-repo>
+    cd <path-to-local-repo>
     git clone https://github.com/igor-sfdc/aura
     cd <path-to-local-repo>/aura
     mvn install -DskipUnitTests -DstartLauncher -DstartBrowser -DhttpPort=9090
 
 Your default browser should automatically open Auradocs application. If
-it does not manually navigating to: 
+it does not then try manually navigating to: 
 
     http://localhost:9090/auradocs/docs.app#
 
 3. Optionally, to include a separate Aura-note application bundle and run it alongside Aura framework replace #2 with:
 
     mkdir -p <path-to-local-repo>
+    cd <path-to-local-repo>
     git clone https://github.com/igor-sfdc/aura
     cd <path-to-local-repo>/aura
     git submodule init
@@ -33,7 +35,7 @@ it does not manually navigating to:
     mvn install -f aura-note/pom.xml
     mvn install -pl osgi-launcher -DstartLauncher -DstartBrowser -DhttpPort=9090
 
-After your default browser opens Auradocs page navigate to:
+After your default browser opens Auradocs page navigate to Aura-note:
 
     http://localhost:9090/auranote/notes.app#
 
@@ -45,7 +47,7 @@ To use this with Eclipse:
 
 
 2. Create an empty Eclipse workspace in a folder
-_different_ from <path-to-local-repo>/aura
+different from <path-to-local-repo>/aura
 
 3. Import the existing cnf project as Import->General->Existing 
 Projects into the Workspace. Do not check "copy" checkbox
@@ -53,15 +55,12 @@ Projects into the Workspace. Do not check "copy" checkbox
 4. Import the remaining Maven projects into Eclipse as 
 Import->Maven->Existing Maven Projects
 
-5. Right click on Maven projects in Eclipse and chose Maven->Update 
-Project then click on Select All button, then click OK. 
-Wait until Eclipse auto-build finishes
-
-6. Now you should be able to right-click on Launcher class 
-and Run it As Java, which should start Aura in OSGi mode
+5. Now you should be able to right-click on Launcher class 
+and Run it As Java, which should start Aura in OSGi mode. If you get
+any errors run manual build steps again.
 
 
 Future steps planned:
 
 1. More rigorous testing and bug fixes
-2. Add ability to extend Aura framework by providing application artifacts in a separate bundle
+
