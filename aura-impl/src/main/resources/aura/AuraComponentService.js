@@ -237,7 +237,7 @@ var AuraComponentService = function(){
             //
             for (key in attributes) {
                 var value = attributes[key];
-                if (value.hasOwnProperty("value")) {
+                if (value && value.hasOwnProperty("value")) {
                     value = value["value"];
                 }
                 // no def or component here, because we don't have one.
