@@ -15,9 +15,11 @@
  */
 package org.auraframework.ds.resourceloader;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.Set;
 
 import org.osgi.framework.Bundle;
 
@@ -34,5 +36,7 @@ public interface BundleResourceAccessor {
     Bundle getPackageProviderBundle(String componentSourcePackage);
 
     URL getResourceUrl(ClassLoader parent, String resourcePath) throws IOException;
+
+	Set<File> getComponentLocations();
 
 }

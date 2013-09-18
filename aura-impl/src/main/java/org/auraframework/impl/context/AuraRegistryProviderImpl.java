@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
-
 import org.auraframework.adapter.ComponentLocationAdapter;
 import org.auraframework.adapter.RegistryAdapter;
 import org.auraframework.def.ControllerDef;
@@ -35,6 +34,8 @@ import org.auraframework.def.ProviderDef;
 import org.auraframework.def.RendererDef;
 import org.auraframework.def.SecurityProviderDef;
 import org.auraframework.def.TestSuiteDef;
+import org.auraframework.ds.log.AuraDSLog;
+import org.auraframework.ds.resourceloader.BundleResourceAccessorFactory;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.impl.compound.controller.CompoundControllerDefFactory;
 import org.auraframework.impl.controller.AuraStaticControllerDefRegistry;
@@ -183,6 +184,14 @@ public class AuraRegistryProviderImpl implements RegistryAdapter {
 
     protected Collection<ComponentLocationAdapter> getAllComponentLocationAdapters() {
         Collection<ComponentLocationAdapter> ret = ServiceLocator.get().getAll(ComponentLocationAdapter.class);
+        for (File componentLocation : BundleResourceAccessorFactory.get().getComponentLocations()) {
+        	if (componentLocation.exists() && componentLocation.isDirectory()) {
+            	ret.add(new ComponentLocationAdapter.Impl(componentLocation));
+        	} else {
+        		AuraDSLog.get().warning("Component location " + componentLocation.getPath() + " does not exist or is not a directory");
+        	}
+        }
+        
         String prop = System.getProperty("aura.componentDir");
         if (prop != null) {
             ret = Lists.newArrayList(ret);

@@ -15,6 +15,7 @@
  */
 package org.auraframework.ds.resourceloader;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -22,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.auraframework.ds.util.BundleUtil;
+import org.auraframework.provider.api.ComponentLocationProvider;
 import org.auraframework.provider.api.ComponentPackageProvider;
 import org.auraframework.provider.api.BundleResourceProvider;
 import org.osgi.framework.Bundle;
@@ -41,6 +43,16 @@ public class BundleResourceAccessorFactory implements BundleResourceAccessor {
     private static BundleResourceAccessor INSTANCE;
     private final Map<String, BundleIndex> bundleIndexMap = Maps.newHashMap();
     private Map<String, Bundle> packageProviders = Maps.newHashMap();
+    private Set<File> componentLocationProviders = Sets.newHashSet();
+    
+    @Reference (multiple=true, dynamic=true, optional=true)
+    protected void addLocationProvider(ComponentLocationProvider componentLocationProvider) {
+    	componentLocationProviders.add(componentLocationProvider.getComponentLocation());
+    }
+    
+    protected void removeLocationProvider(ComponentLocationProvider componentLocationProvider) {
+    	componentLocationProviders.remove(componentLocationProvider.getComponentLocation());
+    }
     
     @Reference (multiple=true, dynamic=true, optional=true)
     protected void addComponentPackageProvider(ComponentPackageProvider componentPackageProvider) {
@@ -131,6 +143,12 @@ public class BundleResourceAccessorFactory implements BundleResourceAccessor {
         return packageProviders.get(componentSourcePackage);
     }
 
+    @Override
+    public Set<File> getComponentLocations() {
+    	// TODO: osgi needs to be immutable set
+    	return componentLocationProviders;
+    }
+    
     private InputStream getResourceStream(String resource, BundleContext bundleContext) throws IOException {
         InputStream resourceStream = getLocalBundleResourceStream(resource, bundleContext);
         resourceStream = resourceStream != null ? resourceStream : getProvidedResourceStream(resource);
