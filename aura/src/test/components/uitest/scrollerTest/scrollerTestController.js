@@ -22,16 +22,26 @@
     
     scrollToTop : function(cmp, event, helper) {
     	var scrollEvt = cmp.find("scrollToYTest").getEvent("scrollTo");  	
-    	helper.handleScrollTo(scrollEvt, "top", 500);
+    	helper.handleScrollTo(scrollEvt, "top", 0);
     },
     
     scrollToBottom : function(cmp, event, helper) {
     	var scrollEvt = cmp.find("scrollToYTest").getEvent("scrollTo");
-    	helper.handleScrollTo(scrollEvt, "bottom", 500);
+    	helper.handleScrollTo(scrollEvt, "bottom", 0);
     },
     
     scrollDown : function(cmp, event, helper) {
     	var scrollEvt = cmp.find("scrollToYTest").getEvent("scrollBy");
-    	helper.handleScrollBy(scrollEvt, 15, 15, 500);
+    	helper.handleScrollBy(scrollEvt, 15, 15, 0);
+    },
+    
+    scrollUp : function(cmp, event, helper) {
+    	var scrollEvt = cmp.find("scrollToYTest").getEvent("scrollBy");
+    	helper.handleScrollBy(scrollEvt, -15, -15, 0);
+    },
+    
+    handleScrollToBottomUpdate : function (cmp) {
+    	var count = cmp.get("v.scrollToBottomCount") + 1;
+    	cmp.getAttributes().setValue("scrollToBottomCount", count);
     }
 })

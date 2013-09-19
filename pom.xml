@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.auraframework</groupId>
     <artifactId>aura-framework</artifactId>
-    <version>0.305-SNAPSHOT</version>
+    <version>0.334-SNAPSHOT</version>
     <packaging>pom</packaging>
     <organization>
         <url>http://www.auraframework.org</url>
@@ -40,7 +40,7 @@
         <skipUnitTests>false</skipUnitTests>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <createChecksum>true</createChecksum>
-        <selenium.version>2.33.0</selenium.version>
+        <selenium.version>2.35.0</selenium.version>
     </properties>
     <repositories>      
         <repository>
@@ -55,9 +55,8 @@
         <repository>
 	      <id>phloc.com</id>
 	      <url>http://repo.phloc.com/maven2</url>
-	    </repository>
-	    
-	    <repository>
+        </repository>
+        <repository>
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>
@@ -141,88 +140,88 @@
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-osgi-api</artifactId>
-                <version>0.305-SNAPSHOT</version>
+                <version>0.334-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-osgi-extensions</artifactId>
-                <version>0.305-SNAPSHOT</version>
+                <version>0.334-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-osgi</artifactId>
-                <version>0.305-SNAPSHOT</version>
+                <version>0.334-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura</artifactId>
-                <version>0.305-SNAPSHOT</version>
+                <version>0.334-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura</artifactId>
-                <version>0.305-SNAPSHOT</version>
+                <version>0.334-SNAPSHOT</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-util</artifactId>
-                <version>0.305-SNAPSHOT</version>
+                <version>0.334-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-util</artifactId>
-                <version>0.305-SNAPSHOT</version>
+                <version>0.334-SNAPSHOT</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-impl</artifactId>
-                <version>0.305-SNAPSHOT</version>
+                <version>0.334-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-impl</artifactId>
-                <version>0.305-SNAPSHOT</version>
+                <version>0.334-SNAPSHOT</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-impl-expression</artifactId>
-                <version>0.305-SNAPSHOT</version>
+                <version>0.334-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-impl-expression</artifactId>
-                <version>0.305-SNAPSHOT</version>
+                <version>0.334-SNAPSHOT</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-components</artifactId>
-                <version>0.305-SNAPSHOT</version>
+                <version>0.334-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-tools</artifactId>
-                <version>0.305-SNAPSHOT</version>
+                <version>0.334-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-resources</artifactId>
-                <version>0.305-SNAPSHOT</version>
+                <version>0.334-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-integration-test</artifactId>
                 <type>test-jar</type>
-                <version>0.305-SNAPSHOT</version>
+                <version>0.334-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>auradocs-integration-test</artifactId>
                 <type>test-jar</type>
-                <version>0.305-SNAPSHOT</version>
+                <version>0.334-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>junit</groupId>
@@ -677,7 +676,8 @@
                                         </fileset>
                                     </path>
                                     <pathconvert property="definitionList" refid="definitions" pathsep=",">
-                                        <regexpmapper from=".*/([^/]*)/[^/]*/(.*)" to="\1:\2" />
+                                        <!-- Allow either slashes (Windows actually uses both) -->
+                                        <regexpmapper from=".*[/\\]([^/\\]*)[/\\][^/\\]*[/\\](.*)" to="\1:\2" />
                                     </pathconvert>
                                     <echo file="target/src-gen/test/components/.index">${definitionList}</echo>
                                 </target>
@@ -703,7 +703,8 @@
                                         </fileset>
                                     </path>
                                     <pathconvert property="definitionList" refid="definitions" pathsep=",">
-                                        <regexpmapper from=".*/([^/]*)/[^/]*/(.*)" to="\1:\2" />
+                                        <!-- Allow either slashes (Windows actually uses both) -->
+                                        <regexpmapper from=".*[/\\]([^/\\]*)[/\\][^/\\]*[/\\](.*)" to="\1:\2" />
                                     </pathconvert>
                                     <echo file="target/src-gen/main/components/.index">${definitionList}</echo>
                                 </target>

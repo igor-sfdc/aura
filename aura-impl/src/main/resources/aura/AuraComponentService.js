@@ -186,7 +186,7 @@ var AuraComponentService = function(){
          * @public
          * @memberOf AuraComponentService
          */
-        newComponentAsync: function(callbackScope, callback, config, attributeValueProvider, localCreation, doForce){
+        newComponentAsync: function(callbackScope, callback, config, attributeValueProvider, localCreation, doForce, forceServer){
             $A.assert(config, "config is required in ComponentService.newComponentAsync(config)");
             $A.assert($A.util.isFunction(callback),"newComponentAsync requires a function as the callback parameter");
 
@@ -206,7 +206,7 @@ var AuraComponentService = function(){
                 "descriptor": desc
             };
 
-            if ( !def || (def && def.hasRemoteDependencies()) ) {
+            if ( !def || (def && def.hasRemoteDependencies()) || forceServer ) {
                 that.requestComponent(callbackScope, callback, config, attributeValueProvider);
             } else {
                 var newComp = that.newComponentDeprecated(config, attributeValueProvider, localCreation, doForce);
@@ -227,33 +227,20 @@ var AuraComponentService = function(){
                     (config["attributes"]["values"] ? config["attributes"]["values"] : config["attributes"])
                     : null;
             var atts = {};
-            var key;
-
-            var compServ = $A.services.component;
 
             //
             // Note to self, these attributes are _not_ Aura Values. They are instead either
             // a literal string or a (generic object) map.
             //
-            for (key in attributes) {
+            for (var key in attributes) {
                 var value = attributes[key];
                 if (value && value.hasOwnProperty("value")) {
                     value = value["value"];
                 }
                 // no def or component here, because we don't have one.
                 var auraValue = valueFactory.create(value);
-                if(!auraValue.isExpression()){
-                    atts[key] = auraValue.unwrap();
-                } else {
-                    var resolved = $A.expressionService.get(avp, auraValue);
-                    if (resolved) {
-                        // If we got a value, use that.
-                        atts[key] = resolved;
-                    } else {
-                        // try to give the server a version it can use.
-                        atts[key] = auraValue.getValue();
-                    }
-                }
+                    atts[key] = this.computeValue(auraValue, avp);
+
             }
 
             action.setCallback(this, function(a){
@@ -268,8 +255,7 @@ var AuraComponentService = function(){
                         merging = merging["values"];
                     }
                     for (var mkey in attributes) {
-                        var value = attributes[mkey];
-                        merging[mkey] = value;
+                        merging[mkey] = attributes[mkey];
                     }
                     returnedConfig["localId"] = config["localId"];
 
@@ -293,6 +279,60 @@ var AuraComponentService = function(){
                 "attributes" : atts
             });
             $A.enqueueAction(action);
+        },
+
+        /**
+         * Evaluates value object into their literal values. Typically used to pass configs to server.
+         * Iterates through MapValue. Recursion for nested value objects.
+         *
+         * @param valueObj Value Object
+         * @param valueProvider value provider
+         * @returns {*}
+         */
+        computeValue: function(valueObj, valueProvider, raw) {
+            // in case not value object, return
+            if (!$A.util.isValue(valueObj)) {
+                return valueObj;
+            }
+
+            if ($A.util.instanceOf(valueObj, MapValue)) {
+
+                var ret = {};
+                // handle attributes with value provider in attributes
+                if (valueObj.contains("valueProvider") && valueObj.contains("values")) {
+                    valueProvider = valueObj.getValue("valueProvider");
+                }
+                valueObj.each(function(k,v){
+                    // ignore valueProvider
+                    if (k !== "valueProvider") {
+                        ret[k] = $A.componentService.computeValue(v, valueProvider, raw);
+                    }
+                });
+                return ret;
+
+            } else if ($A.util.instanceOf(valueObj, ArrayValue)) {
+
+                var arr = [];
+                valueObj.each(function(item) {
+                    arr.push($A.componentService.computeValue(item, valueProvider, raw));
+                });
+                return arr;
+
+            } else {
+
+                // handle PassthroughValue in scenarios when they aren't used in iteration components
+                if ("isExpression" in valueObj) {
+                    if (!valueObj.isExpression()) {
+                        return valueObj.unwrap();
+                    } else {
+                        var val = $A.expressionService.get(valueProvider, valueObj);
+                        // if raw return raw instead of "{!blah}"
+                        return raw ? val : val || valueObj.getValue();
+                    }
+                } else {
+                    return null;
+                }
+            }
         },
 
         /**
@@ -345,7 +385,7 @@ var AuraComponentService = function(){
 
         /**
          * Gets the component definition from the registry.
-         * @param {Object} config
+         * @param {Object} config The descriptor (<code>markup://ui:scroller</code>) or other component attributes that are provided during its initialization.
          * @param {Object} noInit
          * @returns {ComponentDef}  The metadata of the component
          * @memberOf AuraComponentService
@@ -424,8 +464,8 @@ var AuraComponentService = function(){
          * Removes the index of the component.
          * @private
          */
-        deIndex: function(component){
-            delete priv.indexes.globalId[component.getGlobalId()];
+        deIndex: function(globalId){ 
+            delete priv.indexes.globalId[globalId];
         },
 
         /**

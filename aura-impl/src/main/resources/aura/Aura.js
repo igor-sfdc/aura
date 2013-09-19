@@ -57,13 +57,13 @@ var clientService;
 // #include aura.util.Transport
 // #include aura.util.Style
 // #include aura.util.Bitset
-//#include aura.util.NumberFormat
+// #include aura.util.NumberFormat
 // #include aura.context.AuraContext
 // #include aura.value.BaseValue
 // #include aura.value.AttributeValue
+// #include aura.value.SimpleValue
 // #include aura.value.MapValue
 // #include aura.value.ArrayValue
-// #include aura.value.SimpleValue
 // #include aura.value.PropertyReferenceValue
 // #include aura.value.FunctionCallValue
 // #include aura.value.ActionReferenceValue
@@ -71,6 +71,7 @@ var clientService;
 // #include aura.model.ModelDef
 // #include aura.component.ComponentDefRegistry
 // #include aura.component.Component
+// #include aura.component.InvalidComponent
 // #include aura.renderer.RendererDef
 // #include aura.provider.ProviderDef
 // #include aura.helper.HelperDefRegistry
@@ -697,12 +698,15 @@ $A.ns.Aura.prototype.run = function(func, name) {
 
     $A.services.client.pushStack(name);
     try {
+    	//console.log("$A.run()", name);
+    	
         return func();
     } catch (e) {
         $A.error("Error while running "+name, e);
     } finally {
         $A.services.client.popStack(name);
     }
+    
     return undefined;
 };
 
@@ -1018,6 +1022,23 @@ $A.ns.Aura.prototype.startTransaction = (function() {
 $A.ns.Aura.prototype.endTransaction = (function() {
     if (window["Perf"]) {
         return window["Perf"]["endTransaction"];
+    } else {
+        return $A.ns.Aura.prototype.mark;
+    }
+})();
+
+
+
+/**
+ * Map through to Perf.hasActiveTransaction if Perf is loaded, otherwise a no-op. This will be the same no-op as
+ * $A.ns.Aura.prototype.mark, since both are no-ops when Jiffy is missing; we only need one noop object.
+ *
+ * @public
+ * @function
+ */
+$A.ns.Aura.prototype.hasActiveTransaction = (function() {
+    if (window["Perf"]) {
+        return window["Perf"]["hasActiveTransaction"];
     } else {
         return $A.ns.Aura.prototype.mark;
     }

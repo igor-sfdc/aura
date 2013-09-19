@@ -63,7 +63,8 @@ public class IterationTest extends AuraImplTestCase {
         try {
             getIterationComponent(source, null);
             fail("Expected MissingRequiredAttributeException");
-        } catch (MissingRequiredAttributeException e) {
+        } catch (Exception e) {
+            checkExceptionContains(e, MissingRequiredAttributeException.class, "is missing required attribute 'items'");
         }
     }
 
@@ -90,7 +91,8 @@ public class IterationTest extends AuraImplTestCase {
         try {
             getIterationComponent(source, attributes);
             fail("Expected MissingRequiredAttributeException");
-        } catch (MissingRequiredAttributeException e) {
+        } catch (Exception e) {
+            checkExceptionContains(e, MissingRequiredAttributeException.class, "is missing required attribute 'var'");
         }
     }
 
@@ -103,7 +105,7 @@ public class IterationTest extends AuraImplTestCase {
     }
 
     @Ignore("W-1300971")
-    public void testVarInvalid() throws Exception {
+    public void _testVarInvalid() throws Exception {
         String source = "<aura:iteration items='{!v.items}' var='99bottles'>{!99bottles}</aura:iteration>";
         Map<String, Object> attributes = Maps.newHashMap();
         attributes.put("items", Lists.newArrayList("q", "r", "s"));
@@ -112,7 +114,7 @@ public class IterationTest extends AuraImplTestCase {
     }
 
     @Ignore("W-1300971")
-    public void testVarWithPeriod() throws Exception {
+    public void _testVarWithPeriod() throws Exception {
         String source = "<aura:iteration items='{!v.items}' var='my.prop'>{!my.prop}</aura:iteration>";
         Map<String, Object> attributes = Maps.newHashMap();
         attributes.put("items", Lists.newArrayList("q", "r", "s"));
@@ -136,7 +138,8 @@ public class IterationTest extends AuraImplTestCase {
         try {
             getRenderedBaseComponent(iteration);
             fail("Expected a AuraExecutionException");
-        } catch (AuraExecutionException e) {
+        } catch (Exception e) {
+            checkExceptionContains(e, AuraExecutionException.class, "no such property: other");
         }
     }
 
@@ -149,7 +152,7 @@ public class IterationTest extends AuraImplTestCase {
     }
 
     @Ignore("W-1300971")
-    public void testIndexVarInvalid() throws Exception {
+    public void _testIndexVarInvalid() throws Exception {
         String source = "<aura:iteration items='{!v.items}' var='x' indexVar='99bottles'>{!99bottles}</aura:iteration>";
         Map<String, Object> attributes = Maps.newHashMap();
         attributes.put("items", Lists.newArrayList("q", "r", "s"));
@@ -158,7 +161,7 @@ public class IterationTest extends AuraImplTestCase {
     }
 
     @Ignore("W-1300971")
-    public void testIndexVarWithPeriod() throws Exception {
+    public void _testIndexVarWithPeriod() throws Exception {
         String source = "<aura:iteration items='{!v.items}' var='x' indexVar='my.prop'>{!my.prop}</aura:iteration>";
         Map<String, Object> attributes = Maps.newHashMap();
         attributes.put("items", Lists.newArrayList("q", "r", "s"));
@@ -182,7 +185,8 @@ public class IterationTest extends AuraImplTestCase {
         try {
             getRenderedBaseComponent(iteration);
             fail("Expected a AuraExecutionException");
-        } catch (AuraExecutionException e) {
+        } catch (Exception e) {
+            checkExceptionContains(e, AuraExecutionException.class, "no such property: other");
         }
     }
 
@@ -217,7 +221,8 @@ public class IterationTest extends AuraImplTestCase {
         try {
             getIterationComponent(source, attributes);
             fail("Expected a InvalidExpressionException");
-        } catch (InvalidExpressionException e) {
+        } catch (Exception e) {
+            checkExceptionFull(e, InvalidExpressionException.class, "For input string: \"one\"");
         }
     }
 
@@ -253,7 +258,8 @@ public class IterationTest extends AuraImplTestCase {
         try {
             getIterationComponent(source, attributes);
             fail("Expected a InvalidExpressionException");
-        } catch (InvalidExpressionException e) {
+        } catch (Exception e) {
+            checkExceptionFull(e, InvalidExpressionException.class, "For input string: \"one\"");
         }
     }
 
@@ -293,8 +299,7 @@ public class IterationTest extends AuraImplTestCase {
     }
 
     /**
-     * Verify that marking iteration component as lazy won't skip required
-     * attribute validation.
+     * Verify that marking iteration component as lazy won't skip required attribute validation.
      * 
      * @throws Exception
      */
@@ -305,11 +310,9 @@ public class IterationTest extends AuraImplTestCase {
         try {
             Aura.getInstanceService().getInstance(desc);
             fail("Should not be able to pass non simple attribute values to lazy loading facets.");
-        } catch (InvalidReferenceException e) {
-            assertNotNull(e
-                    .getMessage()
-                    .contains(
-                            "Lazy Component References can only have attributes of simple types passed in (body is not simple)"));
+        } catch (Exception e) {
+            checkExceptionFull(e, InvalidReferenceException.class,
+                    "Lazy Component References can only have attributes of simple types passed in (body is not simple)");
         }
     }
 }

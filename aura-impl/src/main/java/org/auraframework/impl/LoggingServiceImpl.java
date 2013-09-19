@@ -131,6 +131,10 @@ public class LoggingServiceImpl implements LoggingService {
         if (lc != null) {
             lc.setValue(key, value);
         }
+        else {
+        	System.out.println("Logging context is null when LoggingService try to setValue [key:"
+        			+key+"--> value:"+value.toString());
+        }
     }
 
     @Override
@@ -140,6 +144,8 @@ public class LoggingServiceImpl implements LoggingService {
             stopTimer(LoggingService.TIMER_AURA);
             stopTimer(LoggingService.TIMER_TOTAL);
             lc.log();
+        } else {
+        	System.out.println("LoggingContext is null when logging service try to doLog");
         }
     }
 
