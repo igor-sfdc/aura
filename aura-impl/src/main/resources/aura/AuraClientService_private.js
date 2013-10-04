@@ -67,11 +67,6 @@ var priv = {
     isUnloading : false,
     initDefsObservers : [],
     isDisconnected : false,
-
-    // #if {"modes" : ["PTEST"]}
-    requestCounts : {},
-    existingTransactionId : undefined,
-    // #end
     foreground : new $A.ns.FlightCounter(1),
     background : new $A.ns.FlightCounter(1),
     actionQueue : new ActionQueue(),
@@ -116,7 +111,7 @@ var priv = {
             // instead of JSON. There is no real hope of dealing with it,
             // so just flag an error, and carry on.
             //
-            aura.error(text);
+            $A.error(text);
             return null;
         }
 
@@ -144,16 +139,16 @@ var priv = {
                 //
                 text = "//" + text;
             }
-            var resp = aura.util.json.decode(text, true);
+            var resp = $A.util.json.decode(text, true);
 
             // if the error on the server is meant to trigger a client-side
             // event...
-            if (aura.util.isUndefinedOrNull(resp)) {
+            if ($A.util.isUndefinedOrNull(resp)) {
                 // #if {"excludeModes" : ["PRODUCTION"]}
-                aura.error("Communication error, invalid JSON: " + text);
+                $A.error("Communication error, invalid JSON: " + text);
                 // #end
                 // #if {"modes" : ["PRODUCTION"]}
-                aura.error("Communication error, please retry or reload the page");
+                $A.error("Communication error, please retry or reload the page");
                 // #end
                 return null;
             } else if (resp["exceptionEvent"] === true) {
@@ -169,16 +164,16 @@ var priv = {
                 // !!!!!!!!!!HACK ALERT!!!!!!!!!!
                 // #if {"excludeModes" : ["PRODUCTION"]}
                 if (resp["message"] && resp["stack"]) {
-                    aura.error(resp["message"] + "\n" + resp["stack"]);
+                    $A.error(resp["message"] + "\n" + resp["stack"]);
                 } else {
-                    aura.error("Communication error, invalid JSON: " + text);
+                    $A.error("Communication error, invalid JSON: " + text);
                 }
                 // #end
                 // #if {"modes" : ["PRODUCTION"]}
                 if (resp["message"]) {
-                    aura.error(resp["message"]);
+                    $A.error(resp["message"]);
                 } else {
-                    aura.error("Communication error, please retry or reload the page");
+                    $A.error("Communication error, please retry or reload the page");
                 }
                 // #end
                 return null;
@@ -191,13 +186,13 @@ var priv = {
             text = "//" + text;
         }
 
-        var responseMessage = aura.util.json.decode(text, true);
-        if (aura.util.isUndefinedOrNull(responseMessage)) {
+        var responseMessage = $A.util.json.decode(text, true);
+        if ($A.util.isUndefinedOrNull(responseMessage)) {
             // #if {"excludeModes" : ["PRODUCTION"]}
-            aura.error("Communication error, invalid JSON: " + text);
+            $A.error("Communication error, invalid JSON: " + text);
             // #end
             // #if {"modes" : ["PRODUCTION"]}
-            aura.error("Communication error, please retry or reload the page");
+            $A.error("Communication error, please retry or reload the page");
             // #end
             return null;
         }
@@ -222,10 +217,10 @@ var priv = {
             evt.fire();
         } else {
             try {
-                aura.util.json.decodeString(resp["defaultHandler"])();
+                $A.util.json.decodeString(resp["defaultHandler"])();
             } catch (e) {
                 // W-1728079 : verify & remove this comment when error() take two parameters in the future
-                aura.error("Error in defaultHandler for event: " + descriptor, e);
+                $A.error("Error in defaultHandler for event: " + descriptor, e);
             }
         }
     },
@@ -294,9 +289,6 @@ var priv = {
      *            the abortableId associated with the set of actions.
      */
     actionCallback : function(response, collector, flightCounter, abortableId) {
-        // #if {"modes" : ["PTEST"]}
-        var lastAction = undefined;
-        // #end
         var responseMessage = this.checkAndDecodeResponse(response);
         var that = this;
         var noAbort = (abortableId === this.actionQueue.getLastAbortableTransactionId());
@@ -314,9 +306,7 @@ var priv = {
                 this.auraStack = [];
             }
         }
-        // #if {"modes" : ["PTEST"]}
-        this.existingTransactionId = collector.getTransactionId();
-        // #end
+
         $A.run(function() {
             var action, actionResponses;
 
@@ -366,26 +356,16 @@ var priv = {
                             action.setParams(actionResponse["params"]);
                             action.setAbortable(false);
                         } else {
-                            aura.assert(action, "Unable to find action for action response " + actionResponse["id"]);
+                            $A.assert(action, "Unable to find action for action response " + actionResponse["id"]);
                         }
                     }
                     that.singleAction(action, noAbort, actionResponse);
-                    // #if {"modes" : ["PTEST"]}
-                    if (action !== undefined) {
-                        lastAction = action;
-                    }
-                    // #end
                 }
             } else if (priv.isDisconnectedOrCancelled(response) && !priv.isUnloading) {
                 var actions = collector.getActionsToSend();
 
                 for ( var m = 0; m < actions.length; m++) {
                     action = actions[m];
-                    // #if {"modes" : ["PTEST"]}
-                    if (action !== undefined) {
-                        lastAction = action;
-                    }
-                    // #end
                     if (noAbort || !action.isAbortable()) {
                         action.incomplete($A.getContext());
                     } else {
@@ -396,21 +376,7 @@ var priv = {
             priv.fireDoneWaiting();
         }, "actionCallback");
 
-        // #if {"modes" : ["PTEST"]}
-        this.existingTransactionId = undefined;
-        // #end
-
         $A.endMark("Completed Action Callback - XHR " + collector.getNum());
-
-        // #if {"modes" : ["PTEST"]}
-        // if there are no more actions for a particular transaction and if
-        // onLoad has already been fired
-        this.requestCounts[collector.getTransactionId()]--;
-        if ((this.requestCounts[collector.getTransactionId()] === 0) && $A.getContext().getTransaction() !== 0) {
-            delete this.requestCounts[collector.getTransactionId()];
-            $A.clientService.unregisterTransaction();
-        }
-        // #end
     },
 
     /**
@@ -483,14 +449,7 @@ var priv = {
         }
 
         if (actionsToSend.length > 0) {
-            collector.setNum(aura.getContext().incrementNum());
-            // #if {"modes" : ["PTEST"]}
-            if (!this.existingTransactionId) {
-                collector.setTransactionId(this.actionQueue.getTransactionId());
-            } else {
-                collector.setTransactionId(this.existingTransactionId);
-            }
-            // #end
+            collector.setNum($A.getContext().incrementNum());
 
             // clientService.requestQueue reference is mutable
             flightCounter.send();
@@ -502,7 +461,7 @@ var priv = {
                     this.actionCallback(response, collector, flightCounter, abortableId);
                 },
                 "params" : {
-                    "message" : aura.util.json.encode({
+                    "message" : $A.util.json.encode({
                         "actions" : actionsToSend
                     }),
                     "aura.token" : priv.token,
@@ -522,27 +481,10 @@ var priv = {
             // #end
 
             $A.endMark("Action Request Prepared");
-
-            // #if {"modes" : ["PTEST"]}
-            this.requestCounts[collector.getTransactionId()]++;
-            // #end
             $A.util.transport.request(requestConfig);
-            
-            // #if {"modes" : ["PTEST"]}
-            var tempTx = this.existingTransactionId;
-            var collectorTx = collector.getTransactionId();
-            var that = this;
-            // #end
+
             setTimeout(function() {
-                // #if {"modes" : ["PTEST"]}
-                if (!that.existingTransactionId) {
-                    that.existingTransactionId = collectorTx;
-                }
-                // #end
                 $A.get("e.aura:waiting").fire();
-                // #if {"modes" : ["PTEST"]}
-                that.existingTransactionId = tempTx;
-                // #end
             }, 1);
         } else {
             // We didn't send a request, so clean up the in-flight counter.
@@ -552,12 +494,21 @@ var priv = {
 
     hardRefresh : function() {
         var url = location.href;
-
-        document._hardRefreshWOUrlAppendFlag = false;
-        
+        //debug for flapper
+        var date; var currentTime;
+        if(window.localStorage) {
+        	date = new Date();
+            currentTime = date.getTime();
+        	window.localStorage.setItem("hardRefresh_touched","url:"+url+",TS:"+currentTime);
+        }
+        //aura.assert(false,"bang from hardRefresh ");
         if (!priv.isManifestPresent() || url.indexOf("?nocache=") > -1) {
         	//debug for flapper
-        	document._hardRefreshWOUrlAppendFlag = true;
+        	if(window.localStorage) {
+        		date = new Date();
+                currentTime = date.getTime();
+            	window.localStorage.setItem("hardRefresh_touched","!isManifestPresent or url contains nocache,location.reload,"+",TS:"+currentTime);
+            }
             location.reload(true);
             return;
         }
@@ -579,6 +530,13 @@ var priv = {
         }
 
         location.href = url + params;
+        //debug for flapper
+    	if(window.localStorage) {
+    		date = new Date();
+            currentTime = date.getTime();
+        	window.localStorage.setItem("hardRefresh_touched","append nocache to url:"+location.href+",TS:"+currentTime);
+        }
+        
     },
 
     flushLoadEventQueue : function() {
@@ -615,6 +573,16 @@ var priv = {
     },
 
     handleAppcacheChecking : function(e) {
+    	document._appcacheChecking = true;
+    	//debug for flapper
+        var date; var currentTime;
+        if(window.localStorage) {
+        	date = new Date();
+            currentTime = date.getTime();
+            var old = window.localStorage.getItem("handleAppcacheChecking");
+            var update = old?(old+"; TS:"+currentTime):("TS:"+currentTime);
+            window.localStorage.setItem("handleAppcacheChecking",update);
+        }
         if (priv.isDevMode()) {
             // TODO IBOGDANOV Why are you checking in commented out code like
             // this???
@@ -626,7 +594,16 @@ var priv = {
     },
 
     handleAppcacheUpdateReady : function(event) {
-        if (window.applicationCache.swapCache) {
+    	//debug for flapper
+        var date; var currentTime;
+        if(window.localStorage) {
+        	date = new Date();
+            currentTime = date.getTime();
+        	var old = window.localStorage.getItem("handleAppcacheUpdateReady");
+            var update = old?(old+"; TS:"+currentTime):("TS:"+currentTime);
+            window.localStorage.setItem("handleAppcacheUpdateReady",update);
+        }
+    	if (window.applicationCache.swapCache) {
             window.applicationCache.swapCache();
         }
 
@@ -645,12 +622,28 @@ var priv = {
     },
 
     handleAppcacheError : function(e) {
-        if (e.stopImmediatePropagation) {
+    	//debug for flapper
+        var date; var currentTime;
+        if(window.localStorage) {
+        	date = new Date();
+            currentTime = date.getTime();
+        	var old = window.localStorage.getItem("handleAppcacheError");
+            var update = old?(old+"; TS:"+currentTime):("TS:"+currentTime);
+            window.localStorage.setItem("handleAppcacheError",update);
+        }
+    	if (e.stopImmediatePropagation) {
             e.stopImmediatePropagation();
         }
         if (window.applicationCache
                 && (window.applicationCache.status === window.applicationCache.UNCACHED || window.applicationCache.status === window.applicationCache.OBSOLETE)) {
-            return;
+        	//debug for flapper
+            if(window.localStorage) {
+            	date = new Date();
+                currentTime = date.getTime();
+            	window.localStorage.setItem("handleAppcacheError2",
+            			"window.applicationCache.status"+window.applicationCache.status+", return, TS:"+currentTime);
+            }
+        	return;
         }
         var manifestURL = priv.getManifestURL();
         if (priv.isDevMode()) {
@@ -658,6 +651,14 @@ var priv = {
         }
 
         if (manifestURL) {
+        	//debug for flapper
+            if(window.localStorage) {
+            	date = new Date();
+                currentTime = date.getTime();
+               
+            	window.localStorage.setItem("handleAppcacheError2",
+            			"send GET reqeust for manifestURL:"+manifestURL+", TS:"+currentTime);
+            }
             setTimeout(function() {
                 $A.util.transport.request({
                     "url" : manifestURL,
@@ -678,6 +679,15 @@ var priv = {
     },
 
     handleAppcacheDownloading : function(e) {
+    	//debug for flapper
+        var date; var currentTime;
+        if(window.localStorage) {
+        	date = new Date();
+            currentTime = date.getTime();
+            var old = window.localStorage.getItem("handleAppcacheDownloading");
+            var update = old?(old+"; TS:"+currentTime):("TS:"+currentTime);
+            window.localStorage.setItem("handleAppcacheDownloading",update);
+        }
         if (priv.isDevMode()) {
             var progress = Math.round(100 * e.loaded / e.total);
             priv.showProgress(progress + 1);
@@ -687,6 +697,15 @@ var priv = {
     },
 
     handleAppcacheProgress : function(e) {
+    	//debug for flapper
+        var date; var currentTime;
+        if(window.localStorage) {
+        	date = new Date();
+            currentTime = date.getTime();
+            var old = window.localStorage.getItem("handleAppcacheProgress");
+            var update = old?(old+"; TS:"+currentTime):("TS:"+currentTime);
+            window.localStorage.setItem("handleAppcacheProgress",update);
+        }
         if (priv.isDevMode()) {
             var progress = Math.round(100 * e.loaded / e.total);
             priv.showProgress(progress);
@@ -694,17 +713,42 @@ var priv = {
     },
 
     handleAppcacheNoUpdate : function(e) {
+    	//debug for flapper
+        var date; var currentTime;
+        if(window.localStorage) {
+        	date = new Date();
+            currentTime = date.getTime();
+            var old = window.localStorage.getItem("handleAppcacheNoUpdate");
+            var update = old?(old+"; TS:"+currentTime):("TS:"+currentTime);
+            window.localStorage.setItem("handleAppcacheNoUpdate",update);
+        }
         if (priv.isDevMode()) {
             priv.showProgress(100);
         }
     },
 
     handleAppcacheCached : function(e) {
-        priv.showProgress(100);
+    	//debug for flapper
+        var date; var currentTime;
+        if(window.localStorage) {
+        	date = new Date();
+            currentTime = date.getTime();
+            var old = window.localStorage.getItem("handleAppcacheCached");
+            var update = old?(old+"; TS:"+currentTime):("TS:"+currentTime);
+            window.localStorage.setItem("handleAppcacheCached",update);
+        }
+    	priv.showProgress(100);
     },
 
     handleAppcacheObsolete : function(e) {
-        priv.hardRefresh();
+    	if(window.localStorage) {
+        	date = new Date();
+            currentTime = date.getTime();
+            var old = window.localStorage.getItem("handleAppcacheObsolete");
+            var update = old?(old+"; TS:"+currentTime):("TS:"+currentTime);
+            window.localStorage.setItem("handleAppcacheObsolete",update);
+        }
+    	priv.hardRefresh();
     },
 
     showProgress : function(progress) {
@@ -791,6 +835,5 @@ if (window.applicationCache && window.applicationCache.addEventListener) {
     window.applicationCache.addEventListener("progress", priv.handleAppcacheProgress, false);
     window.applicationCache.addEventListener("noupdate", priv.handleAppcacheNoUpdate, false);
     window.applicationCache.addEventListener("cached", priv.handleAppcacheCached, false);
-    
     window.applicationCache.addEventListener("obsolete", priv.handleAppcacheObsolete, false);
 }

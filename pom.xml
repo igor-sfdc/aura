@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.auraframework</groupId>
     <artifactId>aura-framework</artifactId>
-    <version>0.334-SNAPSHOT</version>
+    <version>0.367-SNAPSHOT</version>
     <packaging>pom</packaging>
     <organization>
         <url>http://www.auraframework.org</url>
@@ -140,88 +140,88 @@
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-osgi-api</artifactId>
-                <version>0.334-SNAPSHOT</version>
+                <version>0.367-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-osgi-extensions</artifactId>
-                <version>0.334-SNAPSHOT</version>
+                <version>0.367-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-osgi</artifactId>
-                <version>0.334-SNAPSHOT</version>
+                <version>0.367-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura</artifactId>
-                <version>0.334-SNAPSHOT</version>
+                <version>0.367-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura</artifactId>
-                <version>0.334-SNAPSHOT</version>
+                <version>0.367-SNAPSHOT</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-util</artifactId>
-                <version>0.334-SNAPSHOT</version>
+                <version>0.367-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-util</artifactId>
-                <version>0.334-SNAPSHOT</version>
+                <version>0.367-SNAPSHOT</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-impl</artifactId>
-                <version>0.334-SNAPSHOT</version>
+                <version>0.367-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-impl</artifactId>
-                <version>0.334-SNAPSHOT</version>
+                <version>0.367-SNAPSHOT</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-impl-expression</artifactId>
-                <version>0.334-SNAPSHOT</version>
+                <version>0.367-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-impl-expression</artifactId>
-                <version>0.334-SNAPSHOT</version>
+                <version>0.367-SNAPSHOT</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-components</artifactId>
-                <version>0.334-SNAPSHOT</version>
+                <version>0.367-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-tools</artifactId>
-                <version>0.334-SNAPSHOT</version>
+                <version>0.367-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-resources</artifactId>
-                <version>0.334-SNAPSHOT</version>
+                <version>0.367-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-integration-test</artifactId>
                 <type>test-jar</type>
-                <version>0.334-SNAPSHOT</version>
+                <version>0.367-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>auradocs-integration-test</artifactId>
                 <type>test-jar</type>
-                <version>0.334-SNAPSHOT</version>
+                <version>0.367-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>junit</groupId>
@@ -386,10 +386,15 @@
                 <version>1.7R4</version>
             </dependency>
             <dependency>
-		      <groupId>com.phloc</groupId>
-		      <artifactId>phloc-css</artifactId>
-		      <version>3.5.5</version>
-		    </dependency>
+                <groupId>com.phloc</groupId>
+                <artifactId>phloc-css</artifactId>
+                <version>3.5.5</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ibm.icu</groupId>
+                <artifactId>icu4j</artifactId>
+                <version>4.6.1</version>
+            </dependency>
             <dependency>
                 <groupId>biz.aQute</groupId>
                 <artifactId>bnd</artifactId>
@@ -488,6 +493,7 @@
                         <exclude>**/.index</exclude>
                         <exclude>**/version.prop</exclude>
                         <exclude>aura-resources/src/main/resources/**</exclude>
+                        <exclude>aura-archetype/src/main/resources/archetype-resources/**</exclude>
                         <exclude>**/target/**</exclude>
                     </excludes>
                 </configuration>
@@ -593,7 +599,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-resources-plugin</artifactId>
-                    <version>2.5</version>
+                    <version>2.6</version>
                     <executions>
                         <execution>
                             <id>copy-test-components</id>

@@ -17,7 +17,6 @@ package org.auraframework.impl;
 
 import java.math.BigDecimal;
 import java.text.DateFormat;
-import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.HashMap;
@@ -28,12 +27,15 @@ import java.util.TimeZone;
 import org.auraframework.Aura;
 import org.auraframework.service.LocalizationService;
 import org.auraframework.service.testdata.LocalizationServiceTestData;
+import org.auraframework.test.UnitTestCase;
 import org.auraframework.util.number.AuraNumberFormat;
+
+import com.ibm.icu.text.NumberFormat;
 
 /**
  * Tests for LocalizationServiceImpl.
  */
-public class LocalizationServiceImplTest extends AuraImplTestCase {
+public class LocalizationServiceImplTest extends UnitTestCase {
 
     public LocalizationService localizationService = null;
 
@@ -406,17 +408,6 @@ public class LocalizationServiceImplTest extends AuraImplTestCase {
             }
         }
 
-        // Currency in USD to parser with UK locale
-        {
-            String inputEN = "$1";
-            try {
-                localizationService.parseCurrency(inputEN, Locale.UK);
-                fail("# Exception not thrown for currency:" + inputEN);
-            } catch (Exception e) {
-                assertTrue("# Incorrect exception type!", ((e instanceof ParseException)));
-            }
-        }
-
         // Currency in China Yuan to parser with US locale
         {
             String inputCN = NumberFormat.getCurrencyInstance(Locale.CHINA).format(0);
@@ -500,11 +491,11 @@ public class LocalizationServiceImplTest extends AuraImplTestCase {
         NumberFormat nf = null;
 
         Map<Locale, String[]> strictParserTestNumberStrings = new HashMap<Locale, String[]>();
-        strictParserTestNumberStrings.put(Locale.ENGLISH, new String[] { "100.200,300", "1 1", "100'200", "1.1.1.1" });
+        strictParserTestNumberStrings.put(Locale.ENGLISH, new String[] { "100.200,300", "1 1", "1.1.1.1" });
         strictParserTestNumberStrings.put(Locale.FRANCE, new String[] { "1 1 1 1", "1.1.1", "00. 000 000",
                 "100,200.300" });
-        strictParserTestNumberStrings.put(Locale.CHINESE, new String[] { "100 200", "1, 0,0", "100'2", "123 456" });
-        strictParserTestNumberStrings.put(Locale.GERMAN, new String[] { "100,200,300.456", "0.123,456,789", "123 456",
+        strictParserTestNumberStrings.put(Locale.CHINESE, new String[] { "1, 0,0", "100'2" });
+        strictParserTestNumberStrings.put(Locale.GERMAN, new String[] { "100,200,300.456", "0.123,456,789",
                 "111.111,111.111" });
 
         for (Locale locale : strictParserTestNumberStrings.keySet()) {

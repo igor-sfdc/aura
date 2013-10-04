@@ -68,6 +68,7 @@ exp(p,
     "isInstanceOfSpanElement", p.isInstanceOfSpanElement,
     "isInstanceOf", p.isInstanceOf,
     "getElementAttributeValue", p.getElementAttributeValue,
+    "clickOrTouch", p.clickOrTouch,
     
     // javascript
     "getPrototype", p.getPrototype,
@@ -78,7 +79,6 @@ exp(p,
     // actions
     "callServerAction", p.callServerAction,
     "isActionPending", p.isActionPending,
-    "allActionsComplete", p.allActionsComplete,
     "markForCompletion", p.markForCompletion,
     "isComplete", p.isComplete,
     "isSuccessfullyComplete", p.isSuccessfullyComplete,

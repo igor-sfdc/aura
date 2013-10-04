@@ -57,15 +57,16 @@ exp(p,
     "getWindowSize", p.getWindowSize,
     "isComponent", p.isComponent,
     "isValue", p.isValue,
-    "instanceOf", p.instanceOf
-    
+    "instanceOf", p.instanceOf,
+    "supportsTouchEvents", p.supportsTouchEvents
     
     //#if {"excludeModes" : ["PRODUCTION"]}
-    ,
-    "getDebugToolComponent", p.getDebugToolComponent,
-    "setDebugToolWindow", p.setDebugToolWindow,
-    "getDebugToolsAuraInstance",  p.getDebugToolsAuraInstance,
-    "getUrl", p.getUrl,
-    "getText", p.getText
+	    ,
+	    "getDebugToolComponent", p.getDebugToolComponent,
+	    "setDebugToolWindow", p.setDebugToolWindow,
+	    "getDebugToolsAuraInstance",  p.getDebugToolsAuraInstance,
+	    "getUrl", p.getUrl,
+	    "getText", p.getText,
+	    "errorBasedOnMode", p.errorBasedOnMode
     //#end
 );

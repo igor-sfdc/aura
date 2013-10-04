@@ -36,13 +36,12 @@
                 }
             );
 
-            $A.test.addWaitFor(true, $A.test.allActionsComplete, function() {
+            $A.test.addWaitFor(false, $A.test.isActionPending, function() {
                 var p = document.getElementsByTagName("p");
                 var cmpText = $A.util.getText(p[0]);
                 $A.test.assertEquals("one stringtwo stringred stringblue string", cmpText,
                     "Newly created component not showing up in DOM.");
             });
-
         }
     },
     /**
@@ -66,7 +65,7 @@
             });
 
             // Non-preloaded cmp creation will be asynchronous so add a wait here.
-            $A.test.addWaitFor(true, $A.test.allActionsComplete, function() {
+            $A.test.addWaitFor(false, $A.test.isActionPending, function() {
                 var p = document.getElementsByTagName("p");
                 var cmpText = $A.util.getText(p[0]);
                 $A.test.assertEquals("one stringtwo stringred stringblue string", cmpText,
@@ -99,7 +98,7 @@
             );
 
 
-            $A.test.addWaitFor(true, $A.test.allActionsComplete, function() {
+            $A.test.addWaitFor(false, $A.test.isActionPending, function() {
                 var p = document.getElementsByTagName("p");
                 var cmpText = $A.util.getText(p[0]);
                 $A.test.assertEquals("one stringtwo stringred stringblue string", cmpText,
@@ -128,12 +127,12 @@
             });
 
             // Non-preloaded cmp creation will be asynchronous so add a wait here.
-            $A.test.addWaitFor(true, $A.test.allActionsComplete, function() {
+            $A.test.addWaitFor(false, $A.test.isActionPending, function() {
                 var p = document.getElementsByTagName("p");
                 var cmpText = $A.util.getText(p[0]);
                 $A.test.assertEquals("one stringtwo stringred stringblue string", cmpText,
                         "Newly created component not showing up in DOM.");
             });
         }
-    },
+    }
 })

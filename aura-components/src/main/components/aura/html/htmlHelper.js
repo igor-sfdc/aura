@@ -96,8 +96,7 @@
     },
 
     supportsTouchEvents : function () {
-        // cache the result--it's not going to change
-        return this.supportsTouchEvents.cache || (this.supportsTouchEvents.cache = !$A.util.isUndefined(document.ontouchstart) && $A.getContext().getMode() !== 'PTEST' && $A.getContext().getMode() !== 'CADENCE' && $A.getContext().getMode() !== 'SELENIUM' && $A.getContext().getMode() !== 'SELENIUMDEBUG');
+    	return $A.util.supportsTouchEvents();
     },
 
     initFastClick : function() {
@@ -204,17 +203,9 @@
             	if (!valueExpression.isDefined()) {
     	            // Map from touch event to onclick
                 	valueExpression = onclickExpression;
-    	            eventName = "onclick";
             	}
             }
         }
-
-        //start a new transaction
-
-        if(eventName == "onclick") {
-            $A.services.client._initTransaction();
-        }
-
 
         $A.run(function () {
                 var action = $A.expressionService.get(valueProvider, valueExpression);
