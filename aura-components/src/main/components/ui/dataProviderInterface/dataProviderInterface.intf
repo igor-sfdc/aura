@@ -18,4 +18,5 @@
 <aura:interface>
     <aura:attribute name="columns" type="List"/>
     <aura:attribute name="items" type="List"/>
+    <aura:attribute name="modelItemsKey" type="String" description="The AuraEnabled field name on the model representing the first page of items."/>
 </aura:interface>

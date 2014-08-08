@@ -21,6 +21,13 @@ Test.Aura.Component.ComponentDefRegistryTest = function() {
             // #import aura.component.ComponentDefRegistry
     });
 
+    var makeDefDescriptor = function(name) {
+        return {
+            "toString" : function() { return name; },
+            "getNamespace" : function() { return "namespace:"+name; }
+        };
+    };
+
     [Fixture]
     function AuraType() {
 	[Fact]
@@ -138,31 +145,30 @@ Test.Aura.Component.ComponentDefRegistryTest = function() {
 		    return obj === undefined || obj === null;
 		}
 	    },
+	    warning : function(message, error){
+            },
 	    assert : function(condition, message){
 		    if(!condition){
 			var error = new Error(message);
 			throw error;
 		    }
 	    },
-	    mark : function() {
-	    },
-	    endMark : function() {
-	    }
+        Perf: {
+            mark: function () {
+            },
+            endMark: function () {
+            }
+        }
 	});
         var mockComponentDef = Mocks.GetMock(Object.Global(), "$A", {
                 ns : {
                     ComponentDef: function(config) {
-                        var def = {};
-                        def["config"] = config;
-                        var toString = function() {
-                            return config["descriptor"]
-                        };
-                        def["getDescriptor"] = function() {
-                            return {
-                                "toString" : toString
-                            };
+                        return {
+                            "config": config,
+                            "getDescriptor" : function() {
+                                return makeDefDescriptor(config["descriptor"]);
+                            }
                         }
-                        return def;
                     }
                 },
                 util : {
@@ -173,15 +179,19 @@ Test.Aura.Component.ComponentDefRegistryTest = function() {
                         return obj === undefined || obj === null;
                     }
                 },
+                warning : function(message, error){
+                },
                 assert : function(condition, message){
                         if(!condition){
                             var error = new Error(message);
                             throw error;
                         }
                 },
-                mark : function() {
-                },
-                endMark : function() {
+                Perf: {
+                    mark: function () {
+                    },
+                    endMark: function () {
+                    }
                 }
             });
 	[Fact]
@@ -312,7 +322,7 @@ Test.Aura.Component.ComponentDefRegistryTest = function() {
 	function WritesConfigToLocalStorageIfNotCached() {
 	    //Arrange
 	    var target = new ComponentDefRegistry();
-	    var descriptor = "layout://foo:bar";
+            var descriptor = "layout://foo:bar";
 	    target.isLocalStorageAvailable = true;
 	    target.useLocalCache = function() {
 		return true;
@@ -379,6 +389,8 @@ Test.Aura.Component.ComponentDefRegistryTest = function() {
     [Fixture]
     function UseLocalCache() {
 	var mockAuraUtil = Mocks.GetMock(Object.Global(), "$A", {
+	    warning : function(message, error){
+            },
 	    util : {
 		isUndefinedOrNull : function(obj) {
 		    return obj === undefined || obj === null;
@@ -503,6 +515,8 @@ Test.Aura.Component.ComponentDefRegistryTest = function() {
 				}
 			    });
 	    var mockAuraUtil = Mocks.GetMock(Object.Global(), "$A", {
+                warning : function(message, error){
+                },
 		util : {
 		    json : {
 			decode : function(s) {
@@ -585,6 +599,8 @@ Test.Aura.Component.ComponentDefRegistryTest = function() {
 				}
 			    });
 	    var mockAuraUtil = Mocks.GetMock(Object.Global(), "$A", {
+                warning : function(message, error){
+                },
 		util : {
 		    json : {
 			decode : function(s) {
@@ -632,17 +648,21 @@ Test.Aura.Component.ComponentDefRegistryTest = function() {
 	function UpdatesLocalStorageWithJsonEncodedDefIfAvailable() {
 	    // Arrange
 	    var storage = {};
-	    var mockAuraUtil = Mocks.GetMock(Object.Global(), "$A", {
-		util : {
-		    json : {
-			encode : function(s) {
-			    return s;
-			}
-		    }
-		},
-		endMark : function() {
-		}
-	    });
+        var mockAuraUtil = Mocks.GetMock(Object.Global(), "$A", {
+            warning: function (message, error) {
+            },
+            util: {
+                json: {
+                    encode: function (s) {
+                        return s;
+                    }
+                }
+            },
+            Perf: {
+                endMark: function () {
+                }
+            }
+        });
 	    var mockLocalStorage = Mocks.GetMock(Object.Global(),
 		    "localStorage", {
 			setItem : function(key, value) {
@@ -677,17 +697,21 @@ Test.Aura.Component.ComponentDefRegistryTest = function() {
 	function UpdatesLocalStorageWithCatalogIfAvailable() {
 	    // Arrange
 	    var storage = {};
-	    var mockAuraUtil = Mocks.GetMock(Object.Global(), "$A", {
-		util : {
-		    json : {
-			encode : function(s) {
-			    return s;
-			}
-		    }
-		},
-		endMark : function() {
-		}
-	    });
+        var mockAuraUtil = Mocks.GetMock(Object.Global(), "$A", {
+            warning: function (message, error) {
+            },
+            util: {
+                json: {
+                    encode: function (s) {
+                        return s;
+                    }
+                }
+            },
+            Perf: {
+                endMark: function () {
+                }
+            }
+        });
 	    var mockLocalStorage = Mocks.GetMock(Object.Global(),
 		    "localStorage", {
 			setItem : function(key, value) {

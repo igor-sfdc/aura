@@ -20,10 +20,8 @@
  * @protected
  */
 function ProviderDef(config){
-    var code = config["code"];
-    $A.assert(code, "provider code not found");
-    var obj = aura.util.json.decodeString(code);
-    this.provideMethod = obj["provide"];
+    this.provideMethod = aura.util.json.decodeString(config["provide"]);
+    $A.assert(this.provideMethod, "Provide method not found");
 }
 
 ProviderDef.prototype.auraType = "ProviderDef";
@@ -31,23 +29,30 @@ ProviderDef.prototype.auraType = "ProviderDef";
 /**
  * Runs the provide method on the component and returns the component definition.
  * Throws an error if the provide method is not found.
- * @param {Object} component
+ * @param {Component} component 
+ * @param {Boolean} localCreation
+ * @param {Function} callback
+ * @param {Object} ccc Not used currently. Will be included in next round of CCC changes - W-1961207
  */
-ProviderDef.prototype.provide = function(component, localCreation){
+ProviderDef.prototype.provide = function(component, localCreation, callback, ccc) {
     var provideMethod = this.provideMethod;
-    $A.assert(provideMethod, "Provide method not found");
 
-    var ret = provideMethod(component, localCreation);
-    if (!ret || $A.util.isString(ret)) {
-        ret = {
-            "componentDef": ret
+    var providedConfig = provideMethod(component, localCreation);
+
+    if (!providedConfig || $A.util.isString(providedConfig)) {
+        providedConfig = {
+            'componentDef': providedConfig
         };
     }
-    if (ret["componentDef"]) {
-        ret["componentDef"] = componentService.getDef(ret["componentDef"]);
+
+    if (providedConfig['componentDef']) {
+        var def = componentService.getDef(providedConfig['componentDef']);
+        // set available component def
+        providedConfig['componentDef'] = def;
     } else {
-        ret["componentDef"] = component.getDef();
+        // no component def provided so set to current component
+        providedConfig['componentDef'] = component.getDef();
     }
-    return ret;
+    callback(providedConfig['componentDef'], providedConfig['attributes']);
 };
 //#include aura.provider.ProviderDef_export

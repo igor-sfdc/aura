@@ -122,8 +122,8 @@
                 function(action){
                     $A.test.assertEquals(200, action.getReturnValue(), "Exclusive action should not be executed before parent action.");
                     //If the call backs are in order, then this attribute will have value set by c.add's call back
-                    $A.test.assertEquals("1", cmp.getAttributes().getValue('responseOrder').getValue(), "Action chaining did not preserve order at client.");
-                    cmp.getAttributes().setValue('responseOrder', "2");
+                    $A.test.assertEquals("1", cmp.get('v.responseOrder'), "Action chaining did not preserve order at client.");
+                    cmp.set('v.responseOrder', "2");
                 });
             multiply.setChained();
             multiply.setExclusive(true);
@@ -133,11 +133,11 @@
                 function(action){
                         $A.test.assertEquals(100, action.getReturnValue(), "Chained action was executed before parent action.");
                         //If the call backs are in order, then this attribute will have the default value
-                        $A.test.assertEquals("", cmp.getAttributes().getValue('responseOrder').getValue(), "Action chaining did not preserve order at client.");
-                        cmp.getAttributes().setValue('responseOrder', "1");
+                        $A.test.assertEquals("", cmp.get('v.responseOrder'), "Action chaining did not preserve order at client.");
+                        cmp.set('v.responseOrder', "1");
                 });
             this.enqueueServerActionAndFireEvent(cmp, add);
-            $A.test.addWaitFor("2", function(){return cmp.getAttributes().get('responseOrder');});
+            $A.test.addWaitFor("2", function(){return cmp.get('v.responseOrder');});
         }
     },
 
@@ -158,10 +158,10 @@
                     //Server call back function will be called back twice
                     function(action){
                         $A.test.assertEquals("SUCCESS",action.getState());
-                        $A.test.assertEquals(200*cmp.getAttributes().getValue('callbackCount').getValue(),
+                        $A.test.assertEquals(200*cmp.get('v.callbackCount'),
                             action.getReturnValue());
-                        cmp.getAttributes().setValue('callbackCount',
-                            cmp.getAttributes().getValue('callbackCount').getValue()+1);
+                        cmp.set('v.callbackCount',
+                            cmp.get('v.callbackCount')+1);
                     });
                 multiply.setChained();
                 var add = $A.test.getAction(cmp,"c.add",{
@@ -172,11 +172,11 @@
                                         },function(action){
                                             $A.test.assertEquals("SUCCESS",action.getState());
                                             $A.test.assertEquals(100, action.getReturnValue(), "Chained action was executed before parent action.");
-                                            cmp.getAttributes().setValue('callbackCount', 1);
+                                            cmp.set('v.callbackCount', 1);
                                         });
                 this.enqueueServerActionAndFireEvent(cmp, add);
                 //Chaining same action multiple times failed.
-                $A.test.addWaitFor(3, function(){return cmp.getAttributes().getValue('callbackCount').getValue();});
+                $A.test.addWaitFor(3, function(){return cmp.get('v.callbackCount');});
             }]
 
     },

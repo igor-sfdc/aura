@@ -16,6 +16,7 @@
 
 -->
 <aura:component isTemplate="true" extensible="true" support="GA" description="The default template used to bootstrap the loading of the aura framework and an application or component. To use another template, extend aura:template and set attributes using aura:set.">
+
     <aura:attribute name="title" type="String" default="Aura" description="The title of the template. Default value is &#8220;Aura&#8221;."/>
     <aura:attribute name="auraStyleTags" type="String" description="Loads Aura CSS files."/>
     <aura:attribute name="auraScriptTags" type="String" description="Loads the js framework, preloads the definitions of all preload namespaces, and any other script that is needed by the framework."/>
@@ -30,6 +31,7 @@
     <aura:attribute name="autoInitializeSync" type="String" default="false" description="Default value is &#8220;false&#8221;."/>
     <aura:attribute name="afterAuraInit" type="String" description="Not used."/>
     <aura:attribute name="loadingText" type="String" default="Loading" description="The text displayed on the page when the template is loading. Default value is &#8220;Loading&#8221;."/>
+    <aura:attribute name="errorTitle" type="String" default="Looks like there's a problem:" description="The title text displayed on the error dialog when an error has occured. Default value is &#8220;Looks like there's a problem:&#8221;."/>
     <aura:attribute name="errorMessage" type="String" default="CSS Error" description="The error message displayed when an error has occured while loading. Default value is &#8220;CSS Error&#8221;."/>
     <aura:attribute name="forceError" type="Boolean" default="false" description="Set this to true to force the display of an error that would otherwise be hidden because of nesting.."/>
     <aura:attribute name="extraScriptTags" type="Aura.Component[]" description="Additional &lt;script&gt; elements, such as JavaScript libraries. Use multiple &lt;script&gt; elements to include more than one JavaScript library. Set this attribute using aura:set if overriding the template."/>
@@ -250,7 +252,7 @@
                 <div class="auraMsgBox auraErrorBox" aura:id="auraError">
                     <h2>
                         <a class="close" onclick="dismissError();" href="javascript:void(0);">&times;</a>
-                        Oops, there's a problem:
+                        {!v.errorTitle}
                     </h2>
                     <div id="auraErrorMessage">{!v.errorMessage}</div>
                 </div>

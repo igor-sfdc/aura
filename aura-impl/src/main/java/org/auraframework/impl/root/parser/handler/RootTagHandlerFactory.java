@@ -17,22 +17,15 @@ package org.auraframework.impl.root.parser.handler;
 
 import javax.xml.stream.XMLStreamReader;
 
-import org.auraframework.def.ApplicationDef;
-import org.auraframework.def.ComponentDef;
-import org.auraframework.def.DefDescriptor;
-import org.auraframework.def.EventDef;
-import org.auraframework.def.InterfaceDef;
-import org.auraframework.def.LayoutsDef;
-import org.auraframework.def.NamespaceDef;
-import org.auraframework.def.RootDefinition;
-import org.auraframework.def.ThemeDef;
+import org.auraframework.def.*;
 import org.auraframework.system.Source;
+import org.auraframework.throwable.quickfix.DefinitionNotFoundException;
 
 public class RootTagHandlerFactory {
 
     @SuppressWarnings("unchecked")
     public static <T extends RootDefinition> RootTagHandler<T> newInstance(DefDescriptor<T> defDescriptor,
-            Source<T> source, XMLStreamReader xmlReader) {
+            Source<T> source, XMLStreamReader xmlReader) throws DefinitionNotFoundException {
         switch (defDescriptor.getDefType()) {
         case APPLICATION:
             return (RootTagHandler<T>) new ApplicationDefHandler((DefDescriptor<ApplicationDef>) defDescriptor,
@@ -43,6 +36,9 @@ public class RootTagHandlerFactory {
         case EVENT:
             return (RootTagHandler<T>) new EventDefHandler((DefDescriptor<EventDef>) defDescriptor,
                     (Source<EventDef>) source, xmlReader);
+        case LIBRARY:
+            return (RootTagHandler<T>) new LibraryDefHandler((DefDescriptor<LibraryDef>) defDescriptor,
+                    (Source<LibraryDef>) source, xmlReader);
         case INTERFACE:
             return (RootTagHandler<T>) new InterfaceDefHandler((DefDescriptor<InterfaceDef>) defDescriptor,
                     (Source<InterfaceDef>) source, xmlReader);
@@ -55,6 +51,9 @@ public class RootTagHandlerFactory {
         case THEME:
             return (RootTagHandler<T>) new ThemeDefHandler((DefDescriptor<ThemeDef>) defDescriptor,
                     (Source<ThemeDef>) source, xmlReader);
+        case DOCUMENTATION:
+            return (RootTagHandler<T>) new DocumentationDefHandler((DefDescriptor<DocumentationDef>) defDescriptor,
+                    (Source<DocumentationDef>) source, xmlReader);
         default:
             throw new UnsupportedOperationException();
         }

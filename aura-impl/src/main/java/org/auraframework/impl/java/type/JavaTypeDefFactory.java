@@ -62,7 +62,7 @@ public class JavaTypeDefFactory extends BaseJavaDefFactory<TypeDef> {
     /**
      * Return base of class name, truncating Generic qualifier, if included.
      * Can't instantiate a class with parameters using ClassProviderFactory.getClazzForName().
-     * 
+     *
      * @param className - the class name, with or without a < > clause
      * @return - the base class name minus generic parameters
      */
@@ -105,8 +105,9 @@ public class JavaTypeDefFactory extends BaseJavaDefFactory<TypeDef> {
         if (clazz == null) {
             clazz = ClassProviderFactory.getClazzForName(className);
         }
-        
+
         if (clazz == null) {
+            // REVIEWME: osgi - the original Aura implementation wants to ignore this and return null
             throw new AuraRuntimeException("Class not found " + className);
         }
         return clazz;

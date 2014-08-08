@@ -14,8 +14,16 @@
  * limitations under the License.
  */
 ({
-    render : function(cmp, helper){
-        helper.update(cmp);
-        return this.superRender();
+    afterRender : function(cmp, helper){
+        this.superAfterRender();
+        helper.setActive(cmp, {"index": cmp._activeTabIndex});
+    },
+    
+    unrender: function(cmp, helper) {
+    	try {
+    		helper.unrender(cmp);
+    	} finally {
+    		this.superUnrender();
+    	}
     }
 })

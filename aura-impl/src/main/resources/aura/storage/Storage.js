@@ -37,6 +37,15 @@ var AuraStorage = function AuraStorage(config) {
     	this.adapter.clear();
     }
     
+    // work around the obfuscation logic to allow external Adapters to properly plug in
+    this.adapter.clear = this.adapter.clear || this.adapter["clear"];
+    this.adapter.getExpired = this.adapter.getExpired || this.adapter["getExpired"];
+    this.adapter.getItem = this.adapter.getItem || this.adapter["getItem"];
+    this.adapter.getName = this.adapter.getName || this.adapter["getName"];
+    this.adapter.getSize = this.adapter.getSize || this.adapter["getSize"];
+    this.adapter.removeItem = this.adapter.removeItem || this.adapter["removeItem"];
+    this.adapter.setItem = this.adapter.setItem || this.adapter["setItem"];  
+    
     //#if {"excludeModes" : ["PRODUCTION", "PRODUCTIONDEBUG"]}
     	this.adapter["getItem"] = this.adapter.getItem;
     	this["adapter"] = this.adapter;
@@ -90,20 +99,21 @@ AuraStorage.prototype.clear = function() {
  * @returns {Object} An item from storage.
  */
 AuraStorage.prototype.get = function(key, resultCallback) {
-	this.sweep();
+    this.sweep();
 
-	// This needs to also be asynchronous (callback) based to map to IndexedDB, WebSQL, SmartStore that are all async worlds
-	var that = this;
-	this.adapter.getItem(key, function(item) {
-		var value;
-		if (item && item.value) {
-			value = item.value;
-			
-			that.log("AuraStorage.get(): using action found in " + that.getName() + " storage", [key, item]);
-		}
-	
-		resultCallback(value);
-	});
+    // This needs to also be asynchronous (callback) based to map to IndexedDB, WebSQL, SmartStore that are all async worlds
+    var that = this;
+    this.adapter.getItem(key, function(item) {
+        var value, isExpired;
+        if (item && item.value) {
+            value = item.value;
+            isExpired = (new Date().getTime() > item.expires);
+            
+            that.log("AuraStorage.get(): using action found in " + that.getName() + " storage", [key, item]);
+        }
+    
+        resultCallback(value, isExpired);
+    });
 };
 
 /**
@@ -149,7 +159,7 @@ AuraStorage.prototype.sweep = function() {
 	if (!this._sweepingSuspended) {
 		// Check simple expirations
 		var removedSomething;
-		var now = new Date().getTime();
+		// var now = new Date().getTime();
 		var that = this;
 		this.adapter.getExpired(function(expired) {
 			for (var n = 0; n < expired.length; n++) {

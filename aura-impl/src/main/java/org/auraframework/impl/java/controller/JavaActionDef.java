@@ -34,17 +34,21 @@ public class JavaActionDef extends DefinitionImpl<ActionDef> implements ActionDe
     private static final long serialVersionUID = -9179014361802437154L;
     private final DefDescriptor<TypeDef> returnTypeDescriptor;
     private final List<ValueDef> params;
+    private final List<String> loggableParams;
     private final Class<?>[] javaParams;
     private final Method method;
     private final boolean background;
+    private final boolean caboose;
 
     protected JavaActionDef(Builder builder) {
         super(builder);
         this.returnTypeDescriptor = builder.returnTypeDescriptor;
         this.params = AuraUtil.immutableList(builder.params);
+        this.loggableParams = builder.loggableParams;
         this.javaParams = builder.javaParams;
         this.method = builder.method;
         this.background = builder.background;
+        this.caboose = builder.caboose;
     }
 
     @Override
@@ -55,6 +59,11 @@ public class JavaActionDef extends DefinitionImpl<ActionDef> implements ActionDe
     @Override
     public List<ValueDef> getParameters() {
         return params;
+    }
+
+    @Override
+    public List<String> getLoggableParams() {
+        return loggableParams;
     }
 
     Class<?>[] getJavaParams() {
@@ -79,6 +88,10 @@ public class JavaActionDef extends DefinitionImpl<ActionDef> implements ActionDe
     	return background;
     }
 
+    public boolean isCaboose() {
+    	return caboose;
+    }
+
     @Override
     public void serialize(Json json) throws IOException {
         json.writeMapBegin();
@@ -87,6 +100,7 @@ public class JavaActionDef extends DefinitionImpl<ActionDef> implements ActionDe
         json.writeMapEntry("actionType", getActionType());
         json.writeMapEntry("returnType", getReturnType());
         json.writeMapEntry("background", isBackground());
+        json.writeMapEntry("caboose", isCaboose());
         json.writeMapEntry("params", params);
         json.writeMapEnd();
     }
@@ -99,9 +113,11 @@ public class JavaActionDef extends DefinitionImpl<ActionDef> implements ActionDe
 
         private DefDescriptor<TypeDef> returnTypeDescriptor;
         private List<ValueDef> params;
+        private List<String> loggableParams;
         private Class<?>[] javaParams;
         private Method method;
         private boolean background = false;
+        private boolean caboose = false;
 
         @Override
         public JavaActionDef build() {
@@ -127,6 +143,15 @@ public class JavaActionDef extends DefinitionImpl<ActionDef> implements ActionDe
         }
 
         /**
+         * Sets the loggable param names for this instance.
+         * 
+         * @param params The loggableParams.
+         */
+        public void setLoggableParams(List<String> loggableParams) {
+            this.loggableParams = loggableParams;
+        }
+
+        /**
          * Sets the javaParams for this instance.
          * 
          * @param javaParams The javaParams.
@@ -139,8 +164,12 @@ public class JavaActionDef extends DefinitionImpl<ActionDef> implements ActionDe
             this.method = method;
         }
 
-		public void setBackground(boolean background) {
-			this.background = background;
-		}
+	public void setBackground(boolean background) {
+	    this.background = background;
+	}
+
+	public void setCaboose(boolean caboose) {
+	    this.caboose = caboose;
+	}
     }
 }

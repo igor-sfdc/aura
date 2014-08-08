@@ -15,26 +15,35 @@
  */
 package org.auraframework.impl.context;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.auraframework.Aura;
+import org.auraframework.css.ThemeList;
 import org.auraframework.def.ApplicationDef;
+import org.auraframework.def.AttributeDef;
 import org.auraframework.def.ComponentDef;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.EventDef;
+import org.auraframework.def.EventType;
+import org.auraframework.def.ThemeDef;
+import org.auraframework.def.TypeDef;
 import org.auraframework.impl.AuraImplTestCase;
+import org.auraframework.impl.root.AttributeDefImpl;
+import org.auraframework.impl.root.event.EventDefImpl;
 import org.auraframework.impl.system.DefDescriptorImpl;
 import org.auraframework.instance.Event;
+import org.auraframework.service.DefinitionService;
 import org.auraframework.system.AuraContext;
-import org.auraframework.system.AuraContext.Access;
+import org.auraframework.system.AuraContext.Authentication;
 import org.auraframework.system.AuraContext.Format;
 import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.test.annotation.UnAdaptableTest;
 import org.auraframework.util.json.Json;
-import org.junit.Ignore;
 
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 /**
@@ -46,90 +55,54 @@ import com.google.common.collect.Sets;
  */
 public class AuraContextImplTest extends AuraImplTestCase {
     public AuraContextImplTest(String name) {
-        super(name);
+        super(name, false);
     }
 
     /**
-     * Verify the basic configuration in place for preloading namespaces. AuraContextImpl keeps track of namespaces
-     * whose definitions should be preLoaded. This test would act like a gold file for namespaces selected to be
-     * pre-loaded. Be sure to consider what namespaces you are specifying for pre-loading.
+     * Verify the serialized format of a ComponentDef when it was 'preloaded'.
      * 
-     * @userStory a07B0000000EYU4
-     */
-    public void testPreloadConfigurations() throws Exception {
-        AuraContext lc = Aura.getContextService().getCurrentContext();
-
-        Set<String> preloadNamespace = lc.getPreloads();
-        // Verify that 'ui' and 'Aura' are always specified as standard preload
-        // namespaces
-        // don't verify anything else as more preloads could be injected through
-        // adapters
-        assertTrue("UI namespace not specified as standard preload namespace", preloadNamespace.contains("ui"));
-        assertTrue("aura namespace not specified as standard preload namespace", preloadNamespace.contains("aura"));
-    }
-
-    /**
-     * Verify methods on AuraContext to alter pre-load configurations.
-     * 
-     * @userStory a07B0000000EYU4
-     */
-    public void testPreloadConfigurationMethods() throws Exception {
-        AuraContext lc = Aura.getContextService().getCurrentContext();
-        lc.clearPreloads();
-        Set<String> preloadNamespace = lc.getPreloads();
-        assertTrue("Preload namespace configuration could not be reset", preloadNamespace.size() == 0);
-        lc.addPreload("auratest");
-        preloadNamespace = lc.getPreloads();
-        assertTrue("Preload namespace configuration could not be changed", preloadNamespace.contains("auratest"));
-    }
-
-    /**
-     * Verify the serialized format of a ComponentDef when it belongs to a pre-load namespace. Components which belong
-     * to a pre-load namespace will only have the descriptor as part of their ComponentDef. This descriptor will be used
-     * on the client side to obtain the full blown componentDef.
+     * Components which are 'preloaded' will be serialized as the descriptor. This allows the client to determine that
+     * the component should be present easily, and give a more reasonable error message if it is not.
      */
     public void testComponentDefSerializedFormat() throws Exception {
-        ApplicationDef cDef = Aura.getDefinitionService().getDefinition("preloadTest:test_Preload_Cmp_SameNameSpace",
-                ApplicationDef.class);
-        // Set<String> preloadNamespace = cDef.getPreloads();
-        // assertTrue(preloadNamespace.contains("preloadTest"));
-        AuraContext lc = Aura.getContextService().getCurrentContext();
-        lc.addPreload("preloadTest");
-        assertEquals("{\"descriptor\":\"markup://preloadTest:test_Preload_Cmp_SameNameSpace\"}", Json.serialize(cDef));
+        DefDescriptor<ApplicationDef> appDesc = Aura.getDefinitionService().getDefDescriptor(
+                "preloadTest:dependenciesApp", ApplicationDef.class);
+        AuraContext context = Aura.getContextService().startContext(Mode.UTEST, Format.HTML,
+                Authentication.AUTHENTICATED, appDesc);
+        DefinitionService ds = Aura.getDefinitionService();
+        ApplicationDef appDef = ds.getDefinition("preloadTest:dependenciesApp", ApplicationDef.class);
+        Map<DefDescriptor<?>, String> clientLoaded = Maps.newHashMap();
+        clientLoaded.put(appDesc, context.getDefRegistry().getUid(null, appDesc));
+        context.setClientLoaded(clientLoaded);
+        ds.updateLoaded(null);
+
+        assertEquals("\"markup://preloadTest:dependenciesApp\"", Json.serialize(appDef));
     }
 
     /**
      * Verify we are able to check what DefDescriptors have been preloaded.
      */
     public void testIsPreloaded() throws Exception {
-        AuraContext lc = Aura.getContextService().getCurrentContext();
-        lc.clearPreloads();
-        lc.addPreload("auratest");
+        DefDescriptor<ApplicationDef> appDesc = Aura.getDefinitionService().getDefDescriptor(
+                "preloadTest:dependenciesApp", ApplicationDef.class);
+        AuraContext context = Aura.getContextService()
+                .startContext(Mode.UTEST, Format.HTML, Authentication.AUTHENTICATED, appDesc);
+        DefDescriptor<ComponentDef> dd = vendor.makeComponentDefDescriptor("test:test_button");
 
-        // Check in preloaded namesapce
-        DefDescriptor<ComponentDef> dd = vendor.makeComponentDefDescriptor("auratest:text");
-        assertTrue("Descriptor in preloaded namespace not found", lc.isPreloaded(dd));
+        Set<DefDescriptor<?>> preloaded = Sets.newHashSet();
+        preloaded.add(appDesc);
+        preloaded.add(dd);
+        context.setPreloadedDefinitions(preloaded);
 
-        // Check in namespace that is not preloaded
-        dd = vendor.makeComponentDefDescriptor("aura:text");
-        assertTrue("Descriptor in namespace *not* preloaded found", !lc.isPreloaded(dd));
+        // check def is preloaded
+        assertTrue("Descriptor is a dependency and should be preloaded", context.isPreloaded(dd));
 
-        // Check after preloads cleared
-        lc.clearPreloads();
-        dd = vendor.makeComponentDefDescriptor("auratest:text");
-        assertTrue("Descriptor found after preloads cleared", !lc.isPreloaded(dd));
-    }
+        // check dependency is not preloaded
+        dd = vendor.makeComponentDefDescriptor("test:child1");
+        assertTrue("Descriptor is not a dependency and should not be preloaded", !context.isPreloaded(dd));
 
-    /**
-     * Verify clearing current preloads in AuraContext AuraContext.preloading indicates whether components defs are
-     * currently being preloaded.
-     */
-    public void testClearPreloads() throws Exception {
-        AuraContext lc = Aura.getContextService().getCurrentContext();
-        lc.clearPreloads();
-        Set<String> preloadNamespace = lc.getPreloads();
-        assertEquals("Calling clearPreloads() should clear the context of all preload namespaces.", 0,
-                preloadNamespace.size());
+        context.setPreloading(true);
+        assertFalse("Descriptor is a dependency but should not be preloaded", context.isPreloaded(dd));
     }
 
     /**
@@ -140,7 +113,8 @@ public class AuraContextImplTest extends AuraImplTestCase {
         DefDescriptor<ApplicationDef> desc = Aura.getDefinitionService().getDefDescriptor("arbitrary:appname",
                 ApplicationDef.class);
 
-        AuraContext ctx = Aura.getContextService().startContext(Mode.PROD, Format.JSON, Access.PUBLIC, desc);
+        AuraContext ctx = Aura.getContextService().startContext(Mode.PROD, Format.JSON, Authentication.UNAUTHENTICATED,
+                desc);
         ctx.setSerializeLastMod(false);
         String res = Json.serialize(ctx, ctx.getJsonSerializationContext());
         goldFileJson(res);
@@ -154,7 +128,8 @@ public class AuraContextImplTest extends AuraImplTestCase {
         DefDescriptor<ComponentDef> desc = Aura.getDefinitionService().getDefDescriptor("arbitrary:cmpname",
                 ComponentDef.class);
 
-        AuraContext ctx = Aura.getContextService().startContext(Mode.PROD, Format.JSON, Access.PUBLIC, desc);
+        AuraContext ctx = Aura.getContextService().startContext(Mode.PROD, Format.JSON, Authentication.UNAUTHENTICATED,
+                desc);
         ctx.setSerializeLastMod(false);
         String res = Json.serialize(ctx, ctx.getJsonSerializationContext());
         goldFileJson(res);
@@ -165,7 +140,7 @@ public class AuraContextImplTest extends AuraImplTestCase {
      */
     @UnAdaptableTest
     public void testSerializeWithoutApp() throws Exception {
-        AuraContext ctx = Aura.getContextService().startContext(Mode.PROD, Format.JSON, Access.PUBLIC);
+        AuraContext ctx = Aura.getContextService().startContext(Mode.PROD, Format.JSON, Authentication.UNAUTHENTICATED);
         ctx.setSerializeLastMod(false);
         String res = Json.serialize(ctx, ctx.getJsonSerializationContext());
         goldFileJson(res);
@@ -183,7 +158,7 @@ public class AuraContextImplTest extends AuraImplTestCase {
         DefDescriptor<ComponentDef> descCmp = Aura.getDefinitionService().getDefDescriptor("arbitrary:cmpname",
                 ComponentDef.class);
 
-        AuraContext ctx = Aura.getContextService().startContext(Mode.PROD, Format.JSON, Access.PUBLIC);
+        AuraContext ctx = Aura.getContextService().startContext(Mode.PROD, Format.JSON, Authentication.UNAUTHENTICATED);
         ctx.setSerializeLastMod(false);
 
         ctx.setApplicationDescriptor(descCmp);
@@ -210,17 +185,14 @@ public class AuraContextImplTest extends AuraImplTestCase {
      */
     public void testAttachingEvents() throws Exception {
         // Verify that nulls are filtered
-        AuraContext lc = Aura.getContextService().getCurrentContext();
-        try {
-            lc.addClientApplicationEvent(null);
-            assertEquals("Should not be accepting null objects as events.", 0, lc.getClientEvents().size());
-        } catch (Exception e) {
-            fail("Context.addClientApplicationEvent() does not handle nulls.");
-        }
+        AuraContext lc = Aura.getContextService().startContext(Mode.UTEST, Format.JSON, Authentication.UNAUTHENTICATED);
+
+        lc.addClientApplicationEvent(null);
+        assertEquals("Should not be accepting null objects as events.", 0, lc.getClientEvents().size());
         Aura.getContextService().endContext();
 
         // Adding multiple contexts
-        lc = Aura.getContextService().startContext(Mode.UTEST, Format.JSON, Access.AUTHENTICATED);
+        lc = Aura.getContextService().startContext(Mode.UTEST, Format.JSON, Authentication.AUTHENTICATED);
         Event evt1 = Aura.getInstanceService().getInstance("markup://aura:applicationEvent", EventDef.class, null);
         lc.addClientApplicationEvent(evt1);
         Event evt2 = Aura.getInstanceService().getInstance("markup://aura:connectionLost", EventDef.class, null);
@@ -233,7 +205,7 @@ public class AuraContextImplTest extends AuraImplTestCase {
 
         // Adding same event again should not cause an error, same event can be
         // fired with different parameters.
-        lc = Aura.getContextService().startContext(Mode.UTEST, Format.JSON, Access.AUTHENTICATED);
+        lc = Aura.getContextService().startContext(Mode.UTEST, Format.JSON, Authentication.AUTHENTICATED);
         Event evt3 = Aura.getInstanceService().getInstance("markup://handleEventTest:applicationEvent", EventDef.class,
                 null);
         lc.addClientApplicationEvent(evt3);
@@ -244,7 +216,7 @@ public class AuraContextImplTest extends AuraImplTestCase {
         Aura.getContextService().endContext();
 
         // Verify component events are not acceptable
-        lc = Aura.getContextService().startContext(Mode.UTEST, Format.JSON, Access.AUTHENTICATED);
+        lc = Aura.getContextService().startContext(Mode.UTEST, Format.JSON, Authentication.AUTHENTICATED);
         Event evt4 = Aura.getInstanceService().getInstance("markup://handleEventTest:event", EventDef.class, null);
         try {
             lc.addClientApplicationEvent(evt4);
@@ -259,7 +231,8 @@ public class AuraContextImplTest extends AuraImplTestCase {
      * Expect a map that doesn't include dropped descriptors.
      */
     public void testGetLoaded() throws Exception {
-        AuraContext context = Aura.getContextService().getCurrentContext();
+        AuraContext context = Aura.getContextService().startContext(Mode.UTEST, Format.JSON,
+                Authentication.UNAUTHENTICATED);
         context.setApplicationDescriptor(laxSecurityApp);
 
         assertTrue("Nothing should be loaded", context.getLoaded().isEmpty());
@@ -285,10 +258,10 @@ public class AuraContextImplTest extends AuraImplTestCase {
      * Loaded map contains the loaded descriptor.
      */
     public void testSerializeWithLoaded() throws Exception {
-        AuraContext context = Aura.getContextService().getCurrentContext();
+        AuraContext context = Aura.getContextService().startContext(Mode.UTEST, Format.JSON,
+                Authentication.UNAUTHENTICATED);
         context.setApplicationDescriptor(laxSecurityApp);
         context.setSerializeLastMod(false);
-        context.setSerializePreLoad(false);
         context.getGlobalProviders().clear();
 
         DefDescriptor<?> added = DefDescriptorImpl.getInstance("auratest:iwasadded", EventDef.class);
@@ -296,16 +269,38 @@ public class AuraContextImplTest extends AuraImplTestCase {
         String res = Json.serialize(context, context.getJsonSerializationContext());
         goldFileJson(res);
     }
-    
+
+    public void testSerializeWithUnPreLoadedEvent() throws Exception {
+        AuraContext context = Aura.getContextService().startContext(Mode.UTEST, Format.JSON,
+                Authentication.UNAUTHENTICATED);
+        context.setApplicationDescriptor(laxSecurityApp);
+        context.setSerializeLastMod(false);
+        context.getGlobalProviders().clear();
+
+        DefDescriptor<ComponentDef> added = DefDescriptorImpl.getInstance("auratest:iamloaded", ComponentDef.class);
+        context.addLoaded(added, "somegenerateduid");
+
+        DefDescriptor<EventDef> eventDesc = DefDescriptorImpl.getInstance("fake:event", EventDef.class);
+        Map<DefDescriptor<AttributeDef>, AttributeDef> atts = new HashMap<DefDescriptor<AttributeDef>, AttributeDef>();
+        DefDescriptor<TypeDef> type = DefDescriptorImpl.getInstance("String", TypeDef.class);
+        atts.put(DefDescriptorImpl.getInstance("testString", AttributeDef.class), new AttributeDefImpl(
+                DefDescriptorImpl.getInstance("testString", AttributeDef.class), null, type, null, true,
+                AttributeDef.SerializeToType.BOTH, null, null));
+        EventDefImpl eventDef = vendor.makeEventDef(eventDesc, EventType.COMPONENT, atts, null, null);
+
+        context.getDefRegistry().addLocalDef(eventDef);
+        String res = Json.serialize(context, context.getJsonSerializationContext());
+        assertTrue(res.contains("markup://fake:event"));
+    }
+
     /**
      * Loaded map contains deleted descriptors.
      */
-    @Ignore("W-1560329")
     public void testSerializeWithDroppedLoaded() throws Exception {
-        AuraContext context = Aura.getContextService().getCurrentContext();
+        AuraContext context = Aura.getContextService().startContext(Mode.UTEST, Format.JSON,
+                Authentication.UNAUTHENTICATED);
         context.setApplicationDescriptor(laxSecurityApp);
         context.setSerializeLastMod(false);
-        context.setSerializePreLoad(false);
         context.getGlobalProviders().clear();
 
         DefDescriptor<?> dropped = DefDescriptorImpl.getInstance("auratest:iwasdropped", EventDef.class);
@@ -313,38 +308,85 @@ public class AuraContextImplTest extends AuraImplTestCase {
         String res = Json.serialize(context, context.getJsonSerializationContext());
         goldFileJson(res);
     }
-    
+
     /**
      * Verify that an app descriptor specified to startContext() is used to setup AuraContext.
      */
-    public void testSettingAppDescriptorOnContext(){
-        if(Aura.getContextService().isEstablished()){
+    public void testSettingAppDescriptorOnContext() {
+        if (Aura.getContextService().isEstablished()) {
             Aura.getContextService().endContext();
         }
-        DefDescriptor<ApplicationDef> appDesc = Aura.getDefinitionService().getDefDescriptor("test:laxSecurity", ApplicationDef.class);
-        AuraContext cntx = Aura.getContextService().startContext(Mode.FTEST, Format.JSON, Access.AUTHENTICATED, appDesc);
+        DefDescriptor<ApplicationDef> appDesc = Aura.getDefinitionService().getDefDescriptor("test:laxSecurity",
+                ApplicationDef.class);
+        AuraContext cntx = Aura.getContextService().startContext(Mode.FTEST, Format.JSON, Authentication.AUTHENTICATED,
+                appDesc);
         assertEquals(appDesc, cntx.getApplicationDescriptor());
     }
-    
+
     /**
      * Verify that an cmp descriptor specified to startContext() is used to setup AuraContext.
      */
-    public void testSettingAComponentAsAppDescriptorOnContext(){
-        if(Aura.getContextService().isEstablished()){
+    public void testSettingAComponentAsAppDescriptorOnContext() {
+        if (Aura.getContextService().isEstablished()) {
             Aura.getContextService().endContext();
         }
-        DefDescriptor<ComponentDef> cmpDesc = Aura.getDefinitionService().getDefDescriptor("aura:text", ComponentDef.class);
-        AuraContext cntx = Aura.getContextService().startContext(Mode.FTEST, Format.JSON, Access.AUTHENTICATED, cmpDesc);
+        DefDescriptor<ComponentDef> cmpDesc = Aura.getDefinitionService().getDefDescriptor("aura:text",
+                ComponentDef.class);
+        AuraContext cntx = Aura.getContextService().startContext(Mode.FTEST, Format.JSON, Authentication.AUTHENTICATED,
+                cmpDesc);
         assertEquals(cmpDesc, cntx.getApplicationDescriptor());
     }
-    
-    @UnAdaptableTest
-    public void testDefaultPreloadNamespaces(){
-        AuraContext cntx = Aura.getContextService().getCurrentContext();
-        Set<String> preloads = Sets.newHashSet(cntx.getPreloads());
-        Set<String> expectedPreloads = Sets.newHashSet("aura", "ui");
-        assertTrue(preloads.containsAll(expectedPreloads));
-        preloads.removeAll(expectedPreloads);
-        assertTrue("Unexpected namespaces prelaoded:"+preloads.toString(), preloads.isEmpty());
+
+    public void testAddAppThemeDescriptors() throws Exception {
+        DefDescriptor<ThemeDef> t = addSourceAutoCleanup(ThemeDef.class, "<aura:theme></aura:theme>");
+        String src = String.format("<aura:application access='unauthenticated' theme='%s'/>", t.getDescriptorName());
+        DefDescriptor<ApplicationDef> app = addSourceAutoCleanup(ApplicationDef.class, src);
+
+        AuraContext ctx = Aura.getContextService().startContext(Mode.UTEST, Format.JSON,
+                Authentication.UNAUTHENTICATED, app);
+
+        ctx.addAppThemeDescriptors();
+
+        ThemeList descriptors = ctx.getThemeList();
+        assertEquals(1, descriptors.size());
+        assertEquals(t, descriptors.get(0));
+    }
+
+    public void testGetThemeDescriptors() throws Exception {
+        AuraContext ctx = Aura.getContextService()
+                .startContext(Mode.UTEST, Format.JSON, Authentication.UNAUTHENTICATED);
+
+        DefDescriptor<ThemeDef> t1 = addSourceAutoCleanup(ThemeDef.class, "<aura:theme/>");
+        DefDescriptor<ThemeDef> t2 = addSourceAutoCleanup(ThemeDef.class, "<aura:theme/>");
+        DefDescriptor<ThemeDef> t3 = addSourceAutoCleanup(ThemeDef.class, "<aura:theme/>");
+        ctx.appendThemeDescriptor(t1);
+        ctx.appendThemeDescriptor(t2);
+        ctx.appendThemeDescriptor(t3);
+
+        ThemeList explicit = ctx.getThemeList();
+        assertEquals(explicit.get(0), t1);
+        assertEquals(explicit.get(1), t2);
+        assertEquals(explicit.get(2), t3);
+    }
+
+    public void testSerializeWithThemes() throws Exception {
+        // this app specifies test:fakeTheme
+        DefDescriptor<ApplicationDef> app = DefDescriptorImpl.getInstance("test:fakeThemeApp", ApplicationDef.class);
+
+        AuraContext ctx = Aura.getContextService()
+                .startContext(Mode.UTEST, Format.JSON, Authentication.UNAUTHENTICATED, app);
+        ctx.setSerializeLastMod(false);
+        ctx.setSerializeThemes(true);
+
+        ctx.appendThemeDescriptor(DefDescriptorImpl.getInstance("test:fakeTheme2", ThemeDef.class));
+        ctx.appendThemeDescriptor(DefDescriptorImpl.getInstance("test:fakeThemeWithMapProvider", ThemeDef.class));
+        ctx.addAppThemeDescriptors();
+        String res = getAuraTestingUtil().getSerializedAuraContext(ctx);
+        // expected order
+        // "test:fakeTheme" (app specified comes first)
+        // "test:fakeTheme2" (explicit order)
+        // "test:fakeThemeWithMapProvider" (explicit order)
+        // also expect the vars hash to be present
+        goldFileJson(res);
     }
 }

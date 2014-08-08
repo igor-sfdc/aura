@@ -32,10 +32,12 @@ import org.auraframework.system.Parser.Format;
 import org.auraframework.util.text.Hash;
 
 /**
- * Abstract base class for providing access to source code, and metadata about
- * that source code, including systemId(URL or filename), the format, and
- * timestamp. Implemented as abstract so that implementations can create readers
- * on demand rather than holding them open earlier than necessary.
+ * Abstract base class for providing access to source code and metadata.
+ *
+ * Implemented as abstract with inversion of control.
+ *
+ * Implementors should read the comments for {@link #getHash()} and ensure they honor the
+ * contract.
  */
 public abstract class Source<D extends Definition> implements Serializable {
 
@@ -57,19 +59,32 @@ public abstract class Source<D extends Definition> implements Serializable {
         private MessageDigest digest;
         private final Charset utf8;
         private boolean hadError;
+        private boolean closed;
 
         public HashingReader(Reader reader) {
             this.reader = reader;
             try {
                 digest = MessageDigest.getInstance("MD5");
             } catch (NoSuchAlgorithmException e) {
-                throw new RuntimeException("MD5 is a required MessageDigest algorithm, but is not registered here.");
+                throw new IllegalStateException("MD5 is a required MessageDigest algorithm, but is not registered here.");
             }
             utf8 = Charset.forName("UTF-8");
         }
 
         @Override
         public void close() throws IOException {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            if (reader.read() != -1) {
+                //
+                // If someone didn't finish reading the file, we want to yell at them
+                // and make sure the code is fixed. If we let it fall through, we may end
+                // up with a null hash, which no-one will notice.
+                //
+                throw new IllegalStateException("Closed a hashing file without reading the entire thing");
+            }
             if (digest != null) {
                 setChangeInfo();
             }
@@ -135,6 +150,9 @@ public abstract class Source<D extends Definition> implements Serializable {
         return systemId;
     }
 
+    /**
+     * Get the format of this source.
+     */
     public Format getFormat() {
         return format;
     }
@@ -153,6 +171,18 @@ public abstract class Source<D extends Definition> implements Serializable {
 
     public abstract Writer getWriter();
 
+    /**
+     * Get the hash promise for this source.
+     *
+     * This <em>MUST</em> be valid by the time we are done with this source. In the case of
+     * this abstract class, {@link getHashingReader()} is the arbiter of this guarantee.
+     * If the entire file is read, we will have a valid hash. If this is overridden,
+     * the class that overrides it <em>MUST</em> guarantee that if either {@link getContents()} or
+     * {@link getHashingReader()} are called, the hash will be set (it can also arbitrarily
+     * be set elsewhere. As long as it is valid after reading the contents.
+     *
+     * @return the hash promise.
+     */
     public Hash getHash() {
         return hash;
     }

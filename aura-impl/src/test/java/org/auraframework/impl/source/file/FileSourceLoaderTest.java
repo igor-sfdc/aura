@@ -16,7 +16,6 @@
 package org.auraframework.impl.source.file;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.Reader;
 import java.util.Set;
 
@@ -59,7 +58,8 @@ public class FileSourceLoaderTest extends AuraImplTestCase {
         try {
             new FileSourceLoader(new File("this_probably_doesnt_exist"));
             fail("Should have thrown AuraException(Base directory does not exist)");
-        } catch (AuraRuntimeException e) {
+        } catch (Exception e) {
+        	checkExceptionRegex(e, AuraRuntimeException.class, "Base directory.*.does not exist");
         }
     }
 
@@ -67,7 +67,8 @@ public class FileSourceLoaderTest extends AuraImplTestCase {
         try {
             new FileSourceLoader(null);
             fail("Should have thrown AuraException(Base directory does not exist)");
-        } catch (AuraRuntimeException e) {
+        } catch (Exception e) {
+        	checkExceptionRegex(e, AuraRuntimeException.class, "Base directory.*.does not exist");
         }
 
     }
@@ -89,7 +90,11 @@ public class FileSourceLoaderTest extends AuraImplTestCase {
             if (reader != null) {
                 try {
                     reader.close();
-                } catch (IOException e) {
+                    fail("Did not get an exception for not reading the entire file");
+                } catch (IllegalStateException ise) {
+                	// expected, we didn't read the file.
+                	checkExceptionFull(ise,IllegalStateException.class,"Closed a hashing file without reading the entire thing");
+                } catch (Exception e) {
                     fail(e.getMessage());
                 }
             }
@@ -119,7 +124,11 @@ public class FileSourceLoaderTest extends AuraImplTestCase {
             if (reader != null) {
                 try {
                     reader.close();
-                } catch (IOException e) {
+                    fail("Did not get an exception for not reading the entire file");
+                } catch (IllegalStateException ise) {
+                    // expected, we didn't read the file.
+                	checkExceptionFull(ise,IllegalStateException.class,"Closed a hashing file without reading the entire thing");
+                } catch (Exception e) {
                     fail(e.getMessage());
                 }
             }
@@ -156,5 +165,17 @@ public class FileSourceLoaderTest extends AuraImplTestCase {
 
         found = loader.find(new DescriptorFilter("markup://test:doesntexist"));
         assertEquals("Should not have found any components", 0, found.size());
+    }
+    
+    /**
+     * All namespaces loaded by FileSourceLoader are privileged, verify that FileSourceLoader says so.
+     */
+    public void testIsPrivilegedNamespace(){
+        FileSourceLoader loader = new FileSourceLoader(AuraImplFiles.TestComponents.asFile());
+        assertTrue("All namespaces loaded by FileSourceLoader are to be privileged", 
+                loader.isPrivilegedNamespace(null));
+        assertTrue("All namespaces loaded by FileSourceLoader are to be privileged," +
+        		"Regardless of the namespace.", loader.isPrivilegedNamespace("fooBared"));
+        assertTrue(loader.isPrivilegedNamespace("aura"));
     }
 }

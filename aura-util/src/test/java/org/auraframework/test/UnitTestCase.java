@@ -32,6 +32,8 @@ import junit.framework.TestCase;
 
 import org.auraframework.test.annotation.TestLabels;
 import org.auraframework.test.annotation.UnitTest;
+import org.auraframework.test.perf.metrics.PerfMetrics;
+import org.auraframework.test.perf.metrics.PerfMetricsComparator;
 import org.auraframework.util.IOUtil;
 import org.auraframework.util.json.Json;
 import org.auraframework.util.json.JsonSerializationContext;
@@ -50,6 +52,7 @@ public abstract class UnitTestCase extends TestCase {
     private static final GoldFileUtils goldFileUtils = new GoldFileUtils();
     Collection<File> tempFiles = null;
     Stack<Runnable> tearDownSteps = null;
+    private PerfMetricsComparator perfMetricsComparator = PerfMetricsComparator.DEFAULT_INSTANCE;
 
     public UnitTestCase() {
         super();
@@ -111,7 +114,31 @@ public abstract class UnitTestCase extends TestCase {
         tearDownSteps.push(toRun);
     }
 
-    protected String getGoldFileName() {
+    /**
+     * @return to get metric details stored in gold file (i.e. for perf metrics)
+     */
+    public boolean storeDetailsInGoldFile() {
+        return true;
+    }
+
+    /**
+     * @return a non null value to specify a results folder for the gold files and to avoid the automatic results folder
+     *         location logic
+     */
+    public final String getExplicitGoldResultsFolder() {
+        return explicitGoldResultsFolder;
+    }
+
+    /**
+     * Overrides the default gold results folder location
+     */
+    public final void setExplicitGoldResultsFolder(String folder) {
+        explicitGoldResultsFolder = folder;
+    }
+
+    private String explicitGoldResultsFolder;
+
+    public String getGoldFileName() {
         return getName();
     }
 
@@ -130,7 +157,7 @@ public abstract class UnitTestCase extends TestCase {
             suffix = suffix + ".txt";
         }
 
-        goldFileUtils.assertTextDiff(this.getClass(), getGoldFileName() + suffix, actual);
+        goldFileUtils.assertTextDiff(this, getGoldFileName() + suffix, actual);
     }
 
     protected void goldFileJson(String actual, String suffix) throws Exception {
@@ -140,7 +167,7 @@ public abstract class UnitTestCase extends TestCase {
             suffix = suffix + ".json";
         }
 
-        goldFileUtils.assertJsonDiff(this.getClass(), getGoldFileName() + suffix, actual);
+        goldFileUtils.assertJsonDiff(this, getGoldFileName() + suffix, actual);
     }
 
     protected void goldFileJson(String actual) throws Exception {
@@ -149,6 +176,18 @@ public abstract class UnitTestCase extends TestCase {
 
     protected void serializeAndGoldFile(Object actual, String suffix) throws Exception {
         goldFileJson(toJson(actual), suffix);
+    }
+
+    protected final void assertGoldMetrics(PerfMetrics actual) throws Exception {
+        goldFileUtils.assertPerfDiff(this, getGoldFileName() + ".json", actual);
+    }
+
+    public PerfMetricsComparator getPerfMetricsComparator() {
+        return perfMetricsComparator;
+    }
+
+    public void setPerfMetricsComparator(PerfMetricsComparator perfMetricsComparator) {
+        this.perfMetricsComparator = perfMetricsComparator;
     }
 
     protected void serializeAndGoldFile(Object actual) throws Exception {

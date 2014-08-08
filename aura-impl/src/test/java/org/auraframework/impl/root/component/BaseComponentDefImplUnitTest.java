@@ -23,10 +23,13 @@ import org.auraframework.Aura;
 import org.auraframework.def.AttributeDef;
 import org.auraframework.def.AttributeDefRef;
 import org.auraframework.def.BaseComponentDef;
+import org.auraframework.def.BaseComponentDef.WhitespaceBehavior;
 import org.auraframework.def.ComponentDef;
 import org.auraframework.def.ControllerDef;
 import org.auraframework.def.DefDescriptor;
+import org.auraframework.def.DefDescriptor.DefType;
 import org.auraframework.def.Definition.Visibility;
+import org.auraframework.def.DefinitionAccess;
 import org.auraframework.def.DependencyDef;
 import org.auraframework.def.EventHandlerDef;
 import org.auraframework.def.HelperDef;
@@ -34,20 +37,21 @@ import org.auraframework.def.InterfaceDef;
 import org.auraframework.def.ModelDef;
 import org.auraframework.def.RegisterEventDef;
 import org.auraframework.def.RendererDef;
+import org.auraframework.def.ImportDef;
 import org.auraframework.def.RootDefinition.SupportLevel;
 import org.auraframework.def.StyleDef;
 import org.auraframework.def.TestSuiteDef;
-import org.auraframework.def.BaseComponentDef.WhitespaceBehavior;
 import org.auraframework.expression.PropertyReference;
 import org.auraframework.impl.expression.PropertyReferenceImpl;
 import org.auraframework.impl.root.RootDefinitionImplUnitTest;
 import org.auraframework.impl.root.component.BaseComponentDefImpl.Builder;
 import org.auraframework.impl.system.DefDescriptorImpl;
-import org.auraframework.system.AuraContext.Access;
+import org.auraframework.system.AuraContext.Authentication;
 import org.auraframework.system.AuraContext.Format;
 import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.system.Location;
 import org.auraframework.throwable.AuraRuntimeException;
+import org.auraframework.throwable.quickfix.InvalidAccessValueException;
 import org.auraframework.throwable.quickfix.InvalidDefinitionException;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -77,11 +81,23 @@ public abstract class BaseComponentDefImplUnitTest<I extends BaseComponentDefImp
     protected List<DefDescriptor<ControllerDef>> controllerDescriptors;
     protected Map<String, RegisterEventDef> events;
     protected List<EventHandlerDef> eventHandlers;
+    protected List<ImportDef> imports;
     protected List<AttributeDefRef> facets;
     protected Set<PropertyReference> expressionRefs;
     protected String render;
     protected WhitespaceBehavior whitespaceBehavior;
     protected List<DependencyDef> dependencies;
+    
+    protected static DefinitionAccess GLOBAL_ACCESS;
+    
+    static {
+    	try {
+			GLOBAL_ACCESS = Aura.getDefinitionParserAdapter().parseAccess(null, "GLOBAL");
+		} catch (InvalidAccessValueException x) {
+			throw new AuraRuntimeException(x);
+		}
+    }
+
 
     public BaseComponentDefImplUnitTest(String name) {
         super(name);
@@ -90,28 +106,6 @@ public abstract class BaseComponentDefImplUnitTest<I extends BaseComponentDefImp
     public void testAppendDependenciesDefaultValue() throws Exception {
         Set<DefDescriptor<?>> dependencies = Mockito.spy(Sets.<DefDescriptor<?>> newHashSet());
         buildDefinition().appendDependencies(dependencies);
-    }
-
-    @Override
-    public void testGetNameNullDescriptor() throws Exception {
-        this.descriptor = null;
-        try {
-            buildDefinition();
-            fail("Expected an exception when trying to getName() if descriptor is null");
-        } catch (Throwable t) {
-            assertExceptionMessage(t, AuraRuntimeException.class, "descriptor is null");
-        }
-    }
-
-    @Override
-    public void testValidateDefinitionNullDescriptor() throws Exception {
-        this.descriptor = null;
-        try {
-            buildDefinition().validateDefinition();
-            fail("Expected an exception for null descriptor");
-        } catch (Throwable t) {
-            assertExceptionMessage(t, AuraRuntimeException.class, "descriptor is null");
-        }
     }
 
     @Override
@@ -128,6 +122,7 @@ public abstract class BaseComponentDefImplUnitTest<I extends BaseComponentDefImp
         AttributeDef attrDef = Mockito.mock(AttributeDef.class);
         Mockito.doReturn(attrDesc).when(attrDef).getDescriptor();
         Mockito.doReturn(Visibility.PRIVATE).when(attrDef).getVisibility();
+		Mockito.doReturn(GLOBAL_ACCESS).when(attrDef).getAccess();
 
         @SuppressWarnings("unchecked")
         D parentDef = (D) Mockito.mock(getBuilder().getClass().getDeclaringClass());
@@ -135,8 +130,10 @@ public abstract class BaseComponentDefImplUnitTest<I extends BaseComponentDefImp
         Mockito.doReturn(ImmutableMap.of()).when(parentDef).getAttributeDefs();
         Mockito.doReturn(true).when(parentDef).isExtensible();
         Mockito.doReturn(SupportLevel.GA).when(parentDef).getSupport();
+        Mockito.doReturn(GLOBAL_ACCESS).when(parentDef).getAccess();
         Mockito.doReturn(parentDef).when(this.extendsDescriptor).getDef();
-
+        Mockito.doReturn(DefType.COMPONENT).when(this.extendsDescriptor).getDefType();
+        
         this.expressionRefs = Sets.newHashSet();
         this.expressionRefs.add(new PropertyReferenceImpl("v.privateAttribute", null));
         this.attributeDefs = ImmutableMap.of(attrDesc, attrDef);
@@ -151,6 +148,7 @@ public abstract class BaseComponentDefImplUnitTest<I extends BaseComponentDefImp
         AttributeDef attrDef = Mockito.mock(AttributeDef.class);
         Mockito.doReturn(attrDesc).when(attrDef).getDescriptor();
         Mockito.doReturn(Visibility.PRIVATE).when(attrDef).getVisibility();
+        Mockito.doReturn(GLOBAL_ACCESS).when(attrDef).getAccess();
 
         @SuppressWarnings("unchecked")
         D parentDef = (D) Mockito.mock(getBuilder().getClass().getDeclaringClass());
@@ -159,6 +157,8 @@ public abstract class BaseComponentDefImplUnitTest<I extends BaseComponentDefImp
         Mockito.doReturn(true).when(parentDef).isExtensible();
         Mockito.doReturn(SupportLevel.GA).when(parentDef).getSupport();
         Mockito.doReturn(parentDef).when(this.extendsDescriptor).getDef();
+        Mockito.doReturn(GLOBAL_ACCESS).when(parentDef).getAccess();
+        Mockito.doReturn(DefType.COMPONENT).when(this.extendsDescriptor).getDefType();
 
         Location exprLocation = new Location("expression", 0);
         this.expressionRefs = Sets.newHashSet();
@@ -182,6 +182,7 @@ public abstract class BaseComponentDefImplUnitTest<I extends BaseComponentDefImp
         AttributeDef attrDef = Mockito.mock(AttributeDef.class);
         Mockito.doReturn(attrDesc).when(attrDef).getDescriptor();
         Mockito.doReturn(Visibility.PRIVATE).when(attrDef).getVisibility();
+        Mockito.doReturn(GLOBAL_ACCESS).when(attrDef).getAccess();
 
         @SuppressWarnings("unchecked")
         D parentDef = (D) Mockito.mock(getBuilder().getClass().getDeclaringClass());
@@ -190,6 +191,8 @@ public abstract class BaseComponentDefImplUnitTest<I extends BaseComponentDefImp
         Mockito.doReturn(true).when(parentDef).isExtensible();
         Mockito.doReturn(SupportLevel.GA).when(parentDef).getSupport();
         Mockito.doReturn(parentDef).when(this.extendsDescriptor).getDef();
+        Mockito.doReturn(GLOBAL_ACCESS).when(parentDef).getAccess();
+        Mockito.doReturn(DefType.COMPONENT).when(this.extendsDescriptor).getDefType();
 
         this.expressionRefs = Sets.newHashSet();
         this.expressionRefs.add(new PropertyReferenceImpl("v.privateAttribute", null));
@@ -203,7 +206,7 @@ public abstract class BaseComponentDefImplUnitTest<I extends BaseComponentDefImp
         super.setupValidateReferences();
         this.interfaces = Sets.newHashSet();
         this.interfaces.add(BaseComponentDefImpl.ROOT_MARKER);
-        testAuraContext = Aura.getContextService().startContext(Mode.UTEST, Format.JSON, Access.AUTHENTICATED);
+        testAuraContext = Aura.getContextService().startContext(Mode.UTEST, Format.JSON, Authentication.AUTHENTICATED);
     }
 
     @Override
@@ -222,6 +225,7 @@ public abstract class BaseComponentDefImplUnitTest<I extends BaseComponentDefImp
         builder.controllerDescriptors = this.controllerDescriptors;
         builder.events = this.events;
         builder.eventHandlers = this.eventHandlers;
+        builder.imports = this.imports;
         builder.facets = this.facets;
         builder.expressionRefs = this.expressionRefs;
         builder.render = this.render;

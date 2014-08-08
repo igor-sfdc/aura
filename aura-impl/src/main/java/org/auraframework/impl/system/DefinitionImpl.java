@@ -22,11 +22,15 @@ import java.util.Set;
 import org.auraframework.builder.DefBuilder;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.Definition;
+import org.auraframework.def.DefinitionAccess;
+import org.auraframework.impl.DefinitionAccessImpl;
 import org.auraframework.system.Location;
 import org.auraframework.system.SubDefDescriptor;
+import org.auraframework.throwable.AuraExceptionInfo;
 import org.auraframework.throwable.quickfix.InvalidDefinitionException;
 import org.auraframework.throwable.quickfix.QuickFixException;
 import org.auraframework.util.json.Json.Serialization;
+import org.auraframework.util.json.Json.Serialization.ReferenceScope;
 import org.auraframework.util.json.Json.Serialization.ReferenceType;
 import org.auraframework.util.text.Hash;
 
@@ -35,7 +39,7 @@ import com.google.common.collect.Maps;
 /**
  * The implementation for a definition.
  */
-@Serialization(referenceType = ReferenceType.IDENTITY)
+@Serialization(referenceType = ReferenceType.IDENTITY, referenceScope = ReferenceScope.REQUEST)
 public abstract class DefinitionImpl<T extends Definition> implements Definition, Serializable {
 
     private static final long serialVersionUID = 5836732915093913670L;
@@ -43,31 +47,36 @@ public abstract class DefinitionImpl<T extends Definition> implements Definition
     protected final DefDescriptor<T> descriptor;
     protected final Location location;
     protected final Map<SubDefDescriptor<?, T>, Definition> subDefs;
+    protected final String apiVersion;
     protected final String description;
     protected final Visibility visibility;
 
+    private final QuickFixException parseError;
     private final String ownHash;
-    private final Hash sourceHash;
+    private final DefinitionAccess access;
     private boolean valid;
 
     protected DefinitionImpl(DefDescriptor<T> descriptor, Location location, Visibility visibility) {
-        this(descriptor, location, null, null, visibility, null, null);
+        this(descriptor, location, null, null, null, visibility, null, null, null);
     }
 
     protected DefinitionImpl(RefBuilderImpl<T, ?> builder) {
-        this(builder.getDescriptor(), builder.getLocation(), builder.subDefs, builder.description, builder
-                .visibility, builder.getOwnHash(), builder.getSourceHash());
+        this(builder.getDescriptor(), builder.getLocation(), builder.subDefs, builder.apiVersion, builder.description,
+                builder.visibility, builder.getAccess(), builder.getOwnHash(), builder.getParseError());
     }
 
     DefinitionImpl(DefDescriptor<T> descriptor, Location location, Map<SubDefDescriptor<?, T>, Definition> subDefs,
-            String description, Visibility visibility, String ownHash, Hash sourceHash) {
+            String apiVersion, String description, Visibility visibility, DefinitionAccess access, String ownHash,
+            QuickFixException parseError) {
         this.descriptor = descriptor;
         this.location = location;
         this.subDefs = subDefs;
+        this.apiVersion = apiVersion;
         this.description = description;
         this.visibility = visibility;
         this.ownHash = ownHash;
-        this.sourceHash = sourceHash;
+        this.parseError = parseError;
+        this.access = access == null ? DefinitionAccessImpl.defaultAccess(descriptor != null ? descriptor.getNamespace() : null) : access;
     }
 
     /**
@@ -90,6 +99,11 @@ public abstract class DefinitionImpl<T extends Definition> implements Definition
     public Visibility getVisibility(){
         return visibility == null ? Visibility.PUBLIC : visibility;
     }
+    
+    @Override
+    public DefinitionAccess getAccess() {
+    	return access;
+    }
 
     /**
      * @see Definition#getName()
@@ -101,9 +115,6 @@ public abstract class DefinitionImpl<T extends Definition> implements Definition
 
     @Override
     public String getOwnHash() {
-        if (sourceHash != null) {
-            return sourceHash.toString();
-        }
         return ownHash;
     }
 
@@ -112,7 +123,7 @@ public abstract class DefinitionImpl<T extends Definition> implements Definition
      * @see Definition#appendDependencies(java.util.Set)
      */
     @Override
-    public void appendDependencies(Set<DefDescriptor<?>> dependencies) throws QuickFixException {
+    public void appendDependencies(Set<DefDescriptor<?>> dependencies) {
     }
 
     /**
@@ -129,6 +140,9 @@ public abstract class DefinitionImpl<T extends Definition> implements Definition
      */
     @Override
     public void validateDefinition() throws QuickFixException {
+        if (parseError != null) {
+            throw parseError;
+        }
         if (descriptor == null) {
             throw new InvalidDefinitionException("No descriptor", location);
         }
@@ -190,13 +204,25 @@ public abstract class DefinitionImpl<T extends Definition> implements Definition
         public Location location;
         public Map<SubDefDescriptor<?, T>, Definition> subDefs;
         private final Class<T> defClass;
+        public String apiVersion;
         public String description;
         public Hash hash;
         public String ownHash;
+        private QuickFixException parseError;
+        private DefinitionAccess access;
 
         protected RefBuilderImpl(Class<T> defClass) {
             this.defClass = defClass;
             //this.ownHash = String.valueOf(System.currentTimeMillis());
+        }
+
+        public RefBuilderImpl<T, A> setAccess(DefinitionAccess access) {
+            this.access = access;
+            return this;
+        }
+
+        public DefinitionAccess getAccess() {
+            return access;
         }
 
         @Override
@@ -246,7 +272,12 @@ public abstract class DefinitionImpl<T extends Definition> implements Definition
 
         @Override
         public RefBuilderImpl<T, A> setDescriptor(String qualifiedName) {
-            return this.setDescriptor(DefDescriptorImpl.getInstance(qualifiedName, defClass));
+            try {
+                return this.setDescriptor(DefDescriptorImpl.getInstance(qualifiedName, defClass));
+            } catch (Exception e) {
+                setParseError(e);
+                return this;
+            }
         }
 
         @Override
@@ -260,6 +291,12 @@ public abstract class DefinitionImpl<T extends Definition> implements Definition
         @Override
         public DefDescriptor<T> getDescriptor() {
             return descriptor;
+        }
+
+        @Override
+        public RefBuilderImpl<T, A> setAPIVersion(String apiVersion) {
+            this.apiVersion = apiVersion;
+            return this;
         }
 
         @Override
@@ -293,21 +330,38 @@ public abstract class DefinitionImpl<T extends Definition> implements Definition
             return ownHash;
         }
 
-        private Hash getSourceHash() {
-            //
-            // Only set the hash value if we don't have one.
-            //
-            if (getOwnHash() == null) {
-                return hash;
-            } else {
-                return null;
+        @Override
+        public void setParseError(Throwable cause) {
+            if (this.parseError != null) {
+                return;
             }
+            if (cause instanceof QuickFixException) {
+                this.parseError = (QuickFixException)cause;
+            } else {
+                Location location = null;
+
+                if (cause instanceof AuraExceptionInfo) {
+                    AuraExceptionInfo aei = (AuraExceptionInfo)cause;
+                    location = aei.getLocation();
+                }
+                this.parseError = new InvalidDefinitionException(cause.getMessage(), location, cause);
+            }
+        }
+
+        @Override
+        public QuickFixException getParseError() {
+            return parseError;
         }
     }
 
     @Override
     public void retrieveLabels() throws QuickFixException {
 
+    }
+
+    @Override
+    public String getAPIVersion() {
+        return apiVersion;
     }
 
     @Override

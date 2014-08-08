@@ -14,20 +14,29 @@
  * limitations under the License.
  */
 ({
-    refresh: function(component, event, helper) {
-        helper.refresh(component);
+    init: function (component, event, helper) {
+        helper.initialize(component);
     },
-    
-    locationChange: function(component, event) {
-		var scroller = component._scroller;
-		if (!$A.util.isUndefined(scroller)) {
-			scroller.unbindTransientHandlers();
-		}    	
+    refresh: function(component, event, helper) {
+       var scroller = helper.getScrollerInstance(component);
+        if (scroller) {
+            scroller.refresh();
+        }
     },
     scrollTo: function(component, event, helper) {
-    	helper.handleScrollTo(component, event);
+        helper.handleScrollTo(component, event);
     },
+
     scrollBy: function(component, event, helper) {
-    	helper.handleScrollBy(component, event);
+        helper.handleScrollBy(component, event);
+    },
+
+    handleCanShowMoreChange: function (cmp, evt, hlp) {
+        var newValue = evt.getParam('value');
+        hlp.swapShowMore(cmp, newValue);
+    },
+    handleCanRefreshChange: function (cmp, evt, hlp) {
+        var newValue = evt.getParam('value');
+        hlp.swapRefresh(cmp, newValue);
     }
 })

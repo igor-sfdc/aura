@@ -29,12 +29,11 @@ import org.auraframework.def.ProviderDef;
 import org.auraframework.instance.ComponentConfig;
 import org.auraframework.system.Annotations.AuraEnabled;
 import org.auraframework.system.Annotations.Controller;
-import org.auraframework.system.AuraContext.Access;
+import org.auraframework.system.AuraContext.Authentication;
 import org.auraframework.system.AuraContext.Format;
 import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.test.WebDriverTestCase;
-import org.auraframework.test.WebDriverTestCase.TargetBrowsers;
-import org.auraframework.test.WebDriverUtil.BrowserType;
+import org.auraframework.test.annotation.UnAdaptableTest;
 import org.auraframework.throwable.AuraRuntimeException;
 import org.mockito.Mockito;
 import org.openqa.selenium.By;
@@ -42,14 +41,8 @@ import org.openqa.selenium.By;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
+@UnAdaptableTest("W-2329849: Failing on SFDC but passing on standalone ios-driver builds. Needs investigation")
 @Controller
-@TargetBrowsers({ BrowserType.GOOGLECHROME })
-/*
- * W-1625166: Excluding from BrowserType.SAFARI,FIREFOX,IE10,IE7,IE8,IPAD,IPHONE : failed at assertion: expected:<[not a
- * list]> but was:<[Modelonetwothree]> . if run with saucelab, GOOGLECHROME has the same problem. GOOGLECHROME only work
- * under command line :mvn verify -DskipUnitTests -DskipJsDoc -DrunIntTests -DtestNameContains="testMockModel" -Pdesktop
- * -Dwebdriver.browser.type=GOOGLECHROME
- */
 public class MockingUtilTest extends WebDriverTestCase {
 
     private MockingUtil mockingUtil;
@@ -72,7 +65,7 @@ public class MockingUtilTest extends WebDriverTestCase {
 
     public void testMockModelSanity() throws Exception {
         if (!Aura.getContextService().isEstablished()) {
-            Aura.getContextService().startContext(Mode.SELENIUM, Format.HTML, Access.AUTHENTICATED);
+            Aura.getContextService().startContext(Mode.SELENIUM, Format.HTML, Authentication.AUTHENTICATED);
         }
         DefDescriptor<ModelDef> modelDefDescriptor = Aura.getDefinitionService()
                 .getDefDescriptor("java://org.auraframework.impl.java.model.TestJavaModel", ModelDef.class);
@@ -86,7 +79,7 @@ public class MockingUtilTest extends WebDriverTestCase {
 
     public void testMockModelString() throws Exception {
         if (!Aura.getContextService().isEstablished()) {
-            Aura.getContextService().startContext(Mode.SELENIUM, Format.HTML, Access.AUTHENTICATED);
+            Aura.getContextService().startContext(Mode.SELENIUM, Format.HTML, Authentication.AUTHENTICATED);
         }
         DefDescriptor<ModelDef> modelDefDescriptor = Aura.getDefinitionService().getDefDescriptor(
                 "java://org.auraframework.impl.java.model.TestJavaModel", ModelDef.class);
@@ -102,7 +95,7 @@ public class MockingUtilTest extends WebDriverTestCase {
 
     public void testMockModelList() throws Exception {
         if (!Aura.getContextService().isEstablished()) {
-            Aura.getContextService().startContext(Mode.SELENIUM, Format.HTML, Access.AUTHENTICATED);
+            Aura.getContextService().startContext(Mode.SELENIUM, Format.HTML, Authentication.AUTHENTICATED);
         }
         DefDescriptor<ModelDef> modelDefDescriptor = Aura.getDefinitionService().getDefDescriptor(
                 "java://org.auraframework.impl.java.model.TestJavaModel", ModelDef.class);
@@ -121,7 +114,7 @@ public class MockingUtilTest extends WebDriverTestCase {
 
     public void testMockModelChain() throws Exception {
         if (!Aura.getContextService().isEstablished()) {
-            Aura.getContextService().startContext(Mode.SELENIUM, Format.HTML, Access.AUTHENTICATED);
+            Aura.getContextService().startContext(Mode.SELENIUM, Format.HTML, Authentication.AUTHENTICATED);
         }
         DefDescriptor<ModelDef> modelDefDescriptor = Aura.getDefinitionService().getDefDescriptor(
                 "java://org.auraframework.impl.java.model.TestJavaModel", ModelDef.class);
@@ -189,7 +182,7 @@ public class MockingUtilTest extends WebDriverTestCase {
 
     public void testMockServerActionSanity() throws Exception {
         if (!Aura.getContextService().isEstablished()) {
-            Aura.getContextService().startContext(Mode.SELENIUM, Format.HTML, Access.AUTHENTICATED);
+            Aura.getContextService().startContext(Mode.SELENIUM, Format.HTML, Authentication.AUTHENTICATED);
         }
         DefDescriptor<ControllerDef> controllerDefDescriptor = Aura.getDefinitionService().getDefDescriptor(
                 String.format("java://%s", this.getClass().getCanonicalName()), ControllerDef.class);
@@ -214,7 +207,7 @@ public class MockingUtilTest extends WebDriverTestCase {
 
     public void testMockServerAction() throws Exception {
         if (!Aura.getContextService().isEstablished()) {
-            Aura.getContextService().startContext(Mode.SELENIUM, Format.HTML, Access.AUTHENTICATED);
+            Aura.getContextService().startContext(Mode.SELENIUM, Format.HTML, Authentication.AUTHENTICATED);
         }
         DefDescriptor<ControllerDef> controllerDefDescriptor = Aura.getDefinitionService().getDefDescriptor(
                 String.format("java://%s", this.getClass().getCanonicalName()), ControllerDef.class);

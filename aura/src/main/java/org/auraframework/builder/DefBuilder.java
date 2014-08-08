@@ -17,10 +17,8 @@ package org.auraframework.builder;
 
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.Definition;
-
 import org.auraframework.system.Location;
 import org.auraframework.throwable.quickfix.QuickFixException;
-
 import org.auraframework.util.text.Hash;
 
 /**
@@ -47,6 +45,8 @@ public interface DefBuilder<PrimaryIntf extends Definition, DefOrRefType extends
 
     DefBuilder<PrimaryIntf, DefOrRefType> setDescriptor(DefDescriptor<PrimaryIntf> desc);
 
+    DefBuilder<PrimaryIntf, DefOrRefType> setAPIVersion(String apiVersion);
+
     DefBuilder<PrimaryIntf, DefOrRefType> setDescription(String description);
 
     /**
@@ -68,4 +68,20 @@ public interface DefBuilder<PrimaryIntf extends Definition, DefOrRefType extends
     DefBuilder<PrimaryIntf, DefOrRefType> setOwnHash(String hash);
 
     DefDescriptor<PrimaryIntf> getDescriptor();
+
+    /**
+     * Set an error from when we are parsing/building the def.
+     *
+     * This method allows the building process to set a parse error that will be returned
+     * as a quick fix exception. If the cause is of an appropriate type information is
+     * extracted/sent on to the quick fix.
+     *
+     * @param cause the underlying throwable.
+     */
+    void setParseError(Throwable cause);
+
+    /**
+     * Get any error that occurred during the build process.
+     */
+    QuickFixException getParseError();
 }

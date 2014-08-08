@@ -17,7 +17,7 @@
     /**
      * Adds an event handler for every DOM event for which this input has a Aura-equivalent handler
      */
-    addDomEvents : function(component) {    	
+    addDomEvents : function(component) {
         var events = this.getHandledDOMEvents(component);
         //work around for bug W-1744442
         var helper = component.getConcreteComponent().getDef().getHelper() || this;
@@ -45,10 +45,10 @@
     domEventHandler : function (event) {
         var element = event.target;
         var htmlCmp = $A.componentService.getRenderingComponentForElement(element);
-        var component = htmlCmp.getAttributes().getComponentValueProvider().getConcreteComponent();
+        var component = htmlCmp.getComponentValueProvider().getConcreteComponent();
         var helper = component.getDef().getHelper();
-        
-        if (!helper) {
+
+        if (!helper || component._recentlyClicked) {
             return;
         }
 
@@ -61,12 +61,17 @@
         if (helper.fireEvent) {
             helper.fireEvent(component, event, helper);
         }
+
+        if (event.type == "click" && component.get("v.disableDoubleClicks")) {
+        	component._recentlyClicked = true;
+        	window.setTimeout(function() { component._recentlyClicked = false; }, 350);
+        }
     },
 
     /**
      * Fire the equivalent Aura event for DOM one.
      * This can be overridden by extended component
-     * 
+     *
      * @param event must be a DOM event
      */
      fireEvent : function (component, event, helper) {
@@ -107,7 +112,7 @@
     /**
      * This method is intended to be overridden by extended components to do event related stuff before the event gets fired.
      * For example, input component uses this method to update its value if the event is the "updateOn" event.
-     * 
+     *
      * @param event must be a DOM event
      */
     preEventFiring : function(component, event){
@@ -140,7 +145,7 @@
      * @param {String} disabledCss Optional css class to apply when disabled, and remove when enabled.
      */
     setDisabled: function(component, disabled, disabledCss) {
-        component.setValue('v.disabled', disabled);
+        component.set('v.disabled', disabled);
         if (disabledCss) {
             var fn = disabled ? component.addClass : component.removeClass;
             fn.call(component, disabledCss);

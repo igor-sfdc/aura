@@ -33,9 +33,9 @@
     },
     
     getParentComponent: function(component) {
-        var parent = component.getValue("v.parent");
-        if (parent && !parent.isEmpty()) {
-            return parent.getValue(0);
+        var parent = component.get("v.parent");
+        if (parent && parent.length > 0) {
+            return parent[0];
         }
         return null;
     },
@@ -55,9 +55,9 @@
     
     fireSelectEvent: function(component, event) {
         var concrete = component.getConcreteComponent();
-        var parent = concrete.getValue("v.parent");
-        if (parent && !parent.isEmpty()) {
-            p = parent.getValue(0);
+        var parent = concrete.get("v.parent");
+        if (parent && parent.length > 0) {
+            p = parent[0];
             var e = p.getEvent("menuSelect");
             if (e) {
                 e.setParams({
@@ -76,7 +76,7 @@
     	var concreteParentCmp = parent.getConcreteComponent();
         if (concreteParentCmp) {
             if (concreteParentCmp.get("v.visible") === true) {
-                concreteParentCmp.setValue("v.visible", false);
+                concreteParentCmp.set("v.visible", false);
                 if (component.get("v.disabled") === true) {
                     // for disabled menu item, no Aura event gets fired, so we have to directly deal with DOM.
                     var devCmp = parent.find("menu");
@@ -109,10 +109,11 @@
      */
     handleTabkeydown: function(component, event) {
         var parent = this.getParentComponent(component);
+		var closeOnTab = parent.get('v.closeOnTabKey');
         var concreteParentCmp = parent.getConcreteComponent();
-        if (concreteParentCmp) {
+        if (concreteParentCmp && closeOnTab) {
             if (concreteParentCmp.get("v.visible") === true) {
-                concreteParentCmp.setValue("v.visible", false);
+                concreteParentCmp.set("v.visible", false);
                 if (component.get("v.disabled") === true) {
                     // for disabled menu item, no Aura event gets fired, so we have to directly deal with DOM.
                     var devCmp = parent.find("menu");
@@ -131,7 +132,7 @@
     
     setDisabled : function(component) {
     	var concreteCmp = component.getConcreteComponent();
-        var linkCmp = concreteCmp.find("link");
+        var linkCmp = this.getAnchorElement(component);
         var elem = linkCmp ? linkCmp.getElement() : null;
         if (elem) {
             var disabled = concreteCmp.get("v.disabled");
@@ -146,29 +147,42 @@
     },
     
     setFocus: function(component) {
-        var concreteCmp = component.getConcreteComponent();
-        var linkCmp = concreteCmp.find("link");
+        var linkCmp = this.getAnchorElement(component);
         var elem = linkCmp ? linkCmp.getElement() : null;
         if (elem && elem.focus) {
             elem.focus();
         }
     },
     
+    getAnchorElement: function(component) {
+    	//Walk up the component ancestor to find the contained component by localId
+    	var localId = "link", c =  component.getConcreteComponent();
+    	var retCmp = null;    	
+    	while (c) {    		    		
+    		retCmp = c.find(localId);
+    		if (retCmp) {
+    			break;
+    		}
+    		c = c.getSuper();
+    	}
+    	return retCmp;
+    },
+    
     setFocusToNextItem: function(component) {
         var parent = this.getParentComponent(component);
         if (parent) {
             var nextIndex = 0;
-            var menuItems = parent.getValue("v.childMenuItems");
-            for (var i = 0; i < menuItems.getLength(); i++) {
-                if (component === menuItems.getValue(i)) {
+            var menuItems = parent.get("v.childMenuItems");
+            for (var i = 0; i < menuItems.length; i++) {
+                if (component === menuItems[i]) {
                     nextIndex = ++i;
                     break;
                 }
             }
-            if (nextIndex >= menuItems.getLength()) {
+            if (nextIndex >= menuItems.length) {
                 nextIndex = 0;
             }
-            var nextFocusCmp = menuItems.getValue(nextIndex);
+            var nextFocusCmp = menuItems[nextIndex];
             var action = nextFocusCmp.get("c.setFocus");
             action.runDeprecated();
         }
@@ -178,17 +192,17 @@
         var parent = this.getParentComponent(component);
         if (parent) {
             var previousIndex = 0;
-            var menuItems = parent.getValue("v.childMenuItems");
-            for (var i = 0; i < menuItems.getLength(); i++) {
-                if (component === menuItems.getValue(i)) {
+            var menuItems = parent.get("v.childMenuItems");
+            for (var i = 0; i < menuItems.length; i++) {
+                if (component === menuItems[i]) {
                     previousIndex = --i;
                     break;
                 }
             }
             if (previousIndex < 0) {
-                previousIndex = menuItems.getLength() - 1;
+                previousIndex = menuItems.length - 1;
             }
-            var previousFocusCmp = menuItems.getValue(previousIndex);
+            var previousFocusCmp = menuItems[previousIndex];
             var action = previousFocusCmp.get("c.setFocus");
             action.runDeprecated();
         }
@@ -197,9 +211,9 @@
     setFocusToTrigger: function(component) {
         var parent = this.getParentComponent(component);
         if (parent) {
-            var grandParent = parent.getValue("v.parent");
-            if (grandParent && !grandParent.isEmpty()) {
-                var dropdownCmp = grandParent.getValue(0);
+            var grandParent = parent.get("v.parent");
+            if (grandParent && grandParent.length > 0) {
+                var dropdownCmp = grandParent[0];
                 var dropdownHelper = dropdownCmp.getDef().getHelper();
                 var menuTriggerCmp = dropdownHelper.getTriggerComponent(dropdownCmp);
                 if (menuTriggerCmp) {
@@ -229,9 +243,9 @@
 
             // Try to select
             var matchText = parent._keyBuffer.join("").toLowerCase();
-            var menuItems = parent.getValue("v.childMenuItems");
-            for(var i = 0; i < menuItems.getLength(); i++) {
-                var c = menuItems.getValue(i)
+            var menuItems = parent.get("v.childMenuItems");
+            for(var i = 0; i < menuItems.length; i++) {
+                var c = menuItems[i];
                 var text = c.get("v.label");
                 if(text.toLowerCase().indexOf(matchText) === 0) {
                     var action = c.get("c.setFocus");

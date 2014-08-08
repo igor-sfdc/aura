@@ -49,6 +49,7 @@ $A['ns'] = $A.ns; // TODO: use exportSymbols when available
 
 var clientService;
 
+// #include aura.Promise
 // #include aura.util.Function
 // #include aura.util.Util
 // #include {"modes" : ["TESTING","AUTOTESTING", "TESTINGDEBUG", "AUTOTESTINGDEBUG", "DOC"], "path" : "aura.test.Test"}
@@ -64,7 +65,7 @@ var clientService;
 // #include aura.value.SimpleValue
 // #include aura.value.MapValue
 // #include aura.value.ArrayValue
-// #include aura.value.PropertyReferenceValue
+// #include aura.value.PropertyChain
 // #include aura.value.FunctionCallValue
 // #include aura.value.ActionReferenceValue
 // #include aura.value.PassthroughValue
@@ -75,6 +76,7 @@ var clientService;
 // #include aura.renderer.RendererDef
 // #include aura.provider.ProviderDef
 // #include aura.helper.HelperDefRegistry
+// #include aura.library.LibraryDefRegistry
 // #include aura.event.EventDefRegistry
 // #include aura.event.EventDef
 // #include aura.event.Event
@@ -98,6 +100,7 @@ var clientService;
 // #include aura.model.ValueDef
 // #include aura.l10n.AuraLocalizationContext
 // #include aura.AuraClientService
+// #include aura.AuraComponentContext
 // #include aura.AuraComponentService
 // #include aura.AuraSerializationService
 // #include aura.AuraRenderingService
@@ -106,7 +109,7 @@ var clientService;
 // #include aura.AuraEventService
 // #include aura.AuraLayoutService
 // #include aura.AuraLocalizationService
-// #include {"excludeModes" : ["PRODUCTION"], "path" : "aura.AuraDevToolService"}
+// #include {"excludeModes" : ["PRODUCTION", "PRODUCTIONDEBUG"], "path" : "aura.AuraDevToolService"}
 // #include aura.value.ValueFactory
 // #include aura.value.ExpressionFunctions
 // #include aura.model.Model
@@ -122,25 +125,28 @@ var clientService;
  * @constructor
  */
 $A.ns.Aura = function() {
-    this.util = new $A.ns.Util();
+    this.util = new $A.ns.Util(); 
+    //TODO W-2334986: HACK to get past closure, $A.util.on is getting stomped over by closure property rename
+    this.util["on"] = this.util.on;
     this["util"] = this.util;
     //#if {"modes" : ["TESTING","AUTOTESTING", "TESTINGDEBUG", "AUTOTESTINGDEBUG"]}
-    this.test = new Test();
+    this.test = new $A.ns.Test();
     this["test"] = this.test;
     //#end
 
     this.clientService = new AuraClientService();
-    this.componentService = new AuraComponentService();
+    this.componentService = new $A.ns.AuraComponentService();
     this.serializationService = new AuraSerializationService();
     this.renderingService = new AuraRenderingService();
     this.expressionService = new AuraExpressionService();
-    this.historyService = new AuraHistoryService();
+    this.historyService = new $A.ns.AuraHistoryService();
     this.eventService = new AuraEventService();
     this.layoutService = new AuraLayoutService();
     this.localizationService = new AuraLocalizationService();
     this.storageService = new AuraStorageService();
+    this.componentStack = new $A.ns.AuraComponentContext();
 
-    //#if {"excludeModes" : ["PRODUCTION"]}
+    //#if {"excludeModes" : ["PRODUCTION", "PRODUCTIONDEBUG"]}
     this.devToolService = new AuraDevToolService();
     //#end
     var aura = this;
@@ -256,6 +262,16 @@ $A.ns.Aura = function() {
     this.enqueueAction = this.clientService.enqueueAction;
 
     /**
+     * Equivalent to <code>$A.clientService.deferAction()</code>.
+     * <p>See Also: <a href="#reference?topic=api:AuraClientService">AuraClientService</a></p>
+     * @public
+     * @function
+     * @param {Action} action
+     * @borrows AuraClientService.deferAction
+     */
+    this.deferAction = this.clientService.deferAction;
+
+    /**
      * Equivalent to <code>$A.renderingService.render()</code>.
      * <p>See Also: <a href="#reference?topic=api:AuraRenderingService">AuraRenderingService</a></p>
      * @public
@@ -303,11 +319,102 @@ $A.ns.Aura = function() {
      * @param {Component|Array} cmp
      * @borrows AuraComponentService.get
      */
-    this.getCmp = this.componentService.get;
+    this.getCmp = function(globalId) {
+        return this.componentService.get(globalId);
+    };
 
-    this.newCmp = this.componentService.newComponent;
-    this.newCmpDeprecated = this.componentService.newComponentDeprecated;
-    this.newCmpAsync = this.componentService.newComponentAsync;
+    /**
+     * Client-side component creation. This method is replaced by newCmpAsync().
+     * @param {Object} config
+     * @param {Object} attributeValueProvider
+     * @param {Boolean} localCreation
+     */
+    this.newCmp = function(config, attributeValueProvider, localCreation, doForce) {
+        return this.componentService.newComponentDeprecated(config, attributeValueProvider, localCreation, doForce);
+    };
+    /**
+     * Previously known as newComponent(). This method is replaced by newCmpAsync().
+     * @param {Object} config
+     * @param {Object} attributeValueProvider
+     * @param {Boolean} localCreation
+     * @param {Boolean} doForce
+     */
+    this.newCmpDeprecated = function(config, attributeValueProvider, localCreation, doForce) {
+        return this.componentService.newComponentDeprecated(config, attributeValueProvider, localCreation, doForce);
+    };
+
+    /**
+     * Creates components from a client-side controller or helper. Equivalent to <code>$A.newCmpAsync()</code>.
+     * If no server-side dependencies are found, this method runs synchronously.
+     * @param {Object} callbackScope The callback scope
+     * @param {Function} callback The callback function, required for returning the newly created component
+     * @param {Object} config Provides the component descriptor and attributes. Example:
+     * <p><code>"componentDef": "markup://ui:button", "attributes": { "values": {label: "Submit"}}</code></p>
+     * @param {Object} attributeValueProvider The value provider for the attribute.
+     * @param {Boolean} localCreation For internal use only. localCreation determines if the global id is used and defaults to false.
+     * @param {Boolean} doForce For internal use only. doForce enforces client-side creation and defaults to false.
+     * @param {Boolean} forceServer For internal use only. forceServer enforces server-side creation and defaults to false.
+     */
+    this.newCmpAsync = function(callbackScope, callback, config, attributeValueProvider, localCreation, doForce, forceServer){
+        return this.componentService.newComponentAsync(callbackScope, callback, config, attributeValueProvider, localCreation, doForce, forceServer);
+    };
+
+
+
+    /**
+     * Pushes current portion of attribute's creationPath onto stack
+     * @param {String} creationPath
+     *
+     * @public
+     */
+    this.pushCreationPath = function(creationPath) {
+        var ctx = this.getContext();
+        if (!ctx) {
+            return;
+        }
+        var act = ctx.getCurrentAction();
+        if (!act) {
+            return;
+        }
+        act.pushCreationPath(creationPath);
+    };
+
+    /**
+     * pops current portion of attribute's creationPath from stack
+     * @param {String} creationPath
+     *
+     * @public
+     */
+    this.popCreationPath = function(creationPath) {
+        var ctx = this.getContext();
+        if (!ctx) {
+            return;
+        }
+        var act = ctx.getCurrentAction();
+        if (!act) {
+            return;
+        }
+        act.popCreationPath(creationPath);
+    };
+
+    /**
+     * sets pathIndex for the current attribute on creationPath's stack
+     * @param {String} creationPath
+     *
+     * @public
+     */
+    this.setCreationPathIndex = function(idx) {
+        var ctx = this.getContext();
+        if (!ctx) {
+            return;
+        }
+        var act = ctx.getCurrentAction();
+        if (!act) {
+            return;
+        }
+        act.setCreationPathIndex(idx);
+    };
+
 
     /**
      * Equivalent to <code>$A.eventService.newEvent()</code>.
@@ -333,12 +440,16 @@ $A.ns.Aura = function() {
         "storageService", aura.storageService,
         "services", aura.services,
         "enqueueAction", aura.enqueueAction,
+        "deferAction", aura.deferAction,
         "render", aura.render,
         "rerender", aura.rerender,
         "unrender", aura.unrender,
         "afterRender", aura.afterRender,
         "getCmp", aura.getCmp,
-        //#if {"excludeModes" : ["PRODUCTION"]}
+        "pushCreationPath", aura.pushCreationPath,
+        "popCreationPath", aura.popCreationPath,
+        "setCreationPathIndex", aura.setCreationPathIndex,
+        //#if {"excludeModes" : ["PRODUCTION", "PRODUCTIONDEBUG"]}
             "devToolService", aura.devToolService,
             "getQueryStatement", aura.devToolService.newStatement,
             "qhelp", function() { return aura.devToolService.help() },
@@ -368,6 +479,18 @@ $A.ns.Aura = function() {
             }
     );
 
+    
+    this.eventService.addHandler({
+        event : 'aura:clientRedirect',
+        "globalId" : "Aura",
+        "handler" : function(evt) {
+        	var url = evt.getParam('url');
+        	if (url != null) {
+        		window.location = url; 
+        	}
+        }
+    });
+        
     this.eventService.addHandler({
         event : 'aura:systemError',
         "globalId" : "Aura",
@@ -390,16 +513,20 @@ $A.ns.Aura = function() {
  * @public
  */
 $A.ns.Aura.prototype.initAsync = function(config) {
-    $A.mark("Component Load Complete");
-    $A.mark("Component Load Initiated");
-    $A.context = new AuraContext(config["context"]);
-    clientService.initHost(config["host"]);
-    clientService.loadComponent(config["descriptor"], config["attributes"], function(resp) {
-        $A.initPriv(resp);
-        $A.endMark("Component Load Complete");
-    }, config["deftype"]);
-
-    $A.endMark("Component Load Initiated");
+    $A.Perf.mark("Component Load Complete");
+    $A.Perf.mark("Component Load Initiated");
+    //
+    // we don't handle components that come back here. This is used in the case where there
+    // are none.
+    //
+    $A.context = new AuraContext(config["context"], function() {
+        clientService.initHost(config["host"]);
+        clientService.loadComponent(config["descriptor"], config["attributes"], function(resp) {
+            $A.initPriv(resp);
+            $A.Perf.endMark("Component Load Complete");
+        }, config["deftype"]);
+        $A.Perf.endMark("Component Load Initiated");
+    });
 };
 
 /**
@@ -409,37 +536,27 @@ $A.ns.Aura.prototype.initAsync = function(config) {
  * @param {Boolean} useExisting
  * @param {Boolean} doNotInitializeServices Set to true if Layout and History services should not be initialized, or false if
  * 	 they should. Defaults to true for Aura Integration Service.
- * @param {Boolean} doNotCallJiffyOnLoad True if Jiffy.onLoad() should not be called after initialization. In case of
+ * @param {Boolean} doNotCallUIPerfOnLoad True if UIPerf.onLoad() should not be called after initialization. In case of
  *       IntegrationService when aura components are embedded on the page, onLoad is called by the parent container.
  */
-$A.ns.Aura.prototype.initConfig = function(config, useExisting, doNotInitializeServices, doNotCallJiffyOnLoad) {
+$A.ns.Aura.prototype.initConfig = function(config, useExisting, doNotInitializeServices, doNotCallUIPerfOnLoad) {
     config = $A.util.json.resolveRefs(config);
 
     if (!useExisting || $A.util.isUndefined($A.getContext())) {
         clientService.initHost(config["host"]);
 
+        // FIXME: AuraContext accepts a callback because its init is async (eg loading of the GVP
+        // from persistent storage). Only AIS uses this setup method and AIS doesn't use persistent
+        // storage with an async fetch (eg Smart Store Adapter).
         $A.context = new AuraContext(config["context"]);
-        this.init(config["instance"], config["token"], config["context"], null, doNotInitializeServices, doNotCallJiffyOnLoad);
+        this.initPriv($A.util.json.resolveRefs(config["instance"]), config["token"], null, doNotInitializeServices, doNotCallUIPerfOnLoad);
+        $A.context.finishComponentConfigs($A.context.getCurrentAction().getId());
+        $A.context.setCurrentAction(null);
     } else {
         // Use the existing context and just join the new context into it
+        // FIXME: is this used? it won't do the right thing if there are components.
         $A.getContext().join(config["context"]);
     }
-};
-
-/**
- * Initializes Aura in a specified mode.
- * @param {Object} config The descriptor (<code>"markup://foo:bar"</code>), attributes, defType (<code>"APPLICATION"</code> or <code>"COMPONENT"</code>), and timestamp of last modified change
- * @param {String} token
- * @param {Object} context The mode of the application or component ("DEV", "PROD", "PTEST")
- * @param {Object} container Sets the container for the component.
- * @param {Boolean} doNotInitializeServices Set to true if Layout and History services should not be initialized, or false if
- * 	 they should. Defaults to true for Aura Integration Service.
- * @param {Boolean} doNotCallJiffyOnLoad True if Jiffy.onLoad() should not be called after initialization. In case of
- *       IntegrationService when aura components are embedded on the page, onLoad is called by the parent container.
- */
-$A.ns.Aura.prototype.init = function(config, token, context, container, doNotInitializeServices, doNotCallJiffyOnLoad) {
-    var component = $A.util.json.resolveRefs(config);
-    $A.initPriv(component, token, container, doNotInitializeServices, doNotCallJiffyOnLoad);
 };
 
 /**
@@ -451,64 +568,58 @@ $A.ns.Aura.prototype.init = function(config, token, context, container, doNotIni
  * @param {Object} container Sets the container for the component.
  * @param {Boolean=} doNotInitializeServices True if Layout and History services should not be initialized, or false if
  *        they should. Defaults to true for Aura Integration Service.
- * @param {Boolean} doNotCallJiffyOnLoad True if Jiffy.onLoad() should not be called after initialization. In case of
+ * @param {Boolean} doNotCallUIPerfOnLoad True if UIPerf.onLoad() should not be called after initialization. In case of
  *       IntegrationService when aura components are embedded on the page, onLoad is called by the parent container.
  * @private
  */
-$A.ns.Aura.prototype.initPriv = function(config, token, container, doNotInitializeServices, doNotCallJiffyOnLoad) {
+$A.ns.Aura.prototype.initPriv = function(config, token, container, doNotInitializeServices, doNotCallUIPerfOnLoad) {
     if (!$A["hasErrors"]) {
-        $A.mark("ClientService.init");
+        $A.Perf.mark("ClientService.init");
 
         clientService.init(config, token, function(cmp) {
-            $A.endMark("ClientService.init");
+            $A.Perf.endMark("ClientService.init");
             $A.setRoot(cmp);
 
             if (!$A.initialized) {
                 if (!doNotInitializeServices) {
-                    $A.mark("LayoutService.init");
+                    $A.Perf.mark("LayoutService.init");
                     $A.layoutService.init(cmp);
-                    $A.endMark("LayoutService.init");
+                    $A.Perf.endMark("LayoutService.init");
 
-                    $A.mark("HistoryService.init");
+                    $A.Perf.mark("HistoryService.init");
                     $A.historyService.init();
-                    $A.endMark("HistoryService.init");
+                    $A.Perf.endMark("HistoryService.init");
                 }
 
                 $A.initialized = true;
             }
 
-            $A.finishInit(doNotCallJiffyOnLoad);
+            $A.finishInit(doNotCallUIPerfOnLoad);
         }, container ? $A.util.getElement(container) : null);
     }
 };
 
 /**
  * Signals that initialization has completed.
- * @param {Boolean} doNotCallJiffyOnLoad True if Jiffy.onLoad() should not be called after initialization. In case of
+ * @param {Boolean} doNotCallUIPerfOnLoad True if UIPerf.onLoad() should not be called after initialization. In case of
  *       IntegrationService when aura components are embedded on the page, onLoad is called by the parent container.
  * @private
  */
-$A.ns.Aura.prototype.finishInit = function(doNotCallJiffyOnLoad) {
+$A.ns.Aura.prototype.finishInit = function(doNotCallUIPerfOnLoad) {
     if (!this["finishedInit"]) {
-        $A.mark("Aura.finishInit");
+        $A.Perf.mark("Aura.finishInit");
         $A.util.removeClass(document.body, "loading");
 
-        $A.endMark("Aura.finishInit");
-        if(window["Jiffy"]){
-          //Do not call Jiffy.onLoad()
-          if(doNotCallJiffyOnLoad){
-              if(window["Jiffy"]["setTimer"]){
-              window["Jiffy"]["setTimer"]("Aura Init");
-              }
-          }else{
-            if (window["Jiffy"]["onLoad"]) {
-                    window["Jiffy"]["onLoad"]();
-                    if (window["Jiffy"]["ui"] && window["Jiffy"]["ui"]["onLoad"]) {
-                        window["Jiffy"]["ui"]["onLoad"]();
-                    }
+        $A.Perf.endMark("Aura.finishInit");
+        if (doNotCallUIPerfOnLoad) {
+            $A.Perf.setTimer("Aura Init");
+        } else {
+            $A.Perf.onLoad();
+            if (window["Perf"] && window["Perf"]["ui"] && window["Perf"]["ui"]["onLoad"]) {
+                window["Perf"]["ui"]["onLoad"]();
             }
-          }
         }
+
         this["finishedInit"] = true;
         $A.clientService.fireLoadEvent("e.aura:initialized");
     }
@@ -518,19 +629,23 @@ $A.ns.Aura.prototype.finishInit = function(doNotCallJiffyOnLoad) {
  * Use <code>$A.error()</code> in response to a serious error that has no recovery path.
  *
  * If this occurs during a test, the test will be stopped unless you add calls to '$A.test.expectAuraError' for
- * each error that occurs. <code>exceptionsAllowedDuringInit</code> allows server side errors to not stop the
+ * each error that occurs. <code>auraErrorsExpectedDuringInit</code> allows server side errors to not stop the
  * test as well.
  *
  * @description <p>Example:</p>
- * <code>
- * testDuplicate : {<br/>
- * &nbsp;&nbsp;&nbsp;&nbsp;exceptionsAllowedDuringInit : ["Duplicate found!"],<br/>
- * &nbsp;&nbsp;&nbsp;&nbsp;attributes : {<br/>
- * &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dupCmp : true<br/>
- * &nbsp;&nbsp;&nbsp;&nbsp;},<br/>
- * &nbsp;&nbsp;&nbsp;&nbsp;//more tests<br/>
+ * <pre>
+ * testDuplicate : {
+   auraErrorsExpectedDuringInit : ["Duplicate found!"],
+     attributes : {
+ *     dupCmp : true
+ *   },
+ *    //more tests
  * }
- * </code>
+ * </pre>
+ *
+ * <p>This code tries to separate a "display message" (with limited information for users in production
+ * modes) from a "log message" (always complete).</p>
+ *
  * @public
  * @param {String} msg The error message to be displayed to the user.
  * @param {Error} [e] The error object to be displayed to the user.
@@ -538,16 +653,26 @@ $A.ns.Aura.prototype.finishInit = function(doNotCallJiffyOnLoad) {
 $A.ns.Aura.prototype.error = function(msg, e){
     var logMsg = msg || "";
     var dispMsg;
-
+ 
     if (!$A.util.isString(msg)) {
-        e = msg;
+        e = msg; 
         logMsg = "";
         msg = "Unknown Error";
     }
     if (!e) {
         e = undefined;
-    } else if (!$A.util.isObject(e) && !$A.util.isError(e)) {
-        logMsg = "Internal Error: Unrecognized parameter to aura.error";
+    } else if (!$A.util.isError(e)) {
+        // Somebody's thrown something bogus, or we're on IE, but either way we
+        // should do what we can...
+        if ($A.util.isObject(e) && e.message) {
+            var stk = e.stack;
+            e = new Error("caught " + e.message);
+            if (stk) {
+                e.stack = stk;      
+            }
+        } else {
+            e = new Error("caught " + $A.util.json.encode(e));
+        }
     }
     if (!logMsg.length) {
         logMsg = "Unknown Error";
@@ -556,6 +681,9 @@ $A.ns.Aura.prototype.error = function(msg, e){
     if (e && !$A.util.isUndefinedOrNull(e.message)) {
         dispMsg = dispMsg+" : "+e.message;
     }
+
+    var testMsg = dispMsg;
+
     //#if {"excludeModes" : ["PRODUCTION", "PRODUCTIONDEBUG"]}
     var stack = this.getStackTrace(e);
     $A.logInternal("Error", logMsg, e, stack);
@@ -591,7 +719,7 @@ $A.ns.Aura.prototype.error = function(msg, e){
         //
         // Note that this sends the only the error message string (no stack) through to the test
         //
-        $A.test.auraError(msg);
+        $A.test.auraError(testMsg);
     }
     if (!$A.initialized) {
         $A["hasErrors"] = true;
@@ -609,10 +737,10 @@ $A.ns.Aura.prototype.error = function(msg, e){
  * @param {Error} e an error, if any.
  */
 $A.ns.Aura.prototype.warning = function(w, e) {
-    if ($A.test && $A.test.auraWarning(w)) {
-        return;
-    }
     $A.logInternal("Warning",w, e, this.getStackTrace(e));
+    if ($A.test) {
+        $A.test.auraWarning(w);
+    }
 };
 
 /**
@@ -637,9 +765,10 @@ $A.ns.Aura.prototype.message = function(msg) {
  * @public
  * @function
  * @param {String} key The data key to look up on element, for example, <code>$A.get("root.v.mapAttring.key")</code>.
+ * @param {Function} callback The method to call with the result if a server trip is expected.
  */
-$A.ns.Aura.prototype.get = function(key) {
-    return this.expressionService.get($A.services, key);
+$A.ns.Aura.prototype.get = function(key, callback) {
+    return this.expressionService.get($A.services, key, callback);
 };
 
 /**
@@ -661,8 +790,10 @@ $A.ns.Aura.prototype.setRoot = function(root) {
 /**
  * Gets the current <code>AuraContext</code>. The context consists of the mode, descriptor, and namespaces to be loaded.
  * <p>See Also: <a href="#help?topic=modesReference">Modes Reference</a></p>
+ *
  * @public
  * @function
+ * @return {AuraContext} current context
  */
 $A.ns.Aura.prototype.getContext = function() {
     return this.context;
@@ -698,15 +829,15 @@ $A.ns.Aura.prototype.run = function(func, name) {
 
     $A.services.client.pushStack(name);
     try {
-    	//console.log("$A.run()", name);
-    	
+        //console.log("$A.run()", name);
+
         return func();
     } catch (e) {
         $A.error("Error while running "+name, e);
     } finally {
         $A.services.client.popStack(name);
     }
-    
+
     return undefined;
 };
 
@@ -722,7 +853,7 @@ $A.ns.Aura.prototype.run = function(func, name) {
  * @protected Internal assertion, should never happen
  */
 $A.ns.Aura.prototype.assert = function(condition, assertMessage) {
-    //#if {"excludeModes" : ["PRODUCTION"]}
+    //#if {"excludeModes" : ["PRODUCTION", "PRODUCTIONDEBUG"]}
     if (!condition) {
         var message = "Assertion Failed!: " + assertMessage + " : " + condition;
         var error = new Error(message);
@@ -800,6 +931,7 @@ $A.ns.Aura.prototype.logInternal = function(type, message, error, trace) {
 
     if (!$A.util.isUndefinedOrNull(message)) {
         stringVersion += " : " + message;
+        logMsg += message;
     }
     if (!$A.util.isUndefinedOrNull(error) && !$A.util.isUndefinedOrNull(error.message)) {
         stringVersion += " : " + error.message;
@@ -830,7 +962,7 @@ $A.ns.Aura.prototype.logInternal = function(type, message, error, trace) {
             }
         }
     }
-    
+
     // sending logging info to debug tool if enabled
     if(!$A.util.isUndefinedOrNull($A.util.getDebugToolComponent())) {
         if ($A.util.isUndefinedOrNull(stringVersion)) {
@@ -839,9 +971,9 @@ $A.ns.Aura.prototype.logInternal = function(type, message, error, trace) {
             }
             stringVersion = this.stringVersion(logMsg, error, trace);
         }
-    	var debugLogEvent = $A.util.getDebugToolsAuraInstance().get("e.aura:debugLog");
-		debugLogEvent.setParams({"type" : type, "message" : stringVersion});
-    	debugLogEvent.fire();
+        var debugLogEvent = $A.util.getDebugToolsAuraInstance().get("e.aura:debugLog");
+        debugLogEvent.setParams({"type" : type, "message" : stringVersion});
+        debugLogEvent.fire();
     }
     //#end
 };
@@ -873,9 +1005,11 @@ $A.ns.Aura.prototype.log = function(value, error) {
  * Logs using <code>console.log()</code> if defined on the console implementation.
  */
 $A.ns.Aura.prototype.logf = function() {
+    //#if {"excludeModes" : ["PRODUCTION", "PRODUCTIONDEBUG"]}
     if (window["console"]) {
         window["console"]["log"].apply(window["console"], arguments);
     }
+    //#end
 };
 
 /**
@@ -886,7 +1020,7 @@ $A.ns.Aura.prototype.logf = function() {
  * @param {Number} size The length of the output string.
  */
 $A.ns.Aura.prototype.fitTo = function(value, size) {
-    if (typeof (value) != "string") {
+    if (typeof value != "string") {
         if ($A.util.isUndefinedOrNull(value)) {
             return null;
         }
@@ -958,203 +1092,6 @@ $A.ns.Aura.prototype.trace = function() {
 };
 
 /**
- * Map through to Jiffy.mark if Jiffy is loaded, otherwise a no-op.
- *
- * @public
- * @function
- */
-$A.ns.Aura.prototype.mark = window["Perf"] ? window["Perf"]["mark"] : function(){ return this; };
-
-/**
- * Map through to Jiffy.measure if Jiffy is loaded, otherwise a no-op.
- * This will be the same no-op as <code>$A.ns.Aura.prototype.mark</code>, since both
- * are no-ops when Jiffy is missing; we only need one noop object.
- *
- * @public
- * @function
- * @deprecated Use endMark instead
- */
-$A.ns.Aura.prototype.measure = (function() {
-    if (window["Perf"]) {
-        return window["Perf"]["measure"];
-    } else {
-        return $A.ns.Aura.prototype.mark;
-    }
-})();
-
-/**
- * Map through to Perf.endMark if Perf is loaded, otherwise a no-op. This will be the same no-op as
- * $A.ns.Aura.prototype.mark, since both are no-ops when Jiffy is missing; we only need one noop object.
- *
- * @public
- * @function
- */
-$A.ns.Aura.prototype.endMark = (function() {
-    if (window["Perf"]) {
-        return window["Perf"]["endMark"];
-    } else {
-        return $A.ns.Aura.prototype.mark;
-    }
-})();
-
-/**
- * If Perf is loaded the page-ready and transaction timers will be started, otherwise a no-op. This will be the same no-op as
- * $A.ns.Aura.prototype.mark, since both are no-ops when Jiffy is missing; we only need one noop object.
- *
- * @public
- * @function
- */
-$A.ns.Aura.prototype.startTransaction = (function(name) {
-    if (window["Perf"]) {
-        return function(name) {
-            window["Perf"]["startTransaction"](name);
-        	return window["Perf"]["mark"]("page-ready");
-        };
-    } else {
-        return $A.ns.Aura.prototype.mark;
-    }
-})();
-
-/**
- * Map through to Perf.endTransaction if Perf is loaded, otherwise a no-op. This will be the same no-op as
- * $A.ns.Aura.prototype.mark, since both are no-ops when Jiffy is missing; we only need one noop object.
- *
- * @public
- * @function
- */
-$A.ns.Aura.prototype.endTransaction = (function() {
-    if (window["Perf"]) {
-        return window["Perf"]["endTransaction"];
-    } else {
-        return $A.ns.Aura.prototype.mark;
-    }
-})();
-
-/**
- * Map through to Perf.endMark with an id of 'page-ready' if Perf is loaded, otherwise a no-op. This will be the same no-op as
- * $A.ns.Aura.prototype.mark, since both are no-ops when Jiffy is missing; we only need one noop object.
- *
- * @public
- * @function
- */
-$A.ns.Aura.prototype.pageReady = (function() {
-    if (window["Perf"]) {
-        return function() {
-        	return window["Perf"]["endMark"]("page-ready");
-        };
-    } else {
-        return $A.ns.Aura.prototype.mark;
-    }
-})();
-
-/**
- * Map through to Perf.updateTransaction if Perf is loaded, otherwise a no-op. This will be the same no-op as
- * $A.ns.Aura.prototype.mark, since both are no-ops when Jiffy is missing; we only need one noop object.
- *
- * @public
- * @function
- */
-$A.ns.Aura.prototype.updateTransaction = (function() {
-    if (window["Perf"]) {
-        return window["Perf"]["updateTransaction"];
-    } else {
-        return $A.ns.Aura.prototype.mark;
-    }
-})();
-
-/**
- * Map through to toJson if Perf is loaded, otherwise a no-op. This will be the same no-op as
- * $A.ns.Aura.prototype.mark, since both are no-ops when Jiffy is missing; we only need one noop object.
- *
- * @public
- * @function
- */
-$A.ns.Aura.prototype.toJson = (function() {
-    if (window["Perf"]) {
-        return window["Perf"]["toJson"];
-    } else {
-        return $A.ns.Aura.prototype.mark;
-    }
-})();
-
-/**
- * Map through to Perf.setBeaconData if Perf is loaded, otherwise a no-op. This will be the same no-op as
- * $A.ns.Aura.prototype.mark, since both are no-ops when Jiffy is missing; we only need one noop object.
- *
- * @public
- * @function
- */
-$A.ns.Aura.prototype.setBeaconData = (function() {
-    if (window["Perf"]) {
-        return window["Perf"]["setBeaconData"];
-    } else {
-        return $A.ns.Aura.prototype.mark;
-    }
-})();
-
-/**
- * Map through to Perf.setBeaconData if Perf is loaded, otherwise a no-op. This will be the same no-op as
- * $A.ns.Aura.prototype.mark, since both are no-ops when Jiffy is missing; we only need one noop object.
- *
- * @public
- * @function
- */
-$A.ns.Aura.prototype.getBeaconData = (function() {
-    if (window["Perf"]) {
-        return window["Perf"]["getBeaconData"];
-    } else {
-        return $A.ns.Aura.prototype.mark;
-    }
-})();
-
-/**
- * Map through to Perf.clearBeaconData if Perf is loaded, otherwise a no-op. This will be the same no-op as
- * $A.ns.Aura.prototype.mark, since both are no-ops when Jiffy is missing; we only need one noop object.
- *
- * @public
- * @function
- */
-$A.ns.Aura.prototype.clearBeaconData = (function() {
-    if (window["Perf"]) {
-        return window["Perf"]["clearBeaconData"];
-    } else {
-        return $A.ns.Aura.prototype.mark;
-    }
-})();
-
-/**
- * Map through to Perf.removeStats if Perf is loaded, otherwise a no-op. This will be the same no-op as
- * $A.ns.Aura.prototype.mark, since both are no-ops when Jiffy is missing; we only need one noop object.
- *
- * @public
- * @function
- */
-$A.ns.Aura.prototype.removeStats = (function() {
-    if (window["Perf"]) {
-        return window["Perf"]["removeStats"];
-    } else {
-        return $A.ns.Aura.prototype.mark;
-    }
-})();
-
-/**
- * Map through to Perf.onLoadFired if Perf is loaded, otherwise a no-op. This will be the same no-op as
- * $A.ns.Aura.prototype.mark, since both are no-ops when Jiffy is missing; we only need one noop object.
- *
- * @public
- * @function
- */
-$A.ns.Aura.prototype.onLoadFired = (function() {
-    if (window["Perf"]) {
-        return window["Perf"]["onLoadFired"];
-    } else {
-        return $A.ns.Aura.prototype.mark;
-    }
-})();
-
-$A.ns.Aura.prototype.logLevel = (window["PerfLogLevel"] || {});
-
-/**
  * Sets mode to production (default), development, or testing.
  *
  * @private
@@ -1166,12 +1103,307 @@ $A.ns.Aura.prototype.setMode = function(mode) {
 };
 
 /**
- * Get GVP directly
- * @return {GlobalValueProviders}
+ * Get GVP directly.
+ * @return {GlobalValueProviders} The global value provider, such as $Label, $Browser, $Locale, etc.
+ *
+ * @private
  */
 $A.ns.Aura.prototype.getGlobalValueProviders = function() {
     return this.getContext().getGlobalValueProviders();
 };
+
+
+/**
+ * The levels for logging performance m
+ *
+ * @enum {{name: !string, value: !number}}
+ * @expose
+ */
+var PerfLogLevel = {
+    /** @expose */
+    DEBUG : {
+        name : "DEBUG",
+        value : 1
+    },
+    /** @expose */
+    INTERNAL : {
+        name : "INTERNAL",
+        value : 2
+    },
+    /** @expose */
+    PRODUCTION : {
+        name : "PRODUCTION",
+        value : 3
+    },
+    /** @expose */
+    DISABLED : {
+        name : "DISABLED",
+        value : 4
+    }
+};
+
+/**
+ * Various Perf constants.
+ *
+ * @enum {!string}
+ * @expose
+ */
+var PerfConstants = {
+    /** @expose */
+    PAGE_START_MARK : "PageStart",
+    /** @expose */
+    PERF_PAYLOAD_PARAM : "bulkPerf",
+    /** @expose */
+    MARK_NAME : "mark",
+    /** @expose */
+    MEASURE_NAME : "measure",
+    /** @expose */
+    MARK_START_TIME : "st",
+    /** @expose */
+    MARK_LAST_TIME : "lt",
+    /** @expose */
+    PAGE_NAME : "pn",
+    /** @expose */
+    ELAPSED_TIME : "et",
+    /** @expose */
+    REFERENCE_TIME : "rt",
+    /** @expose */
+    Perf_LOAD_DONE : "loadDone"
+};
+
+/**
+ * @enum {!string}
+ * @expose
+ */
+PerfConstants.STATS = {
+    /** @expose */
+    NAME : "stat",
+    /** @expose */
+    SERVER_ELAPSED : "internal_serverelapsed",
+    /** @expose */
+    DB_TOTAL_TIME : "internal_serverdbtotaltime",
+    /** @expose */
+    DB_CALLS : "internal_serverdbcalls",
+    /** @expose */
+    DB_FETCHES : "internal_serverdbfetches"
+};
+
+window["PerfConstants"] = PerfConstants;
+window["PerfLogLevel"] = PerfLogLevel;
+
+/**
+ * @public
+ * @namespace
+ * @const
+ * @type {!IPerf}
+ */
+$A.ns.Aura.prototype.Perf = window["Perf"] ?
+    //Planning to delete window.Perf, but can't until removing SFDC references to it
+    //var tmp = window["Perf"];
+    //delete window["Perf"];
+    window["Perf"] :
+{
+    /**
+     * @type {!window.typePerfLogLevel}
+     * @expose
+     * @const
+     */
+    currentLogLevel: PerfLogLevel.DISABLED,
+
+    /**
+     * @param {!string} id The id used to identify the mark.
+     * @param {string|window.typePerfLogLevel=} logLevel The level at which this mark should
+     * be logged at.
+     * @return {!IPerf}
+     * @expose
+     */
+    mark: function (id, logLevel) { return this; },
+
+    /**
+     * @param {!string} id This is the id associated with the mark that uses
+     * the same id.
+     * @param {string|window.typePerfLogLevel=} logLevel The level at which this mark should
+     * be logged at.
+     * @return {!IPerf}
+     * @expose
+     */
+    endMark: function (id, logLevel) { return this; },
+
+    /**
+     * This method is used to the update the name of a mark
+     *
+     * @param {!string} oldName The id used to identify the old mark name.
+     * @param {!string} newName The id used to identify the new mark name.
+     * @return {!IPerf} for chaining methods
+     * @expose
+     */
+    updateMarkName: function (oldName, newName) { return this; },
+
+    /**
+     * Serializes a measure object to JSON.
+     *
+     * @param {!window.typejsonMeasure} measure The measure to serialize.
+     * @return {!string} JSON-serialized version of the supplied measure.
+     * @expose
+     */
+    measureToJson: function (measure) { return ""; },
+
+    /**
+     * Serializes timers to JSON.
+     *
+     * @param {boolean=} includeMarks
+     * @return {!string} JSON-serialized version of supplied marks.
+     * @expose
+     */
+    toJson: function (includeMarks) { return ""; },
+
+    /**
+     * @param {!string} timer_name The name of the timer to set.
+     * @param {number=} timer_delta The time delta to set.
+     * @param {string|window.typePerfLogLevel=} logLevel The level at which this mark should be logged at. Defaults to PerfLogLevel.INTERNAL if left blank
+     * @return {!IPerf}
+     * @expose
+     */
+    setTimer: function (timer_name, timer_delta, logLevel) { return this; },
+
+    /**
+     * Get a JSON-serialized version of all existing timers and stats in POST friendly format.
+     *
+     * @return {!string} POST-friendly timers and stats.
+     * @expose
+     */
+    toPostVar: function () { return ""; },
+
+    /**
+     * Returns all of the measures that have been captured
+     *
+     * @return {!Array.<window.typejsonMeasure>} all existing measures.
+     * @expose
+     */
+    getMeasures: function () { return []; },
+
+    /**
+     * Returns the beaconData to piggyback on the next XHR call
+     *
+     * @return {?string} beacon data.
+     * @expose
+     */
+    getBeaconData: function () { return null; },
+
+    /**
+     * Sets the beaconData to piggyback on the next XHR call
+     *
+     * @param {!string} beaconData
+     * @expose
+     */
+    setBeaconData: function (beaconData) {},
+
+    /**
+     * Clears beacon data
+     *
+     * @expose
+     */
+    clearBeaconData: function () {},
+
+    /**
+     * Removes the existing timers
+     *
+     * @expose
+     */
+    removeStats: function () {},
+
+    /**
+     * Add a performance measurement from the server.
+     *
+     * @param {!string} label
+     * @param {!number} elapsedMillis
+     * @return {!IPerf}
+     * @expose
+     */
+    stat: function (label, elapsedMillis) { return this; },
+
+    /**
+     * Get the stored server side performance measures.
+     *
+     * @param {!string} label
+     * @return {!string|number}
+     * @expose
+     */
+    getStat: function (label) { return -1; },
+
+    /**
+     * Called when the page is ready to interact with. To support the existing Kylie.onLoad method.
+     *
+     * @expose
+     */
+    onLoad: function () {},
+
+    /**
+     * This method is used to mark the start of a transaction
+     *
+     * @param {!string} tName The id used to identify the transaction.
+     * @return {!IPerf} for chaining methods
+     * @expose
+     */
+    startTransaction: function (tName) { return this; },
+
+    /**
+     * This method is used to mark the end of a transaction
+     *
+     * @param {!string} tName The id used to identify the transaction.
+     * @return {!IPerf} for chaining methods
+     * @expose
+     */
+    endTransaction: function (tName) { return this; },
+
+    /**
+     * This method is used to the update the name of the
+     * transaction
+     *
+     * @param {!string} oldName The id used to identify the old transaction name.
+     * @param {!string} newName The id used to identify the new transaction name.
+     * @return {!IPerf} for chaining methods
+     * @expose
+     */
+    updateTransaction: function (oldName, newName) { return this; },
+
+    /**
+     * This method is used to figure if onLoad/page_ready has been fired or
+     * not
+     *
+     * @return {!boolean}
+     * @expose
+     */
+    isOnLoadFired: function () { return false; },
+
+    /**
+     * @namespace
+     * @type {!IPerf_util}
+     * @const
+     * @expose
+     */
+    util: /** @type {!IPerf_util} */ ({
+        /**
+         * Sets the roundtrip time cookie
+         *
+         * @param {!string=} name
+         * @param {!string|number=} value
+         * @param {Date=} expires
+         * @param {string=} path
+         * @expose
+         */
+        setCookie: function (name, value, expires, path) {}
+    }),
+
+    /**
+     * Whether the full Kylie framework is loaded, as opposed to just the stubs.
+     *
+     * @type {boolean}
+     * @const
+     */
+    enabled: false
+};
+
 
 // #include aura.Aura_export
 
@@ -1203,5 +1435,4 @@ window['aura'] = window['$A'];
 
 // #include aura.storage.adapters.MemoryAdapter
 // #include aura.storage.adapters.IndexedDBAdapter
-// #include aura.storage.adapters.SmartStoreAdapter
 // #include aura.storage.adapters.WebSQLAdapter

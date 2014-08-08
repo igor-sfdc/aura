@@ -15,9 +15,11 @@
  */
 package org.auraframework.impl;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.auraframework.def.ClientLibraryDef;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.Definition;
 import org.auraframework.def.DescriptorFilter;
@@ -84,9 +86,9 @@ public class FakeRegistry implements MasterDefRegistry {
     }
 
     @Override
-    public void assertAccess(DefDescriptor<?> desc) {
+    public <D extends Definition> void assertAccess(DefDescriptor<?> referencingDescriptor, D def) throws QuickFixException {
     }
-
+    
     @Override
     public Map<DefDescriptor<?>, Definition> filterRegistry(Set<DefDescriptor<?>> preloads) {
         return null;
@@ -104,22 +106,32 @@ public class FakeRegistry implements MasterDefRegistry {
     }
 
     @Override
-    public <T extends Definition> long getLastMod(String uid) {
+    public long getLastMod(String uid) {
         return 0;
     }
 
     @Override
-    public <T extends Definition> Set<DefDescriptor<?>> getDependencies(String uid) {
+    public Set<DefDescriptor<?>> getDependencies(String uid) {
         return null;
     }
 
     @Override
-    public <T extends Definition> String getCachedString(String uid, DefDescriptor<?> descriptor, String key) {
+    public String getCachedString(String uid, DefDescriptor<?> descriptor, String key) {
         return null;
     }
 
     @Override
-    public <T extends Definition> void putCachedString(String uid, DefDescriptor<?> descriptor, String key, String value) {
+    public void putCachedString(String uid, DefDescriptor<?> descriptor, String key, String value) {
     }
 
+    @Override
+    public List<ClientLibraryDef> getClientLibraries(String uid) {
+        return null;
+    }
+
+	@Override
+	public <D extends Definition> String hasAccess(
+			DefDescriptor<?> referencingDescriptor, D def) {
+		return null;
+	}
 }

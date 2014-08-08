@@ -4,12 +4,16 @@ Service-Component: *
 Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.adapter,\
     org.auraframework.builder,\
+    org.auraframework.builder,\
+    org.auraframework.cache,\
+    org.auraframework.clientlibrary,\
     org.auraframework.components.aura,\
     org.auraframework.component.auradev,\
     org.auraframework.component.auraStorage,\
     org.auraframework.component.ui,\
     org.auraframework.components,\
     org.auraframework.components.ui,\
+    org.auraframework.css,\
     org.auraframework.css.parser,\
     org.auraframework.data,\
     org.auraframework.def,\
@@ -29,11 +33,6 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.expression,\
     org.auraframework.http,\
     org.auraframework.impl,\
-    org.auraframework.impl.expression,\
-    org.auraframework.impl.expression,\
-    org.auraframework.impl.expression.adapter,\
-    org.auraframework.impl.expression.functions,\
-    org.auraframework.impl.expression.parser,\
     org.auraframework.impl.adapter,\
     org.auraframework.impl.adapter.format,\
     org.auraframework.impl.adapter.format.css,\
@@ -43,6 +42,11 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.impl.adapter.format.js,\
     org.auraframework.impl.adapter.format.json,\
     org.auraframework.impl.admin,\
+    org.auraframework.impl.cache,\
+    org.auraframework.impl.clientlibrary,\
+    org.auraframework.impl.clientlibrary.handler,\
+    org.auraframework.impl.clientlibrary.resolver,\
+    org.auraframework.impl.clientlibrary.controller,\
     org.auraframework.impl.component.def,\
     org.auraframework.impl.compound.controller,\
     org.auraframework.impl.context,\
@@ -50,7 +54,13 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.impl.css,\
     org.auraframework.impl.css.parser,\
     org.auraframework.impl.css.style,\
+    org.auraframework.impl.documentation,\
     org.auraframework.impl.error,\
+    org.auraframework.impl.expression,\
+    org.auraframework.impl.expression,\
+    org.auraframework.impl.expression.adapter,\
+    org.auraframework.impl.expression.functions,\
+    org.auraframework.impl.expression.parser,\
     org.auraframework.impl.helper,\
     org.auraframework.impl.integration,\
     org.auraframework.impl.java,\
@@ -89,6 +99,7 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.impl.root.event.locationchange,\
     org.auraframework.impl.root.intf,\
     org.auraframework.impl.root.layouts,\
+    org.auraframework.impl.root.library,\
     org.auraframework.impl.root.namespace,\
     org.auraframework.impl.root.parser,\
     org.auraframework.impl.root.parser.handler,\
@@ -102,6 +113,7 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.impl.type,\
     org.auraframework.impl.util,\
     org.auraframework.impl.util.json,\
+    org.auraframework.impl.validation,\
     org.auraframework.instance,\
     org.auraframework.integration,\
     org.auraframework.java.controller,\
@@ -127,6 +139,7 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.tools.javascript,\
     org.auraframework.util;-split-package:=merge-first,\
     org.auraframework.util.adapter,\
+    org.auraframework.util.css,\
     org.auraframework.util.date,\
     org.auraframework.util.io,\
     org.auraframework.util.javascript,\
@@ -142,6 +155,7 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.util.text,\
     org.auraframework.util.type,\
     org.auraframework.util.type.converter,\
+    org.auraframework.util.validation,\
     org.auraframework.components.aura.model,\
     org.auraframework.components.auraadmin,\
     org.auraframework.components.auradev,\
@@ -180,3 +194,11 @@ Include-Resource: ../aura-resources/target/src-gen/main/resources,\
     ../aura/target/resources/osgi-resources,\
     ../aura-impl/target/resources/osgi-resources,\
     ../aura-impl-expression/target/resources/osgi-resources
+#Attach sources
+-sources: true
+-sourcepath: ../aura/src/main/java,\
+    ../aura-impl/src/main/java,\
+    ../aura-components/src/main/java,\
+    ../aura-util/src/main/java,\
+    ../aura-osgi-api/src/main/java,\
+    ../aura-osgi-extensions/src/main/java

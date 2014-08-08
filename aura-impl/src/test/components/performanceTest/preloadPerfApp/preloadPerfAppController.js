@@ -7,10 +7,12 @@
         });
         a.setCallback(cmp,function(a){
             var c = $A.newCmpDeprecated(a.getReturnValue());
-            cmp.find('placeHolder').getValue('v.body').push(c);
-            $A.endMark("Fetch preloaded component");
+            var body = cmp.find('placeHolder').get("v.body");
+            body.push(c);
+            cmp.find('placeHolder').set("v.body", body);
+            $A.Perf.endMark("Fetch preloaded component");
         });
-        $A.mark("Fetch preloaded component");
+        $A.Perf.mark("Fetch preloaded component");
         $A.enqueueAction(a);
     }
 })

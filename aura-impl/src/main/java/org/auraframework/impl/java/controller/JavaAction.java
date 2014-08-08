@@ -17,19 +17,14 @@ package org.auraframework.impl.java.controller;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import org.auraframework.Aura;
-import org.auraframework.def.ActionDef;
 import org.auraframework.def.ControllerDef;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.ValueDef;
-import org.auraframework.instance.Action;
-import org.auraframework.instance.BaseComponent;
-import org.auraframework.instance.StorableAction;
+import org.auraframework.instance.AbstractActionImpl;
 import org.auraframework.service.LoggingService;
 import org.auraframework.system.Location;
 import org.auraframework.throwable.AuraExecutionException;
@@ -40,27 +35,26 @@ import org.auraframework.throwable.quickfix.QuickFixException;
 import org.auraframework.util.json.Json;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 /**
+ * A server side java based action.
  */
-public class JavaAction implements StorableAction {
+public class JavaAction extends AbstractActionImpl<JavaActionDef> {
+    /**
+     * The constructor for an action.
+     *
+     * Note that if the bean parameter is non-null, this action is invoked as an instance
+     * method on the bean, otherwise, it must be static.
+     *
+     * @param controllerDescriptor the descriptor for the owning controller.
+     * @param actionDef the definition for this action.
+     * @param bean The controller bean, if there is one, otherwise null.
+     * @param paramValues the parameter values.
+     */
     public JavaAction(DefDescriptor<ControllerDef> controllerDescriptor, JavaActionDef actionDef,
-            Map<String, Object> paramValues) {
-        this.controllerDescriptor = controllerDescriptor;
-        this.actionDef = actionDef;
-        this.paramValues = paramValues;
-        this.state = State.NEW;
-    }
-
-    @Override
-    public String getId() {
-        return id;
-    }
-
-    @Override
-    public void setId(String id) {
-        this.id = id;
+            Object bean, Map<String, Object> paramValues) {
+        super(controllerDescriptor, actionDef, paramValues);
+        this.bean = bean;
     }
 
     private Object[] getArgs() {
@@ -75,7 +69,7 @@ public class JavaAction implements StorableAction {
                 //
                 // This means that we have a broken definition.
                 //
-                addException(new AuraUnhandledException("Invalid parameter " + valueDef, qfe), State.ABORTED, true,
+                addException(new AuraUnhandledException("Invalid parameter " + valueDef, qfe), State.ERROR, true,
                         false);
                 return null;
             } catch (IllegalArgumentException iae) {
@@ -83,10 +77,10 @@ public class JavaAction implements StorableAction {
                         false);
                 return null;
             } catch (AuraHandledException lhe) {
-                addException(lhe, State.ABORTED, false, false);
+                addException(lhe, State.ERROR, false, false);
                 return null;
             } catch (Exception e) {
-                addException(new AuraUnhandledException("Error on parameter " + valueDef, e), State.ABORTED, false,
+                addException(new AuraUnhandledException("Error on parameter " + valueDef, e), State.ERROR, false,
                         false);
                 return null;
             }
@@ -139,7 +133,7 @@ public class JavaAction implements StorableAction {
         loggingService.startTimer("java");
         try {
             loggingService.incrementNum("JavaCallCount");
-            this.returnValue = this.actionDef.getMethod().invoke(null, args);
+            this.returnValue = this.actionDef.getMethod().invoke(bean, args);
             this.state = State.SUCCESS;
         } catch (InvocationTargetException e) {
             // something bad happened in the body of the action itself
@@ -165,79 +159,15 @@ public class JavaAction implements StorableAction {
     }
 
     @Override
-    public State getState() {
-        return state;
-    }
-
-    @Override
     public List<Object> getErrors() {
         return errors;
-    }
-
-    @Override
-    public String toString() {
-        return String.format("%s.%s", controllerDescriptor.toString(), actionDef.getName());
     }
 
     @Override
     public void serialize(Json json) throws IOException {
     }
 
-    @Override
-    public DefDescriptor<ActionDef> getDescriptor() {
-        return actionDef.getDescriptor();
-    }
-
-    @Override
-    public void add(List<Action> newActions) {
-        this.actions.addAll(newActions);
-    }
-
-    @Override
-    public List<Action> getActions() {
-        return Collections.unmodifiableList(actions);
-    }
-
-    @Override
-    public void registerComponent(BaseComponent<?, ?> component) {
-        componentRegistry.put(component.getGlobalId(), component);
-    }
-
-    @Override
-    public Map<String, BaseComponent<?, ?>> getComponents() {
-        return componentRegistry;
-    }
-
-    @Override
-    public int getNextId() {
-        return nextId++;
-    }
-
-    @Override
-    public boolean isStorable() {
-        return storable;
-    }
-
-    @Override
-    public void setStorable() {
-        storable = true;
-        setId("s");
-    }
-
-    @Override
-    public Map<String, Object> getParams() {
-        return paramValues;
-    }
-
-    private final DefDescriptor<ControllerDef> controllerDescriptor;
-    private final JavaActionDef actionDef;
-    private final Map<String, Object> paramValues;
-    private final List<Action> actions = Lists.newArrayList();
     private Object returnValue;
-    private final List<Object> errors = new ArrayList<Object>();
-    private State state;
-    private String id;
-    private final Map<String, BaseComponent<?, ?>> componentRegistry = Maps.newLinkedHashMap();
-    private int nextId = 1;
-    private boolean storable;
+    private final List<Object> errors = Lists.newArrayList();
+    private final Object bean;
 }

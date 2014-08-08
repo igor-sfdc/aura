@@ -15,18 +15,20 @@
  */
 ({
     doInit: function(component, event, helper) {
-        var body = component.getValue("v.body");
-        for (var i = 0; i < body.getLength(); i++) {
-            var c = body.getValue(i);
+        var body = component.get("v.body");
+        for (var i = 0; i < body.length; i++) {
+            var c = body[i];
             if (c.getDef().getAttributeDefs().getDef("parent")) {
-                c.setValue("v.parent", [component]);
+                c.set("v.parent", [component]);
             }
         }
     },
     
     trigger: function(component, event, helper) {
         var index = event.getParam("focusItemIndex");
-        helper.toggleMenuVisible(component, index);
+        var concreteCmp = component.getConcreteComponent();
+        var _helper = concreteCmp.getDef().getHelper();
+        _helper.toggleMenuVisible(concreteCmp, index, event);
     },
     
     handleMenuExpand: function(component, event, helper) {

@@ -15,12 +15,16 @@
     limitations under the License.
 
 -->
-<aura:application preload="provider" render="client" securityProvider="java://org.auraframework.components.security.SecurityProviderAlwaysAllows">
+<aura:application render="client">
+    <aura:dependency resource="provider:*" />
+    <aura:dependency resource="ui:outputText" />
+    <aura:dependency resource="markup://attributesTest:simpleValue" />
+
     <aura:attribute name="newDescriptor" type="String" default="markup://provider:clientProvider"/>
     <aura:attribute name="newAttributes" type="String" default="{value:&quot;{componentDef:'markup://aura:text',attributes:{value:'breadwinner'}}&quot;}"/>
 
-    <div>descriptor: <ui:inputText value="{!v.newDescriptor}" size="128"/></div>
-    <div>attributes: <ui:inputText value="{!v.newAttributes}" size="128"/></div>
+    <ui:inputText value="{!v.newDescriptor}" size="128" label="descriptor: "/>
+    <ui:inputText value="{!v.newAttributes}" size="128" label="attributes: "/>
     <ui:button aura:id="create" press="{!c.createComponent}" label="create component"/>
 
     <div aura:id="creations">

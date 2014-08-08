@@ -16,20 +16,27 @@
 package org.auraframework.docs;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 import org.auraframework.Aura;
 import org.auraframework.def.AttributeDef;
 import org.auraframework.def.BaseComponentDef;
+import org.auraframework.def.ComponentDef;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.DefDescriptor.DefType;
 import org.auraframework.def.Definition;
+import org.auraframework.def.DocumentationDef;
 import org.auraframework.def.EventDef;
 import org.auraframework.def.EventHandlerDef;
+import org.auraframework.def.ImportDef;
+import org.auraframework.def.IncludeDef;
 import org.auraframework.def.InterfaceDef;
+import org.auraframework.def.LibraryDef;
 import org.auraframework.def.RegisterEventDef;
 import org.auraframework.def.RootDefinition;
 import org.auraframework.instance.BaseComponent;
+import org.auraframework.service.DefinitionService;
 import org.auraframework.system.Annotations.AuraEnabled;
 import org.auraframework.system.Annotations.Model;
 import org.auraframework.system.AuraContext;
@@ -44,54 +51,56 @@ import com.google.common.collect.Lists;
  */
 @Model
 public class ComponentDefModel {
-
-    private final DefDescriptor<?> descriptor;
-    private final Definition definition;
-    private final List<AttributeModel> attributes = Lists.newArrayList();
-    private final List<AttributeModel> handledEvents = Lists.newArrayList();
-    private final List<AttributeModel> events = Lists.newArrayList();
-    private final String support;
-    private final String theSuper;
-    private final String type;
-    private final boolean isExtensible;
-    private final boolean isAbstract;
-    private final List<String> interfaces = Lists.newArrayList();
-    private final List<DefModel> defs = Lists.newArrayList();
-
     public ComponentDefModel() throws QuickFixException {
-
         AuraContext context = Aura.getContextService().getCurrentContext();
         BaseComponent<?, ?> component = context.getCurrentComponent();
 
         String desc = (String) component.getAttributes().getValue("descriptor");
 
         DefType defType = DefType.valueOf(((String) component.getAttributes().getValue("defType")).toUpperCase());
-        descriptor = Aura.getDefinitionService().getDefDescriptor(desc, defType.getPrimaryInterface());
+        DefinitionService definitionService = Aura.getDefinitionService();
+        descriptor = definitionService.getDefDescriptor(desc, defType.getPrimaryInterface());
         definition = descriptor.getDef();
-        String type = null;
+        
+        ReferenceTreeModel.assertAccess(definition);
 
+        String type = null;
         if (definition instanceof RootDefinition) {
             RootDefinition rootDef = (RootDefinition) definition;
             for (AttributeDef attribute : rootDef.getAttributeDefs().values()) {
-                attributes.add(new AttributeModel(attribute));
+                if (ReferenceTreeModel.hasAccess(attribute)) {
+                    attributes.add(new AttributeModel(attribute));
+                }
             }
+            
+            DocumentationDef docDef = rootDef.getDocumentationDef();
+            doc = docDef != null ? new DocumentationDefModel(docDef) : null;
+            
             if (definition instanceof BaseComponentDef) {
                 BaseComponentDef cmpDef = (BaseComponentDef) definition;
                 for (RegisterEventDef reg : cmpDef.getRegisterEventDefs().values()) {
-                    events.add(new AttributeModel(reg));
+                    if (ReferenceTreeModel.hasAccess(reg)) {
+                        events.add(new AttributeModel(reg));
+                    }
                 }
+                
                 for (EventHandlerDef handler : cmpDef.getHandlerDefs()) {
                     handledEvents.add(new AttributeModel(handler));
                 }
+                
                 for (DefDescriptor<InterfaceDef> intf : cmpDef.getInterfaces()) {
-                    interfaces.add(intf.getNamespace() + ":" + intf.getName());
+                    if (ReferenceTreeModel.hasAccess(intf.getDef())) {
+                        interfaces.add(intf.getNamespace() + ":" + intf.getName());
+                    }
                 }
+                
                 DefDescriptor<?> superDesc = cmpDef.getExtendsDescriptor();
                 if (superDesc != null) {
                     theSuper = superDesc.getNamespace() + ":" + superDesc.getName();
                 } else {
                     theSuper = null;
                 }
+                
                 isAbstract = cmpDef.isAbstract();
                 isExtensible = cmpDef.isExtensible();
 
@@ -107,18 +116,54 @@ public class ComponentDefModel {
                 type = eventDef.getEventType().name();
                 isExtensible = true;
                 isAbstract = false;
+            }  else if (definition instanceof LibraryDef){
+                theSuper = null;
+                isExtensible = false;
+                isAbstract = false;
             } else {
                 theSuper = null;
                 isExtensible = true;
                 isAbstract = false;
             }
+            
             support = rootDef.getSupport().name();
 
             if (definition instanceof RootDefinition) {
                 List<DefDescriptor<?>> deps = ((RootDefinition) definition).getBundle();
 
                 for (DefDescriptor<?> dep : deps) {
-                    defs.add(new DefModel(dep));
+                    // we already surface the documentation--users don't need to see the source for it.
+                    if (dep.getDefType() != DefType.DOCUMENTATION) {
+                        Definition def = dep.getDef();
+                        if (ReferenceTreeModel.hasAccess(def)) {
+                            defs.add(new DefModel(dep));
+                        }
+                    }
+                }
+            }
+            
+            // Add all imported libraries AND their source to the documentation.
+            if (definition instanceof ComponentDef) {
+                Collection<ImportDef> importDefs = ((ComponentDef) definition).getImportDefs();
+                
+                for (ImportDef importDef : importDefs) {
+                    LibraryDef libraryDef = Aura.getDefinitionService().getDefinition(importDef.getLibraryName(), LibraryDef.class);
+                    if (ReferenceTreeModel.hasAccess(libraryDef)) {
+                        defs.add(new DefModel(libraryDef.getDescriptor()));
+                        
+                        // Treat the included js files specially because they load source differently:
+                        for (IncludeDef includeDef: libraryDef.getIncludes()) {
+                            includeDefs.add(new IncludeDefModel(includeDef.getDescriptor()));
+                        }
+                        
+                        // Add external dependencies as well (just the js files).
+                        for (LibraryDef externalLibrary : libraryDef.getExternalDependencies()) {
+                            // Treat the included js files specially because they load source differently:
+                            for (IncludeDef externalIncludeDef: externalLibrary.getIncludes()) {
+                                includeDefs.add(new IncludeDefModel(externalIncludeDef.getDescriptor()));
+                            }
+                        }
+                    }
                 }
             }
         } else {
@@ -126,6 +171,7 @@ public class ComponentDefModel {
             theSuper = null;
             isExtensible = false;
             isAbstract = false;
+            doc = null;
         }
         this.type = type;
     }
@@ -203,6 +249,16 @@ public class ComponentDefModel {
     @AuraEnabled
     public List<DefModel> getDefs() {
         return defs;
+    }
+    
+    @AuraEnabled
+    public List<IncludeDefModel> getIncludeDefs() {
+        return includeDefs;
+    }
+    
+    @AuraEnabled
+    public DocumentationDefModel getDocumentation() {
+        return doc;
     }
 
     public class AttributeModel implements JsonSerializable {
@@ -308,4 +364,19 @@ public class ComponentDefModel {
         }
 
     }
+    
+    private final DefDescriptor<?> descriptor;
+    private final Definition definition;
+    private final List<AttributeModel> attributes = Lists.newArrayList();
+    private final List<AttributeModel> handledEvents = Lists.newArrayList();
+    private final List<AttributeModel> events = Lists.newArrayList();
+    private final String support;
+    private final String theSuper;
+    private final String type;
+    private final boolean isExtensible;
+    private final boolean isAbstract;
+    private final List<String> interfaces = Lists.newArrayList();
+    private final List<DefModel> defs = Lists.newArrayList();
+    private final List<IncludeDefModel> includeDefs = Lists.newArrayList();
+    private final DocumentationDefModel doc;
 }

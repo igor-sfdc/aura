@@ -22,10 +22,8 @@
  * @param javaOptions A java map of options
  * @returns A java String[] of error messages or an empty array.
  */
-var JSLintHelper = function(javaSourceLines, allowDebugger, allowUnfilteredForIn){
-
+var jslintHelper = function(javaSourceLines, allowDebugger, allowUnfilteredForIn){
     var jsSourceLines = [];
-
 
     //Convert the java String[] into a javascript String[]
     for(var i=0;i<javaSourceLines.length;i++){
@@ -34,11 +32,59 @@ var JSLintHelper = function(javaSourceLines, allowDebugger, allowUnfilteredForIn
 
     var jsOptions = {
                         laxbreak : true,
-                        bitwise : true,
-                        newcap : true,
-                        browser : true,
+                        ass       : true,
+                        bitwise   : false,
+                        browser   : true,
+                        closure   : false,
+                        'continue'  : true,
+                        couch     : false,
+                        devel     : false,
+                        eqeq      : true,
+                        evil      : false,
+                        indent    :   4,
+                        maxerr    : 100,
+                        maxlen    : 1000,
+                        newcap    : true,
+                        node      : false,
+                        nomen     : true,
+                        passfail  : false,
+                        plusplus  : true,
+                        properties: false,
+                        regexp    : true,
+                        rhino     : false,
+                        unparam   : true,
+                        sloppy    : true,
+                        stupid    : false,
+                        sub       : false,
+                        todo      : true,
+                        vars      : true,
+                        white     : true,
                         debug : allowDebugger,
-                        forin : allowUnfilteredForIn
+                        forin : allowUnfilteredForIn,
+                        predef : ['$A', 'aura'],
+                        // options we had to add to get 0 errors on framework js
+                        arguments: true, // allow arguments[.]
+                        emptyBlock: true,
+                        weirdAssignment: true,
+                        weirdRelation: true,
+                        weirdTypeof: true,
+                        usedBefore: true,
+                        moveVar: true,
+                        varLoop: true,
+                        unnecessaryInitialize: true,
+                        useOr: true,
+                        moveInvocation: true,
+                        forInVariable: true,
+                        infixIn: true,
+                        weirdCondition: true,
+                        blockDisrupt: true,
+                        wrapImmediate: true,
+                        unused: false,
+                        reserved: false,
+                        stringConcat: true,
+                        unexpectedTypeof: true,
+                        confusingNot: true,
+                        unexpectedCall: true
                     };
 
     JSLINT(jsSourceLines, jsOptions);
@@ -51,10 +97,9 @@ var JSLintHelper = function(javaSourceLines, allowDebugger, allowUnfilteredForIn
         if(jsError){
             var javaError = new java.util.HashMap();
             javaError.put("line", jsError.line);
-            javaError.put("character", jsError.character);
-            javaError.put("reason", jsError.reason);
-            javaError.put("evidence", jsError.evidence);
-
+            javaError.put("startColumn", jsError.character);
+            javaError.put("message", jsError.reason);
+            javaError.put("evidence", new java.lang.String(jsError.evidence));
             javaErrors.add(javaError);
         }
     }

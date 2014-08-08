@@ -17,19 +17,22 @@ package org.auraframework.impl;
 
 import java.util.Map;
 
+import org.antlr.misc.MutableInteger;
 import org.auraframework.adapter.ContextAdapter;
 import org.auraframework.def.BaseComponentDef;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.DefDescriptor.DefType;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.impl.context.AuraContextImpl;
+import org.auraframework.impl.system.MasterDefRegistryImpl;
 import org.auraframework.instance.GlobalValueProvider;
 import org.auraframework.instance.ValueProviderType;
 import org.auraframework.system.AuraContext;
-import org.auraframework.system.AuraContext.Access;
+import org.auraframework.system.AuraContext.Authentication;
 import org.auraframework.system.AuraContext.Format;
 import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.system.MasterDefRegistry;
+import org.auraframework.throwable.AuraRuntimeException;
 import org.auraframework.util.json.JsonSerializationContext;
 
 import aQute.bnd.annotation.component.Component;
@@ -40,10 +43,14 @@ import aQute.bnd.annotation.component.Component;
 public class ContextAdapterImpl implements ContextAdapter {
 
     private static ThreadLocal<AuraContext> currentContext = new ThreadLocal<AuraContext>();
+    
+    private static ThreadLocal<AuraContext> systemContext = new ThreadLocal<AuraContext>();
+
+    private static ThreadLocal<MutableInteger> systemDepth = new ThreadLocal<MutableInteger>();
 
     @Override
     public AuraContext establish(Mode mode, MasterDefRegistry masterRegistry, Map<DefType, String> defaultPrefixes,
-            Format format, Access access, JsonSerializationContext jsonContext,
+            Format format, Authentication access, JsonSerializationContext jsonContext,
             Map<ValueProviderType, GlobalValueProvider> globalProviders,
             DefDescriptor<? extends BaseComponentDef> appDesc) {
     	return establish(mode, masterRegistry, defaultPrefixes, format, access, jsonContext,
@@ -51,8 +58,8 @@ public class ContextAdapterImpl implements ContextAdapter {
     }
 
     @Override
-	public AuraContext establish(Mode mode, MasterDefRegistry masterRegistry,
-			Map<DefType, String> defaultPrefixes, Format format, Access access,
+    public AuraContext establish(Mode mode, MasterDefRegistry masterRegistry,
+			Map<DefType, String> defaultPrefixes, Format format, Authentication access,
 			JsonSerializationContext jsonContext,
 			Map<ValueProviderType, GlobalValueProvider> globalProviders,
 			DefDescriptor<? extends BaseComponentDef> appDesc,
@@ -64,10 +71,50 @@ public class ContextAdapterImpl implements ContextAdapter {
     	context.setApplicationDescriptor(appDesc);
         
         return context;
-	}
+    }
+
+    protected AuraContext buildSystemContext(AuraContext original) {
+        return new AuraContextImpl(original.getMode(),
+                new MasterDefRegistryImpl((MasterDefRegistryImpl)original.getDefRegistry()),
+                original.getDefaultPrefixes(), original.getFormat(), original.getAccess(),
+                original.getJsonSerializationContext(), original.getGlobalProviders(), false);
+    }
+    
+    @Override
+    public AuraContext pushSystemContext() {
+        AuraContext context = systemContext.get();
+        MutableInteger count = systemDepth.get();
+        
+        if (count == null) {
+            count = new MutableInteger(1);
+            systemDepth.set(count);
+        } else {
+            count.value += 1;
+        }
+        if (context == null) {
+            context = buildSystemContext(currentContext.get());
+            systemContext.set(context);
+        }
+        return context;
+    }
+
+    @Override
+    public void popSystemContext() {
+        MutableInteger count = systemDepth.get();
+
+        if (count == null || count.value == 0) {
+            throw new AuraRuntimeException("unmatched pop");
+        }
+        count.value -= 1;
+    }
     
     @Override
     public AuraContext getCurrentContext() {
+        MutableInteger count = systemDepth.get();
+
+        if (count != null && count.value > 0) {
+            return systemContext.get();
+        }
         return currentContext.get();
     }
 
@@ -79,6 +126,12 @@ public class ContextAdapterImpl implements ContextAdapter {
     @Override
     public void release() {
         currentContext.set(null);
+        systemContext.set(null);
+
+        MutableInteger count = systemDepth.get();
+        if (count != null && count.value != 0) {
+            throw new AuraRuntimeException("unmatched push");
+        }
     }
 
 }

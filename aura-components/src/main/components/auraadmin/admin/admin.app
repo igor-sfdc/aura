@@ -15,7 +15,7 @@
     limitations under the License.
 
 -->
-<aura:application preload="auradev" model="java://org.auraframework.impl.admin.AdminModel" controller="java://org.auraframework.impl.admin.AdminController" securityProvider="java://org.auraframework.impl.admin.AdminSecurityProvider">
+<aura:application model="java://org.auraframework.impl.admin.AdminModel" controller="java://org.auraframework.impl.admin.AdminController">
 <aura:attribute name="mbeans" type="boolean"/>
 <div>
 <h2>Aura Administration console</h2>
@@ -34,9 +34,9 @@ Caches
 <p>
 Non-caching Registries
 <br/>
-<aura:foreach var="reg" items="{!m.registryData}">
+<aura:iteration var="reg" items="{!m.registryData}">
 <auraadmin:registryView registry="{!reg}"/>
-</aura:foreach>
+</aura:iteration>
 </p>
 
 <p>

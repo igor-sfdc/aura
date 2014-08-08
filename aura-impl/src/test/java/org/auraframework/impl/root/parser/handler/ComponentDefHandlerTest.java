@@ -15,7 +15,6 @@
  */
 package org.auraframework.impl.root.parser.handler;
 
-import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamReader;
 
 import org.auraframework.def.ComponentDef;
@@ -27,12 +26,11 @@ import org.auraframework.impl.root.parser.XMLParser;
 import org.auraframework.impl.source.StringSource;
 import org.auraframework.impl.system.DefDescriptorImpl;
 import org.auraframework.system.Parser.Format;
-import org.auraframework.throwable.AuraRuntimeException;
-import org.auraframework.throwable.quickfix.QuickFixException;
+
+import org.auraframework.throwable.quickfix.InvalidDefinitionException;
 
 public class ComponentDefHandlerTest extends AuraImplTestCase {
     XMLStreamReader xmlReader;
-    XMLInputFactory xmlInputFactory;
     ComponentDefHandler cdHandler;
     XMLParser parser = XMLParser.getInstance();
 
@@ -48,9 +46,7 @@ public class ComponentDefHandlerTest extends AuraImplTestCase {
                         + vendor.getParentComponentDefDescriptor() + "' implements='"
                         + vendor.getInterfaceDefDescriptor()
                         + "' abstract='true'>Child Text<aura:foo/></aura:component>", "myID", Format.XML);
-        xmlInputFactory = XMLInputFactory.newInstance();
-        xmlInputFactory.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, false);
-        xmlReader = xmlInputFactory.createXMLStreamReader(source.getSystemId(), source.getHashingReader());
+        xmlReader = XMLParser.getInstance().createXMLStreamReader(source.getHashingReader());
         xmlReader.next();
         cdHandler = new ComponentDefHandler(vendor.getComponentDefDescriptor(), source, xmlReader);
     }
@@ -74,10 +70,11 @@ public class ComponentDefHandlerTest extends AuraImplTestCase {
         StringSource<ComponentDef> source = new StringSource<ComponentDef>(descriptor,
                 "<aura:component><aura:attribute name=\"implNumber\" type=\"String\"/>"
                         + "<aura:attribute name=\"implNumber\" type=\"String\"/></aura:component>", "myID", Format.XML);
+        ComponentDef cd = parser.parse(descriptor, source);
         try {
-            parser.parse(descriptor, source);
+            cd.validateDefinition();
             fail("Should have thrown Exception. Two attributes with the same name cannot exist");
-        } catch (AuraRuntimeException expected) {
+        } catch (InvalidDefinitionException expected) {
         }
     }
 
@@ -91,10 +88,11 @@ public class ComponentDefHandlerTest extends AuraImplTestCase {
         StringSource<ComponentDef> source = new StringSource<ComponentDef>(descriptor,
                 "<aura:component extends='test:fakeAbstract' extends='test:fakeAbstractParent'></aura:component>",
                 "myID", Format.XML);
+        ComponentDef cd = parser.parse(descriptor, source);
         try {
-            parser.parse(descriptor, source);
+            cd.validateDefinition();
             fail("Should have thrown Exception. Same attribute specified twice on aura:component tag.");
-        } catch (AuraRuntimeException expected) {
+        } catch (InvalidDefinitionException expected) {
         }
     }
 
@@ -105,29 +103,20 @@ public class ComponentDefHandlerTest extends AuraImplTestCase {
         DefDescriptor<ComponentDef> descriptor = DefDescriptorImpl.getInstance("test:fakeparser", ComponentDef.class);
         StringSource<ComponentDef> source = new StringSource<ComponentDef>(descriptor,
                 "<aura:component extends=''></aura:component>", "myID", Format.XML);
+        ComponentDef cd = parser.parse(descriptor, source);
         try {
-            parser.parse(descriptor, source);
+            cd.validateDefinition();
             fail("Should have thrown Exception. Attribute value cannot be blank.");
-        } catch (AuraRuntimeException expected) {
+        } catch (InvalidDefinitionException expected) {
         }
-
     }
 
-    public void testThemeAlias() throws QuickFixException {
-        DefDescriptor<ThemeDef> theme = addSourceAutoCleanup(ThemeDef.class, "<aura:theme/>");
-        DefDescriptor<ComponentDef> cmp = addSourceAutoCleanup(ComponentDef.class,
-                String.format("<aura:component themeAlias=\"var=%s\"></aura:component>", theme.getDescriptorName()));
-        assertEquals(cmp.getDef().getThemeAliases().get("var"), theme);
-    }
-
-    public void testMalformedThemeAlias() throws QuickFixException {
-        DefDescriptor<ComponentDef> dd = addSourceAutoCleanup(ComponentDef.class,
-                "<aura:component themeAlias=\"test:fakeTheme\"></aura:component>");
-        try {
-            dd.getDef();
-            fail("Expected to throw AuraRuntimeException.");
-        } catch (AuraRuntimeException e) {
-            assertTrue(e.getMessage().contains("Invalid themeAlias format"));
-        }
+    /** tests that themes in the component bundle are correctly associated */
+    public void testLocalComponentTheme() throws Exception {
+        DefDescriptor<ThemeDef> themeDesc = addSourceAutoCleanup(ThemeDef.class, "<aura:theme/>");
+        String fmt = String.format("%s:%s", themeDesc.getNamespace(), themeDesc.getName());
+        DefDescriptor<ComponentDef> cmpDesc = DefDescriptorImpl.getInstance(fmt, ComponentDef.class);
+        addSourceAutoCleanup(cmpDesc, "<aura:component/>");
+        assertEquals(themeDesc, cmpDesc.getDef().getCmpTheme());
     }
 }

@@ -15,14 +15,30 @@
  */
 package org.auraframework.util.javascript;
 
-import java.io.*;
+import java.io.IOException;
+
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 
+import org.auraframework.util.IOUtil;
+
 import com.google.common.collect.Lists;
-import com.google.javascript.jscomp.*;
+import com.google.javascript.jscomp.CommandLineRunner;
+import com.google.javascript.jscomp.CompilationLevel;
 import com.google.javascript.jscomp.Compiler;
+import com.google.javascript.jscomp.CompilerOptions;
+import com.google.javascript.jscomp.JSError;
+import com.google.javascript.jscomp.PropertyRenamingPolicy;
+import com.google.javascript.jscomp.Result;
+import com.google.javascript.jscomp.SourceFile;
+import com.google.javascript.jscomp.SourceMap;
+import com.google.javascript.jscomp.VariableRenamingPolicy;
 
 /**
  * Util for compressing and writing javascript.
@@ -74,6 +90,26 @@ public enum JavascriptWriter {
         }
     },
 
+    /**
+     * A closure that should do almost nothing to the file.
+     */
+    CLOSURE_AURA_PASS {
+        @Override
+        public void setClosureOptions(CompilerOptions options) {
+            options.prettyPrint = true;
+            options.generatePseudoNames = false;
+            options.aliasKeywords = false;
+            options.reserveRawExports = true;
+            options.variableRenaming = VariableRenamingPolicy.OFF;
+            options.propertyRenaming = PropertyRenamingPolicy.OFF;
+        }
+
+        @Override
+        public boolean isSelfScoping() {
+            return true;
+        }
+    },
+
     CLOSURE_AURA_DEBUG {
         @Override
         public void setClosureOptions(CompilerOptions options) {
@@ -120,6 +156,12 @@ public enum JavascriptWriter {
             out.append(in);
             return new ArrayList<JavascriptProcessingError>();
         }
+
+        @Override
+        public List<JavascriptProcessingError> compress(InputStream in, Writer out, String filename) throws IOException {
+            IOUtil.copyStream(new InputStreamReader(in), out);
+            return new ArrayList<JavascriptProcessingError>();
+        }
     };
 
     public static final JavascriptWriter DEFAULT = CLOSURE_SIMPLE;
@@ -147,7 +189,7 @@ public enum JavascriptWriter {
      */
     public List<JavascriptProcessingError> compress(String in, Writer out, String filename) throws IOException {
         SourceFile input = SourceFile.fromCode(filename, in);
-        return compress(input, out);
+        return compress(input, out, null, filename, null);
     }
 
     /**
@@ -155,22 +197,64 @@ public enum JavascriptWriter {
      */
     public List<JavascriptProcessingError> compress(Reader in, Writer out, String filename) throws IOException {
         SourceFile input = SourceFile.fromReader(filename, in);
-        return compress(input, out);
+        return compress(input, out, null, filename, null);
+    }
+
+    /**
+     * Compress source file and generate associated sourcemap.
+     * @param sourceFileReader source Javascrpt file reader
+     * @param compressedFileWriter Compressed Javascript file writer
+     * @param sourceMapWriter Source map writer
+     * @param filename Source javascript file name
+     * @param sourceMapLocationMapping Source file path mapping.
+     * @return
+     * @throws IOException
+     */
+    public List<JavascriptProcessingError> compress(Reader sourceFileReader, Writer compressedFileWriter, Writer sourceMapWriter,  String filename, Map<String, String> sourceMapLocationMapping) throws IOException {
+        SourceFile input = SourceFile.fromReader(filename, sourceFileReader);
+        return compress(input, compressedFileWriter, sourceMapWriter, filename, sourceMapLocationMapping);
+    }
+
+    /**
+     * InputStream base compression
+     *
+     * @param in source stream
+     * @param compressedFileWriter Compressed Javascript file writer
+     * @param filename Source javascript file name
+     * @return
+     * @throws IOException
+     */
+    public List<JavascriptProcessingError> compress(InputStream in, Writer out, String filename) throws IOException {
+        SourceFile input = SourceFile.fromInputStream(filename, in);
+        return compress(input, out, null, filename, null);
     }
 
     /**
      * Does the actual compression work.
      */
-    private List<JavascriptProcessingError> compress(SourceFile in, Writer out) throws IOException {
+    private List<JavascriptProcessingError> compress(SourceFile in, Writer out, Writer sourceMapWriter, String filename, Map<String, String> sourceMapLocationMapping) throws IOException {
         List<JavascriptProcessingError> msgs = new ArrayList<JavascriptProcessingError>();
         // Do some actual closure variation:
         Compiler c = new Compiler();
 
         Compiler.setLoggingLevel(Level.WARNING);
         CompilerOptions options = new CompilerOptions();
+        if(sourceMapWriter != null) {
+            options.sourceMapFormat = SourceMap.Format.V3;
+            options.sourceMapOutputPath = filename;
+        }
+
+        //Add source file mapping, useful for relocating source files on a server or removing repeated values in the “sources” entry
+        if(sourceMapLocationMapping != null && !sourceMapLocationMapping.isEmpty()) {
+            options.sourceMapLocationMappings = new ArrayList<SourceMap.LocationMapping>();
+            for(Map.Entry<String, String> entry : sourceMapLocationMapping.entrySet()) {
+                options.sourceMapLocationMappings.add(new SourceMap.LocationMapping(entry.getKey(), entry.getValue()));
+            }
+        }
+
         setClosureOptions(options);
 
-        c.compile(externs, Lists.<SourceFile> newArrayList(in), options);
+        Result result = c.compile(externs, Lists.<SourceFile> newArrayList(in), options);
 
         if (isSelfScoping()) {
             // Encase the compressed output in a self-executing function to
@@ -184,6 +268,15 @@ public enum JavascriptWriter {
             // scope everything.
             // Global APIs are exported explicitly in the code.
             out.append("})();");
+        }
+
+        //Write sourcemap
+        if(result != null && sourceMapWriter != null) {
+            StringBuilder sb = new StringBuilder();
+            result.sourceMap.validate(true);
+            result.sourceMap.appendTo(sb, filename);
+
+            sourceMapWriter.write(sb.toString());
         }
 
         // errors and warnings

@@ -15,7 +15,6 @@
  */
 package org.auraframework.impl.root.parser.handler;
 
-import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamReader;
 
 import org.auraframework.def.ApplicationDef;
@@ -27,15 +26,11 @@ import org.auraframework.impl.root.parser.XMLParser;
 import org.auraframework.impl.source.StringSource;
 import org.auraframework.impl.system.DefDescriptorImpl;
 import org.auraframework.system.Parser.Format;
-import org.auraframework.throwable.AuraRuntimeException;
 import org.auraframework.throwable.quickfix.InvalidDefinitionException;
 import org.auraframework.throwable.quickfix.QuickFixException;
 
-import com.google.common.base.Optional;
-
 public class ApplicationDefHandlerTest extends AuraImplTestCase {
     XMLStreamReader xmlReader;
-    XMLInputFactory xmlInputFactory;
     ApplicationDefHandler cdHandler;
 
     public ApplicationDefHandlerTest(String name) {
@@ -50,9 +45,7 @@ public class ApplicationDefHandlerTest extends AuraImplTestCase {
                         + vendor.getParentComponentDefDescriptor() + "' implements='"
                         + vendor.getInterfaceDefDescriptor()
                         + "' abstract='true'>Child Text<aura:foo/></aura:application>", "myID", Format.XML);
-        xmlInputFactory = XMLInputFactory.newInstance();
-        xmlInputFactory.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, false);
-        xmlReader = xmlInputFactory.createXMLStreamReader(source.getSystemId(), source.getHashingReader());
+        xmlReader = XMLParser.getInstance().createXMLStreamReader(source.getHashingReader());
         xmlReader.next();
         cdHandler = new ApplicationDefHandler(vendor.getApplicationDefDescriptor(), source, xmlReader);
     }
@@ -79,58 +72,39 @@ public class ApplicationDefHandlerTest extends AuraImplTestCase {
                 "<aura:application><aura:attribute name=\"implNumber\" type=\"String\"/>"
                         + "<aura:attribute name=\"implNumber\" type=\"String\"/></aura:application>", "myID",
                 Format.XML);
+        ApplicationDef ad = parser.parse(descriptor, source);
         try {
-            parser.parse(descriptor, source);
+            ad.validateDefinition();
             fail("Should have thrown Exception. Two attributes with the same name cannot exist");
-        } catch (AuraRuntimeException expected) {
+        } catch (Exception e) {
+            checkExceptionContains(e, InvalidDefinitionException.class,
+                    "Duplicate definitions for attribute implNumber");
         }
     }
 
-    /**
-     * Verify that wild characters are not accepted for preload specifier
-     * 
-     * @throws Exception
-     */
-    public void testWildCharactersForPreLoad() throws Exception {
-        XMLParser parser = XMLParser.getInstance();
-        DefDescriptor<ApplicationDef> descriptor = DefDescriptorImpl.getInstance("test:fakeparser",
-                ApplicationDef.class);
-        StringSource<ApplicationDef> source = new StringSource<ApplicationDef>(descriptor,
-                "<aura:application preload=\"*,?,/\"></aura:application>", "myID", Format.XML);
-        try {
-            ApplicationDef app = parser.parse(descriptor, source);
-            app.validateDefinition();
-            app.validateReferences();
-            fail("Should have thrown Exception. Wild characters cannot be specified for preload namespace");
-        } catch (InvalidDefinitionException expected) {
-            assertTrue("Unexpected message " + expected.getMessage(),
-                    expected.getMessage().equals("Illegal namespace in ?"));
-        }
-    }
+    public void testReadThemeAttribute() throws QuickFixException {
+        DefDescriptor<ThemeDef> theme = addSourceAutoCleanup(ThemeDef.class, "<aura:theme></aura:theme>");
 
-    public void testThemeOverrides() throws Exception {
-        DefDescriptor<ThemeDef> parent = addSourceAutoCleanup(ThemeDef.class, "<aura:theme></aura:theme>");
-        DefDescriptor<ThemeDef> child = addSourceAutoCleanup(ThemeDef.class,
-                String.format("<aura:theme extends=\"%s\"></aura:theme>", parent.getDescriptorName()));
-
-        String src = String.format("<aura:application themeOverrides=\"%s=%s\"></aura:application>",
-                parent.getDescriptorName(), child.getDescriptorName());
+        String src = String.format("<aura:application theme=\"%s\"></aura:application>",
+                theme.getDescriptorName());
 
         DefDescriptor<ApplicationDef> app = addSourceAutoCleanup(ApplicationDef.class, src);
-
-        Optional<DefDescriptor<ThemeDef>> override = app.getDef().getThemeOverrides().getOverride(parent);
-        assertEquals(override.get(), child);
+        assertEquals(1, app.getDef().getThemeDescriptors().size());
+        assertEquals(theme, app.getDef().getThemeDescriptors().get(0));
     }
 
-    public void testMalformedThemeOverrideString() throws QuickFixException {
-        DefDescriptor<ApplicationDef> dd = addSourceAutoCleanup(ApplicationDef.class,
-                "<aura:application themeOverrides=\"test:fakeTheme\"></aura:application>");
-        try {
-            dd.getDef();
-            fail("expected to throw AuraRuntimeException.");
-        } catch (AuraRuntimeException e) {
-            assertTrue(e.getMessage().contains("Invalid themeOverrides format"));
-        }
-    }
+    public void testReadThemeAttributeMultiple() throws QuickFixException {
+        DefDescriptor<ThemeDef> t1 = addSourceAutoCleanup(ThemeDef.class, "<aura:theme></aura:theme>");
+        DefDescriptor<ThemeDef> t2 = addSourceAutoCleanup(ThemeDef.class, "<aura:theme></aura:theme>");
+        DefDescriptor<ThemeDef> t3 = addSourceAutoCleanup(ThemeDef.class, "<aura:theme></aura:theme>");
 
+        String src = String.format("<aura:application theme=\"%s, %s, %s\"></aura:application>",
+                t1.getDescriptorName(), t2.getDescriptorName(), t3.getDescriptorName());
+
+        DefDescriptor<ApplicationDef> app = addSourceAutoCleanup(ApplicationDef.class, src);
+        assertEquals(3, app.getDef().getThemeDescriptors().size());
+        assertEquals(t1, app.getDef().getThemeDescriptors().get(0));
+        assertEquals(t2, app.getDef().getThemeDescriptors().get(1));
+        assertEquals(t3, app.getDef().getThemeDescriptors().get(2));
+    }
 }

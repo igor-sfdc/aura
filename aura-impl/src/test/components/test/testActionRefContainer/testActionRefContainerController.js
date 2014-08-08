@@ -13,15 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-{
+({
     getSand: function(cmp, event) {
-        var sandRef = cmp.find("actionref").getValue("c.sand");
-        cmp.getValue("v.myActionRef").setValue(sandRef);
+        var sandRef = cmp.find("actionref").get("c.sand");
+        cmp.set("v.myActionRef", sandRef);
     },
 
     runSand: function(cmp, event) {
-        var ref = cmp.get("v.myActionRef");
-        var action = ref.unwrap();
+        var action = cmp.get("v.myActionRef");
         action.runDeprecated();
     }
-}
+})

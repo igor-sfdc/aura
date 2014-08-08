@@ -17,7 +17,7 @@
 	testDone : function(cmp, evt, helper){
 		helper.runNextTest(cmp);
 	},
-	
+
     toggleCode: function(cmp) {
         var codeEl = cmp.find("test-suite-code").getElement();
         $A.util.toggleClass(codeEl, "show");

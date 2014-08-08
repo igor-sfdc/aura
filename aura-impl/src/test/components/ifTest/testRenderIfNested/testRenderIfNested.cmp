@@ -1,0 +1,51 @@
+<!--
+
+    Copyright (C) 2013 salesforce.com, inc.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+-->
+<aura:component description="The content container, holding individual components contained in a scroller that can be loaded dynamically">
+
+    <!-- Default Hostable interface attributes -->
+    <aura:attribute name="outer" type="Boolean" default="false"/>
+    <aura:attribute name="inner" type="Boolean" default="false"/>
+    
+    <div class="controls">
+        <ui:button aura:id="TT" label="Item TT" press="{!c.click}"/>
+        <ui:button aura:id="TF" label="Item TF" press="{!c.click}"/>
+        <ui:button aura:id="FT" label="Item FT" press="{!c.click}"/>
+        <ui:button aura:id="FF" label="Item FF" press="{!c.click}"/>
+    </div>
+
+    <div class="view">
+        <aura:renderIf isTrue="{!v.outer}">
+            <aura:renderif isTrue="{!v.inner}">
+                <span>TT</span>
+                <aura:set attribute="else">
+                    <span>TF</span>
+                </aura:set>
+            </aura:renderif>
+
+            <aura:set attribute="else">
+
+                <aura:renderif isTrue="{!v.inner}">
+                    <span>FT</span>
+                    <aura:set attribute="else">
+                        <span>FF</span>
+                    </aura:set>
+                </aura:renderif>
+            </aura:set>
+        </aura:renderIf>
+    </div>
+</aura:component>

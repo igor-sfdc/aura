@@ -26,14 +26,12 @@
             $A.test.assertEquals("0", text.nodeValue, "initial value for pants wasn't 0");
 
             var mar = component.get("v.myActionRef");
-            $A.test.assertEquals(undefined, mar, "there should no actionref yet");
+            $A.test.assertEquals(undefined, mar, "there should be no action yet");
 
             //getButton.dispatchEvent(evt);
             getButton.get("e.press").fire();
             mar = component.get("v.myActionRef");
-
-            $A.test.assertTrue(mar && mar.auraType === "Value", "there should be an actionref");
-
+            $A.test.assertEquals("Action", mar.auraType, "there should be an actionref");
         }, function(component) {
             var text = component.find("actionref").getElements()[1];
             var runButton = component.find("runButton");

@@ -19,6 +19,7 @@ import java.lang.reflect.Constructor;
 import java.util.Map;
 
 import org.auraframework.provider.api.ClassProviderFactory;
+import org.auraframework.Aura;
 import org.auraframework.system.Annotations.AuraEnabled;
 import org.auraframework.system.Annotations.Controller;
 import org.auraframework.system.Annotations.Key;
@@ -36,6 +37,11 @@ public class AuraQuickFixController {
         Class<AuraQuickFix> clz = (Class<AuraQuickFix>) ClassProviderFactory.getClazzForName(String.format(className, name));
         Constructor<AuraQuickFix> constructor = clz.getConstructor(Map.class);
         AuraQuickFix quickFix = constructor.newInstance(attributes);
-        quickFix.fix();
+        Aura.getContextService().pushSystemContext();
+        try {
+            quickFix.fix();
+        } finally {
+            Aura.getContextService().popSystemContext();
+        }
     }
 }

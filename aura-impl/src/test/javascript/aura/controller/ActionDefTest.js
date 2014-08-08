@@ -21,6 +21,7 @@ Test.Aura.Controller.ActionDefTest = function() {
 	Mocks.GetMock(Object.Global(), "exp", function() {
 	})(function() {
 		// #import aura.controller.ActionDef
+		// #import aura.controller.Action
 	});
 
 	[ Fixture ]
@@ -208,6 +209,22 @@ Test.Aura.Controller.ActionDefTest = function() {
 				}
 			}
 			[ Fact ]
+			function DefaultBackground() {
+				// Arrange
+				var config = {
+					actionType : "SERVER",
+				};
+				var actual;
+
+				// Act
+				mockValueDef(function() {
+					actual = new ActionDef(config).background;
+				})
+
+				// Assert
+				Assert.Equal(false, actual);
+			}
+			[ Fact ]
 			function SetsBackground() {
 				// Arrange
 				var expected = "expected";
@@ -223,7 +240,42 @@ Test.Aura.Controller.ActionDefTest = function() {
 				})
 
 				// Assert
-				Assert.Equal(expected, actual);
+				Assert.Equal(true, actual);
+			}
+			[ Fact ]
+			function DefaultCaboose() {
+				// Arrange
+				var config = {
+					actionType : "SERVER",
+				};
+				var actual;
+
+				// Act
+				mockValueDef(function() {
+					actual = new ActionDef(config).caboose;
+				})
+
+				// Assert
+				Assert.Equal(false, actual);
+			}
+
+			[ Fact ]
+			function SetsCaboose() {
+				// Arrange
+				var expected = "expected";
+				var config = {
+					actionType : "SERVER",
+					caboose : expected
+				};
+				var actual;
+
+				// Act
+				mockValueDef(function() {
+					actual = new ActionDef(config).caboose;
+				})
+
+				// Assert
+				Assert.Equal(true, actual);
 			}
 
 			[ Fact ]
@@ -345,7 +397,7 @@ Test.Aura.Controller.ActionDefTest = function() {
 				});
 
 				// Assert
-				Assert.Undefined(actual);
+				Assert.Equal(false, actual);
 			}
 
 			[ Fact ]
@@ -555,11 +607,11 @@ Test.Aura.Controller.ActionDefTest = function() {
 
 		[ Fact ]
 		function ReturnsActionWithBackgroundFromIsBackground() {
-			var expected = "expected";
+                        // Note, this used to use 'expected', but that breaks with the new
+                        // more strict values.
+			var expected = true;
 			var target = new ActionDef({});
-			target.isBackground = function() {
-				return expected;
-			};
+                        target.background = expected;
 
 			var actual = target.newInstance().background;
 

@@ -59,7 +59,7 @@ public class EquinoxExtendedHttpServiceTrackerFactory extends AbstractHttpServic
     public EquinoxExtendedHttpServiceTrackerFactory() {
         super(HTTP_SERVICE_NAME);
     }
-    
+
     @Activate
     protected void activate() {
         logService.info(getClass().getSimpleName() + " Activated");
@@ -72,13 +72,21 @@ public class EquinoxExtendedHttpServiceTrackerFactory extends AbstractHttpServic
     @Override
     protected void register(ExtendedHttpService service,
             ServletProxy<? extends Servlet> servlet) throws ServletException, NamespaceException {
-        service.registerServlet(servlet.getAlias(), servlet, null, null);
+        try {
+            service.registerServlet(servlet.getAlias(), servlet, null, null);
+        } catch (NamespaceException e) {
+            if (e.toString().contains("The alias '/' is already in use")) {
+                // Ignore: a conflict with the newer version of Whiteboard
+            } else {
+                throw e;
+            }
+        }
     }
 
     @Override
-    protected void register(ExtendedHttpService service, FilterProxy<? extends Filter> filter) 
+    protected void register(ExtendedHttpService service, FilterProxy<? extends Filter> filter)
             throws ServletException, NamespaceException {
-        // To abstract the differences b/w Equinox and Felix implementations filters are initially 
+        // To abstract the differences b/w Equinox and Felix implementations filters are initially
         // bound to "/" and then FilterProxy implementation handles the actual pattern matching
         service.registerFilter("/", filter, null, null);
     }

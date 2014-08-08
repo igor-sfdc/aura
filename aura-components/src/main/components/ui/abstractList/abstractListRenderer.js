@@ -22,12 +22,12 @@
  * emptyListContent is handled no matter how the list is implemented.
  */
 	afterRender : function(component, helper){
+		this.superAfterRender();
 		helper.updateEmptyListContent(component);
 	},
 	rerender : function(component, helper){
 		this.superRerender();
-		var items = component.getConcreteComponent().getValue('v.items');
-		if (items.isDirty()) {
+		if (component.getConcreteComponent().isDirty('v.items')) {
 			helper.updateEmptyListContent(component);
 		}
 	}

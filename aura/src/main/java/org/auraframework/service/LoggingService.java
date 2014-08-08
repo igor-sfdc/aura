@@ -15,8 +15,11 @@
  */
 package org.auraframework.service;
 
+import java.util.Map;
+
 import org.auraframework.Aura;
 import org.auraframework.system.LoggingContext;
+import org.auraframework.system.LoggingContext.KeyValueLogger;
 
 /**
  * <p>
@@ -30,6 +33,7 @@ public interface LoggingService extends AuraService {
 
     public static final String CMP_COUNT = "cmpCount";
     public static final String DEF_COUNT = "defCount";
+    public static final String DEF_VISIT_COUNT = "defVisitCount";
     public static final String DEF_DESCRIPTOR_COUNT = "defDescriptorCount";
     public static final String TIMER_DESERIALIZATION = "deSerialization";
     public static final String AURA_REQUEST_QUERY = "auraRequestQuery";
@@ -47,7 +51,7 @@ public interface LoggingService extends AuraService {
     public static final String TIMER_SERIALIZATION_AURA = "serializationAura";
     public static final String USER_AGENT = "userAgent";
     /**
-     * Transaction beacon data from Jiffy to create 'i' log lines
+     * Transaction beacon data from UIPerf to create 'i' log lines
      */
     public static final String BEACON_DATA = "beaconData";
 
@@ -60,6 +64,16 @@ public interface LoggingService extends AuraService {
      * Close and clean up logging context
      */
     void release();
+    
+    /**
+     * Start timers for an action.
+     */
+    void startAction(String actionName);
+    
+    /**
+     * Stop all timers for an action
+     */
+    void stopAction(String actionName);
 
     /**
      * Start a timer.
@@ -139,5 +153,16 @@ public interface LoggingService extends AuraService {
     /**
      * flush the logged values.
      */
-    void doLog();
+    void flush();
+    
+    /**
+     * get a key value pair logger that appends to the buffer
+     */
+    KeyValueLogger getKeyValueLogger(StringBuffer log);
+    
+    /**
+     * write a Content Security Policy report to the logs
+     * @param report a deserialized JSON map
+     */
+    void logCSPReport(Map<String, Object> report);
 }

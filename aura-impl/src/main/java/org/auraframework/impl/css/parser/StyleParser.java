@@ -21,7 +21,10 @@ import org.auraframework.Aura;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.DefDescriptor.DefType;
 import org.auraframework.def.Definition;
+import org.auraframework.def.ResourceDef;
 import org.auraframework.def.StyleDef;
+import org.auraframework.impl.clientlibrary.handler.ResourceDefHandler;
+import org.auraframework.impl.css.parser.CssPreprocessor.ParserResult;
 import org.auraframework.impl.css.style.StyleDefImpl;
 import org.auraframework.system.Client;
 import org.auraframework.system.Parser;
@@ -36,10 +39,11 @@ import com.google.common.collect.ImmutableSet;
  */
 public class StyleParser implements Parser {
 
-    private static StyleParser instance = new StyleParser(true);
-    private static StyleParser nonValidatingInstance = new StyleParser(false);
+    private static final StyleParser instance = new StyleParser(true);
+    private static final StyleParser nonValidatingInstance = new StyleParser(false);
 
-    public static Set<String> allowedConditions;
+    public static final Set<String> allowedConditions;
+    private final boolean doValidation;
 
     // build list of conditional permutations and allowed conditionals
     static {
@@ -58,18 +62,12 @@ public class StyleParser implements Parser {
         return nonValidatingInstance;
     }
 
-    private final boolean doValidation;
-
     protected StyleParser(boolean doValidation) {
         this.doValidation = doValidation;
     }
 
     public boolean shouldValidate(String name) {
-        if (name.toLowerCase().endsWith("template")) {
-            return false;
-        }
-        return doValidation;
-
+        return name.toLowerCase().endsWith("template") ? false : doValidation;
     }
 
     @SuppressWarnings("unchecked")
@@ -77,22 +75,32 @@ public class StyleParser implements Parser {
     public <D extends Definition> D parse(DefDescriptor<D> descriptor, Source<?> source) throws StyleParserException,
             QuickFixException {
 
+        DefDescriptor<StyleDef> styleDefDesc = (DefDescriptor<StyleDef>) descriptor;
+
         if (descriptor.getDefType() == DefType.STYLE) {
             String className = descriptor.getNamespace() + AuraTextUtil.initCap(descriptor.getName());
             StyleDefImpl.Builder builder = new StyleDefImpl.Builder();
-            builder.setDescriptor((DefDescriptor<StyleDef>) descriptor);
+            builder.setDescriptor(styleDefDesc);
             builder.setLocation(source.getSystemId(), source.getLastModified());
             builder.setClassName(className);
             builder.setOwnHash(source.getHash());
 
-            CSSParser parser = new CSSParser(descriptor.getNamespace(), descriptor.getName(),
-                    shouldValidate(descriptor.getName()), className, source.getContents(), allowedConditions,
-                    source.getSystemId());
+            ParserResult result = CssPreprocessor
+                    .initial()
+                    .source(source.getContents())
+                    .resourceName(source.getSystemId())
+                    .componentClass(className, shouldValidate(descriptor.getName()))
+                    .allowedConditions(allowedConditions)
+                    .themes(styleDefDesc)
+                    .parse();
 
-            builder.setComponents(parser.parse());
-            builder.setThemeReferences(parser.getThemeReferences());
+            builder.setContent(result.content());
+            builder.setThemeExpressions(result.themeExpressions());
 
             return (D) builder.build();
+        } else if (descriptor.getDefType() == DefType.RESOURCE) {
+            return (D) new ResourceDefHandler<ResourceDef>((DefDescriptor<ResourceDef>) descriptor,
+                    (Source<ResourceDef>) source).createDefinition();
         }
 
         return null;

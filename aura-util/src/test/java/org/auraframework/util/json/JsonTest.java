@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.TreeMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -161,21 +162,6 @@ public class JsonTest extends UnitTestCase {
                 Json.serialize(objArray2, false, true));
     }
 
-    public void testSerializeEqualityReferenceType() throws IOException {
-        JsonEqualitySerializableTest obj1 = new JsonEqualitySerializableTest(1);
-        JsonEqualitySerializableTest obj2 = new JsonEqualitySerializableTest(1);
-        JsonEqualitySerializableTest obj3 = new JsonEqualitySerializableTest(2);
-        JsonEqualitySerializableTest[] objArray = { obj1, obj2 };
-        // Testing when obj1.equals(obj2)
-        assertEquals("[{\"serId\":1,\"value\":\"JsonEqualitySerializableTest serialized string\"},{\"serRefId\":1}]",
-                Json.serialize(objArray, false, true));
-        JsonEqualitySerializableTest[] objArray2 = { obj1, obj3 };
-        // Testing when !obj1.equals(obj3)
-        assertEquals(
-                "[{\"serId\":1,\"value\":\"JsonEqualitySerializableTest serialized string\"},{\"serId\":2,\"value\":\"JsonEqualitySerializableTest serialized string\"}]",
-                Json.serialize(objArray2, false, true));
-    }
-
     public void testWriteMapBegin() throws IOException {
         Json json = new Json(new StringBuilder(), false, false);
         json.writeMapBegin();
@@ -183,6 +169,43 @@ public class JsonTest extends UnitTestCase {
         json = new Json(new StringBuilder(), true, false);
         json.writeMapBegin();
         assertEquals("{\n", json.getAppendable().toString());
+    }
+
+    private static class NoSerializerClass { public NoSerializerClass() { } };
+
+    private static class NoSerializerContext extends DefaultJsonSerializationContext {
+        public NoSerializerContext() {
+            super(false, false, false);
+        }
+
+        @Override
+        public JsonSerializer<Object> getSerializer(Object o) {
+            if (o instanceof NoSerializerClass) {
+                return null;
+            }
+            return super.getSerializer(o);
+        }
+    }
+
+    public void testWriteValueNoSerializer() throws IOException {
+        Json json = new Json(new StringBuilder(), null, new NoSerializerContext());
+        try {
+            json.writeValue(new NoSerializerClass());
+            fail("should throw exception");
+        } catch (JsonSerializerNotFoundException jse) {
+            assertTrue(jse.getMessage().contains("NoSerializerClass"));
+        }
+    }
+
+    public void testWriteKeyNoSerializer() throws IOException {
+        Json json = new Json(new StringBuilder(), null, new NoSerializerContext());
+        json.writeMapBegin();
+        try {
+            json.writeMapKey(new NoSerializerClass());
+            fail("should throw exception");
+        } catch (JsonSerializerNotFoundException jse) {
+            assertTrue(jse.getMessage().contains("NoSerializerClass"));
+        }
     }
 
     public void testWriteMapEnd() throws IOException {
@@ -393,6 +416,33 @@ public class JsonTest extends UnitTestCase {
         json.writeMapEntry("key2", "value2");
         json.writeMapEnd();
         assertEquals("{\n  \"key1\":\"value1\",\n  \"key2\":\"value2\"\n}", json.getAppendable().toString());
+    }
+
+    public void testWriteMapEntryTyped() throws IOException {
+        List<String> list = new ArrayList<String>(2);
+        list.add("item1");
+        list.add("item2");
+        Json json = new Json(new StringBuilder(), false, false);
+        json.writeMapBegin();
+        json.writeMapEntry("key", list);
+        json.writeMapEnd();
+        assertEquals("{\"key\":[\"item1\",\"item2\"]}", json.getAppendable().toString());
+
+        json = new Json(new StringBuilder(), false, false);
+        json.writeMapBegin();
+        json.writeMapEntry("key", null, "java://java.util.List");
+        json.writeMapEnd();
+        assertEquals("{\"key\":[]}", json.getAppendable().toString());
+
+        Map<String,Integer> map = new TreeMap<String,Integer>();
+        map.put("item1", 1);
+        map.put("item2", 2);
+        json = new Json(new StringBuilder(), false, false);
+        json.writeMapBegin();
+        json.writeMapEntry("map1", map);
+        json.writeMapEntry("map2", null, "java://java.util.Map");
+        json.writeMapEnd();
+        assertEquals("{\"map1\":{\"item1\":1,\"item2\":2},\"map2\":{}}", json.getAppendable().toString());
     }
 
     public void testWriteMapKey() throws IOException {

@@ -78,132 +78,226 @@
         "wbr" : true
     },
 
+    // string constants used to save fast click event and handler
+    NAMES: {
+        "touchStart": "fcTouchStart",
+        "touchEnd": "fcTouchEnd",
+        "touchMove": "fcTouchMove",
+        "domHandler": "fcDomHandler",
+        "hashHandler": "fcHashHandler"
+    },
+
+    GESTURE: function (){
+        var g;
+        if (this.cachedGestures) {
+            return this.cachedGestures;
+        } else {
+
+            if (window["navigator"]["pointerEnabled"]) {
+                g = {
+                        start : 'pointerdown',
+                        move : 'pointermove',
+                        end : 'pointerup' 
+                    };
+
+            } else if (window["navigator"]["msPointerEnabled"]) {
+                g = {
+                        start : 'MSPointerDown',
+                        move : 'MSPointerMove',
+                        end : 'MSPointerUp' 
+                    };
+                
+            } else {
+                g = {
+                        start : 'touchstart',
+                        move : 'touchmove',
+                        end : 'touchend'
+                    };
+            }
+            return this.cachedGestures = g;
+        }
+    },
+
     caseAttribute : function(attribute) {
         return this.SPECIAL_CASINGS()[attribute.toLowerCase()] !== undefined ? this.SPECIAL_CASINGS()[attribute.toLowerCase()] : attribute.toLowerCase();
     },
 
-    createFastClickHandler : function(element, handler) {
-        var self = this;
-        if (this.supportsTouchEvents()) {
-            this.initFastClick();
-
-            // Add "fast click" support for touch enabled devices to avoid 300ms browser lag while it figures out if its a gesture or a click
-            var FastClick = self.FastClick;
-            var fc = new FastClick(element, handler);
-        } else {
-            $A.util.on(element, "click", handler);
+    /**
+     * Sets up fast click handling
+     *
+     * @param element element to enable fast click checking on
+     * @param handler handler for fast click event listener
+     * @param name name of the type of handler
+     * @returns {Function} previous handler if any
+     */
+    createFastClickHandler : function(element, handler, name) {
+        // remove existing click event listeners if component is rerendered
+        // there are potentially two handlers: one for domEvent and another for hashEvent
+        // so we need to save reference and remove the right one
+        var previousHandler = element[name];
+        if($A.util.isFunction(previousHandler)) {
+            $A.util.removeOn(element, "click", previousHandler);
         }
+
+        if (this.supportsTouchEvents()) {
+            // typically mobile and touch screens
+            var FastClick = this.initFastClick();
+            // remove the touch event listeners for the same two handlers
+            var touchHandler = name + "Touch";
+            var previousTouchHandler = element[touchHandler];
+            if (!$A.util.isUndefinedOrNull(previousTouchHandler)) {
+                $A.util.removeOn(element, element[this.NAMES.touchStart], previousTouchHandler);
+                $A.util.removeOn(element, element[this.NAMES.touchMove], previousTouchHandler);
+                $A.util.removeOn(element, element[this.NAMES.touchEnd], previousTouchHandler);
+            }
+            element[touchHandler] = new FastClick(element, handler);
+        }
+
+        // mouse click by default for devices with both touch and click capabilities
+        $A.util.on(element, "click", handler);
+
+        // save current handler on element so that it can be referenced and removed later
+        element[name] = handler;
+        return previousHandler;
     },
 
     supportsTouchEvents : function () {
-    	return $A.util.supportsTouchEvents();
+        return $A.util.supportsTouchEvents();
     },
 
     initFastClick : function() {
-        var self = this;
-        if (!self.FastClick) {
-            self.FastClick = function(element, handler) {
+        var gesture = this.GESTURE(),
+            touchStart = this.NAMES.touchStart,
+            touchMove = this.NAMES.touchMove,
+            touchEnd = this.NAMES.touchEnd,
+            FastClick;
+
+        if (!this.FastClick) {
+            /**
+             * FastClick constructor
+             *
+             * @constructor
+             * @param element element to enable fast click checking on
+             * @param handler handler for fast click event listener
+             **/
+            FastClick = function(element, handler) {
+                // save fast click event type in order to remove listener
+                element[touchStart] = gesture.start;
+                element[touchMove] = gesture.move;
+                element[touchEnd] = gesture.end;
                 this.element = element;
                 this.handler = handler;
-
-                element.addEventListener("touchstart", this, false);
+                element.addEventListener(gesture.start, this, false);
             };
 
-            self.FastClick.prototype.handleEvent = function(event) {
-                switch (event.type) {
-                case "touchstart":
-                    this.onTouchStart(event);
-                    break;
-                case "touchmove":
-                    this.onTouchMove(event);
-                    break;
-                case "touchend":
-                    this.onClick(event);
-                    break;
-                }
-            };
+            FastClick.prototype = {
+                handleEvent : function (event) {
+                    switch (event.type) {
+                    case 'touchstart':
+                    case 'pointerdown':
+                    case 'MSPointerDown':
+                        this.onTouchStart(event);
+                        break;
+                    case 'touchmove':
+                    case 'pointermove':
+                    case 'MSPointerMove':
+                        this.onTouchMove(event);
+                        break;
+                    case 'touchend':
+                    case 'pointerup':
+                    case 'MSPointerUp':
+                        this.onClick(event);
+                        break;
+                    }
+                },
+                onTouchStart : function(event) {
+                    var point = event.touches ? event.touches[0] : event;
+                    $A.util.on(this.element, gesture.end, this, false);
+                    // Bind gesture.move event to this.element instead of document.body, for the event could be stop
+                    // propagated by child elements
+                    $A.util.on(this.element, gesture.move, this, false);
+                    this.startX = point.pageX;
+                    this.startY = point.pageY;
+                },
+                onTouchMove : function(event) {
+                    var point = event.touches ? event.touches[0] : event;
+                    var dragThresholdPixels = 4;
+                    if (Math.abs(point.pageX - this.startX) > dragThresholdPixels
+                        || Math.abs(point.pageY - this.startY) > dragThresholdPixels) {
+                        this.reset();
+                    }
+                },
+                onClick : function(event) {
+                    event.stopPropagation();
+                    event.preventDefault();
+                    this.element.focus();
 
-            self.FastClick.prototype.onTouchStart = function(event) {
-                $A.util.on(this.element, "touchend", this, false);
-                $A.util.on(document.body, "touchmove", this, false);
+                    this.handler(event);
 
-                this.startX = event.touches[0].clientX;
-                this.startY = event.touches[0].clientY;
-            };
-
-            self.FastClick.prototype.onTouchMove = function(event) {
-                if (Math.abs(event.touches[0].clientX - this.startX) > 4
-                        || Math.abs(event.touches[0].clientY - this.startY) > 4) {
+                    if (event.type == gesture.end) {
+                        FastClick.preventGhostClick(this.startX, this.startY);
+                    }
                     this.reset();
+                },
+                reset : function() {
+                    $A.util.removeOn(this.element, gesture.end, this, false);
+                    // See comment in #onTouchStart regarding binding gesture.move to this.element instead of
+                    // document.body
+                    $A.util.removeOn(this.element, gesture.move, this, false);
+
+                    this.startX = 0;
+                    this.startY = 0;
                 }
             };
 
-            self.FastClick.prototype.onClick = function(event) {
-                event.stopPropagation();
-                event.preventDefault();
-                this.element.focus();
-                this.handler(event);
-
-                if (event.type == "touchend") {
-                    self.FastClick.preventGhostClick(this.startX,
-                            this.startY);
-                }
-
-                this.reset();
+            FastClick.preventGhostClick  = function(x, y) {
+                FastClick.clickbusterCoordinates.push(x, y);
+                window.setTimeout(FastClick.pop, 2500);
             };
 
-            self.FastClick.prototype.reset = function() {
-                this.element.removeEventListener("touchend", this, false);
-                document.body.removeEventListener("touchmove", this, false);
-
-                this.startX = 0;
-                this.startY = 0;
+            FastClick.pop = function() {
+                FastClick.clickbusterCoordinates.splice(0, 2);
             };
 
-            self.FastClick.preventGhostClick = function(x, y) {
-                self.FastClick.clickbusterCoordinates.push(x, y);
-                window.setTimeout(self.FastClick.pop, 2500);
-            };
-
-            self.FastClick.pop = function() {
-                self.FastClick.clickbusterCoordinates.splice(0, 2);
-            };
-
-            var onClickBuster = function(event) {
-                for ( var i = 0; i < self.FastClick.clickbusterCoordinates.length; i += 2) {
-                    var x = self.FastClick.clickbusterCoordinates[i];
-                    var y = self.FastClick.clickbusterCoordinates[i + 1];
-                    if (Math.abs(event.clientX - x) < 25
-                            && Math.abs(event.clientY - y) < 25) {
+            FastClick.onClickBuster = function(event) {
+                var point = event.touches ? event.touches[0] : event,
+                    i, x, y;
+                for (i = 0; i < FastClick.clickbusterCoordinates.length; i += 2) {
+                    x = FastClick.clickbusterCoordinates[i];
+                    y = FastClick.clickbusterCoordinates[i + 1];
+                    if (Math.abs(point.pageX - x) < 25 && Math.abs(point.pageY - y) < 25) {
                         event.stopPropagation();
                         event.preventDefault();
                     }
                 }
             };
 
-            self.FastClick.clickbusterCoordinates = [];
-            $A.util.on(document, "click", onClickBuster, true);
+            FastClick.clickbusterCoordinates = [];
+            $A.util.on(document, "click", FastClick.onClickBuster, true);
+
+            this.FastClick = FastClick;
         }
+
+        return this.FastClick;
     },
 
     domEventHandler : function (event) {
-        var eventName = "on" + event.type;
-        var element = event.currentTarget;
-        var ownerComponent = $A.componentService.getRenderingComponentForElement(element);
-        var attributes = ownerComponent.getAttributes();
-        var valueProvider = attributes.getValueProvider();
+        var eventName       = "on" + event.type,
+            element         = event.currentTarget,
+            ownerComponent  = $A.componentService.getRenderingComponentForElement(element),
+            valueProvider   = ownerComponent.getAttributeValueProvider(),
+            htmlAttributes  = ownerComponent.getValue("v.HTMLAttributes"),
+            valueExpression = htmlAttributes.getValue(eventName),
+            onclickExpression;
 
-        var htmlAttributes = attributes.getValue("HTMLAttributes");
-        var valueExpression = htmlAttributes.getValue(eventName);
-
-        if (eventName === "ontouchend") {
-        	// Validate that either onclick or ontouchend is wired up to an action never both simultaneously
-            var onclickExpression = htmlAttributes.getValue("onclick");
-            if (onclickExpression.isDefined()) {
-            	if (!valueExpression.isDefined()) {
-    	            // Map from touch event to onclick
-                	valueExpression = onclickExpression;
-            	}
+        if (eventName === 'ontouchend' || eventName === 'onpointerup' || eventName === 'onMSPointerUp') {
+            // Validate that either onclick or ontouchend is wired up to an action never both simultaneously
+        	 onclickExpression = htmlAttributes.getValue("onclick");
+             if (onclickExpression.isDefined()) {
+                 if (!valueExpression.isDefined()) {
+                    // Map from touch event to onclick
+                    valueExpression = onclickExpression;
+                }
             }
         }
 
@@ -223,19 +317,18 @@
     },
 
     createHtmlAttribute: function(name, ve, config) {
-        var ret = config.ret;
-        var component = config.component;
-        var attributes = component.getAttributes();
-        var valueProvider = attributes.getValueProvider();
-        var on = $A.util.on;
+        var ret           = config.ret,
+            component     = config.component,
+            valueProvider = component.getAttributeValueProvider(),
+            on            = $A.util.on,
+            value;
 
-        var value;
         // special handling if the attribute is an inline event handler
         if (name.toLowerCase().indexOf("on") === 0) {
             var eventName = name.substring(2);
 
             if (eventName.toLowerCase() === "click") {
-                this.createFastClickHandler(ret, this.domEventHandler);
+                this.createFastClickHandler(ret, this.domEventHandler, this.NAMES.domHandler);
             } else {
                 on(ret, eventName, this.domEventHandler);
             }
@@ -243,43 +336,44 @@
             // ve is either an expression (and needs to be evaluated by
             // the expressionService), or a literal
             if (ve && ve.isExpression) {
-            	if (ve.isExpression()) {
-	                value = $A.expressionService.getValue(valueProvider, ve);
+                if (ve.isExpression()) {
+                    value = $A.expressionService.getValue(valueProvider, ve);
 
-	                // get the actual value from the Value object (if it's not null)
-	                if (value && value.auraType === "Value") {
-	                    if (aura.util.arrayIndexOf(this.SPECIAL_BOOLEANS, name.toLowerCase()) > -1) {
-	                        // TODO: values should someday know their type and do the right thing with getValue()
-	                        value = value.getBooleanValue();
-	                    } else {
-	                        value = value.getValue();
-	                    }
-	                }
-            	} else {
+                    // get the actual value from the Value object (if it's not null)
+                    if (value && value.auraType === "Value") {
+                        if (aura.util.arrayIndexOf(this.SPECIAL_BOOLEANS, name.toLowerCase()) > -1) {
+                            // TODO: values should someday know their type and do the right thing with getValue()
+                            // JBUCH: FIXME TEMPORARY FIX FOR HALO
+                            value = $A.util.getBooleanValue(value.getValue());
+                        } else {
+                            value = value.getValue();
+                        }
+                    }
+                } else {
                     value = ve.getValue();
-            	}
+                }
             } else{
-            	value = ve;
+                value = ve;
             }
 
             var isHash = value && value.indexOf && value.indexOf("#") === 0;
             if (name.toLowerCase() === "href" && ret.tagName && ret.tagName.toLowerCase() === "a" && value && (isHash || this.supportsTouchEvents())) {
+            	var HTMLAttributes = component.getValue("v.HTMLAttributes");
+                var target = HTMLAttributes.getValue("target");
+                if (target) {
+                    if (target.isExpression()) {
+                        target = $A.expressionService.getValue(valueProvider, target);
+                    }
+                    target = target.unwrap();
+                }
                 this.createFastClickHandler(ret, function() {
                     if (isHash) {
                         $A.run(function () { $A.historyService.set(value.substring(1)); })
                     } else {
                         // Make sure that non-hash style hrefs work fine even when fast clicking is engaged
-                        var HTMLAttributes = component.getValue("v.HTMLAttributes");
-                        var target = HTMLAttributes.getValue("target");
-                        if (target) {
-                            if (target.isExpression()) {
-                                target = $A.expressionService.getValue(valueProvider, target);
-                            }
-                            target = target.unwrap();
-                        }
                         window.open(value, target ? target : "_self");
                     }
-                });
+                }, this.NAMES.hashHandler);
 
                 var href = "javascript:void(0";
                 if ($A.getContext().getMode() !== "PROD") {
@@ -295,7 +389,7 @@
                 ret.setAttribute(name, value);
             } else if (aura.util.arrayIndexOf(this.SPECIAL_BOOLEANS, name.toLowerCase()) > -1) {
                 // handle the boolean attributes for whom presence implies truth
-            	var casedName = this.caseAttribute(name);
+                var casedName = this.caseAttribute(name);
                 if (value === false) {
                     ret.removeAttribute(casedName);
                 } else {
@@ -303,17 +397,20 @@
 
                     // Support for IE's weird handling of checked
                     if (casedName === "checked"){
-                    	ret.setAttribute("defaultChecked", true);
-                	}
+                        ret.setAttribute("defaultChecked", true);
+                    }
                 }
             } else {
                 // as long as we have a valid value at this point, set
                 // it as an attribute on the DOM node
                 // IE renders null value as string "null" for input (text) element, we have to work around that.
                 if (!aura.util.isUndefined(value) && !($A.util.isIE && this.isInputNullValue(ret.tagName, name, value))) {
-                	var casedAttribute = this.caseAttribute(name);
+                    var casedAttribute = this.caseAttribute(name);
                     var lowerName = name.toLowerCase();
-                    if (lowerName === "type" || lowerName === "href" || lowerName === "style" || lowerName.indexOf("data-") === 0) { // special case we have to use "setAttribute"
+                    if (lowerName === "style" && $A.util.isIE) {
+                        ret.style.cssText = value;
+                    } else if (lowerName === "type" || lowerName === "href" || lowerName === "style" || lowerName.indexOf("data-") === 0) {
+                        // special case we have to use "setAttribute"
                         ret.setAttribute(casedAttribute, value);
                     } else {
                         ret[casedAttribute] = value;

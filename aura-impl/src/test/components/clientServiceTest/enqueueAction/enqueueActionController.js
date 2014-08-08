@@ -15,6 +15,8 @@
  */
 ({
 	client : function(cmp) {
-		cmp.getAttributes().getValue("log").push(this._toLog || "client");
+		var log = cmp.get("v.log"); 
+		log.push(this._toLog || "client");
+		cmp.set("v.log", log);
 	}
 })

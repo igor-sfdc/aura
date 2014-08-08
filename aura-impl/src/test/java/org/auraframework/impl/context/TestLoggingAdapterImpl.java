@@ -21,6 +21,7 @@ import java.util.Map;
 import org.auraframework.impl.LoggingAdapterImpl;
 import org.auraframework.system.LoggingContext;
 import org.auraframework.test.adapter.TestLoggingAdapter;
+
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -81,22 +82,22 @@ public class TestLoggingAdapterImpl extends LoggingAdapterImpl implements TestLo
     }
 
     public class TestLoggingContext extends LoggingContextImpl {
-        
-        @Override
-        protected void log(Map<String, Object> valueMap) {
+        private void captureLog(Map<String, Object> valueMap) {
             if (isCapturing) {
                 logs.add(Maps.newHashMap(valueMap));
             }
-            else {
-            	//TO REMOVE : add this for loop trying to catch 302 missing (W-1818497), this slow the logging process down, remember to remove it later
-            	for (Map.Entry<String, Object> entry : valueMap.entrySet()) {
-            		if(entry.getKey().contains("httpStatus") && entry.getValue().toString().contains("302") ) {
-            			System.out.println("There is a 302 response but isCapturing is false."
-            					+entry.getKey()+":"+entry.getValue().toString());
-            		}
-            	}
-            }
-            super.log(valueMap);//keep logging-adapter informed
+        }
+
+        @Override
+        public void logCSPReport(Map<String, Object> report) {
+            captureLog(report);
+            super.logCSPReport(report);
+        }
+
+        @Override
+        protected void logRequestValuesMap(Map<String, Object> valueMap) {
+            captureLog(valueMap);
+            super.logRequestValuesMap(valueMap);//keep logging-adapter informed
         }
 
     }

@@ -32,47 +32,16 @@
 		}
 	},
 
-	testCaseSensitivity : {
+	testMapDataTypeAndDefaultValue : {
 		test : function(cmp) {
-			$A.test.assertEquals("Aura", cmp.getAttributes().get("strATTRIBUTEWithDefaultValue"));
-			$A.test.assertFalsy(cmp.getAttributes().get("strATTRIBUTEWithNODefaultValue"));
+			this.verifyDefaultValuesOfMapDataType(cmp);
 		}
 	},
-
-	testDefaultValueOfNonExistingAttribute : {
+	//TODO W-2248578
+	_testCaseSensitivity : {
 		test : function(cmp) {
-			$A.test.assertFalsy(cmp.getAttributes().get("fooBar"),
-					"Should not be able to read non existing attributes.");
-			try {
-				$A.test.assertFalsy(cmp.getAttributes().getValue(undefined));
-				$A.test.fail("Should not be able to use undefined in getValue()");
-			} catch (e) {
-				$A.test.assertEquals("Assertion Failed!: Key is required for getValue on MapValue : undefined",
-						e.message)
-			}
-			try {
-				$A.test.assertFalsy(cmp.getAttributes().getValue(null));
-				$A.test.fail("Should not be able to use null in getValue()");
-			} catch (e) {
-				$A.test.assertEquals("Assertion Failed!: Key is required for getValue on MapValue : null", e.message)
-			}
-			try {
-				$A.test.assertFalsy(cmp.getAttributes().getValue());
-				$A.test.fail("Should not be able to use null in getValue()");
-			} catch (e) {
-				$A.test.assertEquals("Assertion Failed!: Key is required for getValue on MapValue : undefined",
-						e.message)
-			}
-			/**
-			 * W-1324218 try{ $A.test.assertFalsy(cmp.getAttributes().get(null)); $A.test.fail("Should not be able to
-			 * use null in get()"); }catch(e){ $A.test.assertEquals("Assertion Failed!: Key is required for get on
-			 * MapValue : null", e.message) } try{ $A.test.assertFalsy(cmp.getAttributes().get(undefined));
-			 * $A.test.fail("Should not be able to use undefined in get()"); }catch(e){ $A.test.assertEquals("Assertion
-			 * Failed!: Key is required for get on MapValue : undefined", e.message) } try{
-			 * $A.test.assertFalsy(cmp.getAttributes().get()); $A.test.fail("Should not be able to use undefined in
-			 * get()"); }catch(e){ $A.test.assertEquals("Assertion Failed!: Key is required for get on MapValue :
-			 * undefined", e.message) }
-			 */
+			$A.test.assertEquals("Aura", cmp.get("v.strATTRIBUTEWithDefaultValue"));
+			$A.test.assertUndefined(cmp.get("v.strATTRIBUTEWithNODefaultValue"));
 		}
 	},
 
@@ -87,14 +56,14 @@
 					function (newComp) {
         				this.verifyDefaultValuesOfBasicDataType(newComp);
         				this.verifyDefaultValuesOfObjectDataType(newComp);
-        				// W-1324216
-        				// this.verifyDefaultValuesOfListDataType(newComp);
+        				this.verifyDefaultValuesOfListDataType(newComp);
         				this.verifyChangingAttributeValues(newComp);
+                        this.verifyDefaultValuesOfMapDataType(newComp);
 					},
 					"markup://attributesTest:defaultValue",
 					null, null, null
 			);
-			
+
 		}
 	},
 
@@ -120,52 +89,59 @@
 	},
 
 	verifyDefaultValuesOfBasicDataType : function(testCmp) {
-		$A.test.assertEquals("Aura", testCmp.getAttributes().get("strAttributeWithDefaultValue"),
+		$A.test.assertEquals("Aura", testCmp.get("v.strAttributeWithDefaultValue"),
 				"Failed to see default value of String attribute.");
 		// The other way of accessing a attribute value.
-		$A.test.assertEquals("Aura", testCmp.getAttributes().getValue("strAttributeWithDefaultValue").getValue());
-		$A.test.assertFalsy(testCmp.getAttributes().get("strAttributeWithNoDefaultValue"),
+		$A.test.assertEquals("Aura", testCmp.get("v.strAttributeWithDefaultValue"));
+		$A.test.assertFalsy(testCmp.get("v.strAttributeWithNoDefaultValue"),
 				"Attributes without default value should have undefined as value");
 	},
 
 	verifyDefaultValuesOfObjectDataType : function(testCmp) {
-		$A.test.assertEquals("['red','green','blue']", testCmp.getAttributes().get("objAttributeWithDefaultValue"),
+		$A.test.assertEquals("['red','green','blue']", testCmp.get("v.objAttributeWithDefaultValue"),
 				"Failed to see default value of object attribute.");
-		$A.test.assertEquals("['red','green','blue']", testCmp.getAttributes().getValue("objAttributeWithDefaultValue")
-				.getValue());
-		$A.test.assertFalsy(testCmp.getAttributes().get("objAttributeWithNoDefaultValue"),
+		$A.test.assertEquals("['red','green','blue']", testCmp.get("v.objAttributeWithDefaultValue"));
+		$A.test.assertFalsy(testCmp.get("v.objAttributeWithNoDefaultValue"),
 				"Attributes without default value should have undefined as value");
 	},
 
 	verifyDefaultValuesOfListDataType : function(testCmp) {
-		var listAttr = testCmp.getAttributes().getValue("listAttributeWithDefaultValue");
-		$A.test.assertTrue(listAttr.toString() === "ArrayValue",
-				"Expected to find attribute of ArrayValue type but found" + listAttr.constructor);
-		$A.test.assertEquals("Value", listAttr.auraType);
-		$A.test.assertEquals("true", listAttr.getValue(0).getValue());
-		$A.test.assertEquals("false", listAttr.getValue(1).getValue());
-		$A.test.assertEquals("true", listAttr.getValue(2).getValue());
+		var listAttr = testCmp.get("v.listAttributeWithDefaultValue");
+		$A.test.assertTrue($A.util.isArray(listAttr), "Expected to find attribute of Array type");
+		$A.test.assertEquals("true", listAttr[0]);
+		$A.test.assertEquals("false", listAttr[1]);
+		$A.test.assertEquals("true", listAttr[2]);
 
-		var a = testCmp.getAttributes().get("listAttributeWithNoDefaultValue");
+		var a = testCmp.get("v.listAttributeWithNoDefaultValue");
 		$A.test.assertTrue($A.util.isArray(a));
-		$A.test.assertEquals(0, a.length, "Array type attributes without default value should have empty as value");
+		$A.test.assertTrue($A.util.isEmpty(a), "Array type attributes without default value should have empty array as value");
 	},
-
+	
+	verifyDefaultValuesOfMapDataType : function(testCmp) {
+		var mapAttr = testCmp.get("v.mapAttributeWithDefaultValue");
+		$A.test.assertTrue($A.util.isObject(mapAttr), "Expected to find attribute of Map(Object)");
+		$A.test.assertEquals(1, mapAttr.a);
+		var a = testCmp.get("v.mapAttributeWithNoDefaultValue");
+		$A.test.assertTrue($A.util.isObject(a));
+		$A.test.assertEquals(0, $A.util.keys(a, true).length, "Expected no-default map to be an empty object");
+	},
+	
 	verifyChangingAttributeValues : function(testCmp) {
-		testCmp.getAttributes().setValue("strAttributeWithDefaultValue", "nemuL");
-		$A.test.assertEquals("nemuL", testCmp.getAttributes().getValue("strAttributeWithDefaultValue").getValue(),
+		testCmp.set("v.strAttributeWithDefaultValue", "nemuL");
+		$A.test.assertEquals("nemuL", testCmp.get("v.strAttributeWithDefaultValue"),
 				"Failed to change value of attribute.");
 
-		testCmp.getAttributes().setValue("strAttributeWithNoDefaultValue", "Saturday Night Live");
-		$A.test.assertEquals("Saturday Night Live", testCmp.getAttributes().getValue("strAttributeWithNoDefaultValue")
-				.getValue(), "Failed to change value of attribute.");
+		testCmp.set("v.strAttributeWithNoDefaultValue", "Saturday Night Live");
+		$A.test.assertEquals("Saturday Night Live", testCmp.get("v.strAttributeWithNoDefaultValue")
+				, "Failed to change value of attribute.");
 
-		testCmp.getAttributes().setValue("objAttributeWithDefaultValue", "['white','black']")
-		$A.test.assertEquals("['white','black']", testCmp.getAttributes().get("objAttributeWithDefaultValue"),
+		testCmp.set("v.objAttributeWithDefaultValue", "['white','black']")
+		$A.test.assertEquals("['white','black']", testCmp.get("v.objAttributeWithDefaultValue"),
 				"Failed to change value of attribute.");
 
-		testCmp.getAttributes().setValue("fooBar", "Jacked")
-		$A.test.assertFalsy(testCmp.getAttributes().get("fooBar"),
-				"Should not be able to create and set values for unidentified attributes.");
+		//TODO W-2248588
+//		testCmp.set("v.fooBar", "Jacked")
+//		$A.test.assertFalsy(testCmp.get("v.fooBar"),
+//				"Should not be able to create and set values for unidentified attributes.");
 	}
 })

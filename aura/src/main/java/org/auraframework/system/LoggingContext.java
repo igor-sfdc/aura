@@ -15,10 +15,16 @@
  */
 package org.auraframework.system;
 
+import java.util.Map;
+
 /**
  * LoggingContext public interface
  */
 public interface LoggingContext {
+    
+    void startAction(String actionName);
+    
+    void stopAction(String actionName);
 
     void startTimer(String name);
 
@@ -40,6 +46,16 @@ public interface LoggingContext {
 
     void setValue(String name, Object value);
 
-    void log();
+    void logRequestValues();
+    
+    KeyValueLogger getKeyValueLogger(StringBuffer log);
 
+    /**
+     * Interface to allow formatted logging of key value pairs
+     */
+    public interface KeyValueLogger {
+        public void log(String key, String value);
+    }
+
+    void logCSPReport(Map<String, Object> report);
 }

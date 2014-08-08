@@ -33,7 +33,7 @@ import org.auraframework.system.SourceListener.SourceMonitorEvent;
  */
 public class FileSourceListener implements FileListener {
 
-    private static final Logger logger = Logger.getLogger(FileSourceListener.class);
+    private static final Logger LOG = Logger.getLogger(FileSourceListener.class);
     private static final EnumMap<DefDescriptor.DefType, String> extensions = new EnumMap<DefDescriptor.DefType, String>(
             DefDescriptor.DefType.class);
 
@@ -41,6 +41,7 @@ public class FileSourceListener implements FileListener {
         extensions.put(DefDescriptor.DefType.APPLICATION, ".app");
         extensions.put(DefDescriptor.DefType.COMPONENT, ".cmp");
         extensions.put(DefDescriptor.DefType.EVENT, ".evt");
+        extensions.put(DefDescriptor.DefType.LIBRARY, ".lib");
         extensions.put(DefDescriptor.DefType.INTERFACE, ".intf");
         extensions.put(DefDescriptor.DefType.STYLE, ".css");
         extensions.put(DefDescriptor.DefType.LAYOUTS, "Layouts.xml");
@@ -51,6 +52,9 @@ public class FileSourceListener implements FileListener {
         extensions.put(DefDescriptor.DefType.PROVIDER, "Provider.js");
         extensions.put(DefDescriptor.DefType.HELPER, "Helper.js");
         extensions.put(DefDescriptor.DefType.MODEL, "Model.js");
+        extensions.put(DefDescriptor.DefType.RESOURCE, "Resource.css");
+        extensions.put(DefDescriptor.DefType.RESOURCE, "Resource.js");
+        extensions.put(DefDescriptor.DefType.DOCUMENTATION, ".auradoc");
     }
 
     @Override
@@ -68,17 +72,18 @@ public class FileSourceListener implements FileListener {
         notifySourceChanges(event, SourceMonitorEvent.changed);
     }
 
-    public void onSourceChanged(DefDescriptor<?> defDescriptor, SourceListener.SourceMonitorEvent smEvent) {
-        Aura.getDefinitionService().onSourceChanged(defDescriptor, smEvent);
+    public void onSourceChanged(DefDescriptor<?> defDescriptor, SourceListener.SourceMonitorEvent smEvent,
+                                String filePath) {
+        Aura.getDefinitionService().onSourceChanged(defDescriptor, smEvent, filePath);
     }
 
     private void notifySourceChanges(FileChangeEvent event, SourceListener.SourceMonitorEvent smEvent) {
 
-        String filePath = event.getFile().toString();
-        logger.info("File changes: " + filePath);
+        String filePath = event.getFile().getName().getPath();
+        LOG.info("File changed: " + filePath);
 
         DefDescriptor<?> defDescriptor = getDefDescriptor(filePath);
-        onSourceChanged(defDescriptor, smEvent);
+        onSourceChanged(defDescriptor, smEvent, filePath);
     }
 
     private DefDescriptor<?> getDefDescriptor(String filePath) {
@@ -94,7 +99,7 @@ public class FileSourceListener implements FileListener {
                 String extension = filePath.substring(filePath.lastIndexOf("."));
 
                 String qname;
-                if (defType == DefDescriptor.DefType.STYLE) {
+                if (extension.equalsIgnoreCase(".css")) {
                     qname = String.format("css://%s.%s", namespace, name);
                 } else if (extension.equalsIgnoreCase(".js")) {
                     qname = String.format("js://%s.%s", namespace, name);

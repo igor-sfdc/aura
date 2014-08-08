@@ -17,6 +17,7 @@ package org.auraframework.impl.root.parser;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.io.StringReader;
 import java.net.URL;
 
 import javax.xml.stream.XMLInputFactory;
@@ -27,10 +28,12 @@ import javax.xml.stream.XMLStreamReader;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.Definition;
 import org.auraframework.def.RootDefinition;
+import org.auraframework.impl.root.parser.handler.RootTagHandler;
 import org.auraframework.impl.root.parser.handler.RootTagHandlerFactory;
 import org.auraframework.system.Location;
 import org.auraframework.system.Parser;
 import org.auraframework.system.Source;
+import org.auraframework.throwable.AuraExceptionInfo;
 import org.auraframework.throwable.AuraUnhandledException;
 import org.auraframework.throwable.quickfix.InvalidDefinitionException;
 import org.auraframework.throwable.quickfix.QuickFixException;
@@ -43,23 +46,35 @@ import org.auraframework.throwable.quickfix.QuickFixException;
  */
 public class XMLParser implements Parser {
 
-    private final XMLInputFactory xmlInputFactory;
-    private static final XMLParser instance = new XMLParser();
+    private static final XMLInputFactory xmlInputFactory;
 
-    private XMLParser() {
+    static {
         xmlInputFactory = XMLInputFactory.newInstance();
+
+        // Setting IS_NAMESPACE_AWARE to true will require all xml to be valid xml and
+        // we would need to enforce namespace definitions ie xmlns in all cmp and app files.
         xmlInputFactory.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, false);
         xmlInputFactory.setProperty(XMLInputFactory.IS_COALESCING, true);
         xmlInputFactory.setProperty(XMLInputFactory.SUPPORT_DTD, true);
         xmlInputFactory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
-        xmlInputFactory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, false);
+        xmlInputFactory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, true);
+
         try {
+            // sjsxp does not currently have a thread-safe XMLInputFactory, as that implementation
+            // tries to cache and reuse theXMLStreamReader. Setting the parser-specific "reuse-instance"
+            // property to false prevents this.
+            // All other known open-source stax parsers (and the bea ref impl) have thread-safe factories.
+            // W-2316503: remove compatibility code for both SJSXP and Woodstox
             xmlInputFactory.setProperty("reuse-instance", false);
-        } catch (IllegalArgumentException e) {
-            //See W-1737863.  This property is specific to SJSXP and not supported or needed by Woodstox
-            //The exception here is a no-op.
+        } catch (IllegalArgumentException ex) {
+            // Other implementations will likely throw this exception since "reuse-instance"
+            // is implementation specific. NO-OP
         }
     }
+
+    private static final XMLParser instance = new XMLParser();
+
+    private XMLParser() {}
 
     public static XMLParser getInstance() {
         return instance;
@@ -70,13 +85,19 @@ public class XMLParser implements Parser {
     public <D extends Definition> D parse(DefDescriptor<D> descriptor, Source<?> source) throws QuickFixException {
         Reader reader = null;
         XMLStreamReader xmlReader = null;
+        RootTagHandler<? extends RootDefinition> handler = null;
 
         D ret = null;
         try {
             if (source.exists()) {
-                reader = new HTMLReader(source.getHashingReader());
+                String contents = source.getContents();
+                reader = new HTMLReader(new StringReader(contents));
 
-                xmlReader = xmlInputFactory.createXMLStreamReader(source.getSystemId(), reader);
+                xmlReader = xmlInputFactory.createXMLStreamReader(reader);
+            }
+            handler = RootTagHandlerFactory.newInstance((DefDescriptor<RootDefinition>) descriptor,
+                    (Source<RootDefinition>) source, xmlReader);
+            if (xmlReader != null) {
                 // need to skip junk above the start that is ok
                 LOOP: while (xmlReader.hasNext()) {
                     int type = xmlReader.next();
@@ -98,13 +119,8 @@ public class XMLParser implements Parser {
                     throw new InvalidDefinitionException("Empty file", getLocation(xmlReader, source));
                 }
             }
-            ret = (D) RootTagHandlerFactory.newInstance((DefDescriptor<RootDefinition>) descriptor,
-                    (Source<RootDefinition>) source, xmlReader).getElement();
-
-            // the handler will stop at the END_ELEMENT, verify there is nothing
-            // left
-
-            if (source.exists()) {
+            ret = (D)handler.getElement();
+            if (xmlReader != null) {
                 LOOP: while (xmlReader.hasNext()) {
                     int type = xmlReader.next();
                     switch (type) {
@@ -120,8 +136,23 @@ public class XMLParser implements Parser {
                     }
                 }
             }
-        } catch (XMLStreamException e) {
-            throw new AuraUnhandledException(e.getLocalizedMessage(), getLocation(xmlReader, source), e);
+        } catch (Exception e) {
+            if (handler != null) {
+                if (e instanceof AuraExceptionInfo) {
+                    handler.setParseError(e);
+                } else {
+                    handler.setParseError(new AuraUnhandledException(e.getLocalizedMessage(),
+                        getLocation(xmlReader, source), e));
+                }
+                try {
+                    ret = (D)handler.getErrorElement();
+                } catch (Throwable t) {
+                    // rethrow our original error, what else can we do?
+                    throw new AuraUnhandledException(e.getLocalizedMessage(), getLocation(xmlReader, source), e);
+                }
+            } else {
+                throw new AuraUnhandledException(e.getLocalizedMessage(), getLocation(xmlReader, source), e);
+            }
         } finally {
             try {
                 if (reader != null) {
@@ -155,9 +186,8 @@ public class XMLParser implements Parser {
      * Returns a location for the reader and source provided. When
      * {@code xmlReader} is provided, its location will be used for the
      * finer-grain information such as line number; otherwise, a new and more
-     * limited location will be constructed based on {@code source} and the
-     * system ID therein.
-     * 
+     * limited location will be constructed based on {@code source}.
+     *
      * @param xmlReader
      * @param source
      * @return An as-specific-as-possible location.
@@ -165,21 +195,12 @@ public class XMLParser implements Parser {
     public static Location getLocation(XMLStreamReader xmlReader, Source<?> source) {
         if (xmlReader != null) {
             assert source != null;
-            // The xmlReader location is "better" for having more information,
-            // but it is sometimes *wrong* for having turned a relative-path
-            // system ID into a false absolute file://$CWD/... URL. So we need
-            // prefer source.getUrl() over
-            // xmlReader.getLocation().getSystemId().
-            // (Also, note that both, in practice, return URLs; XMLStreamReader
-            // will have made a URL out of its system id.)
+            // xmlLocation provides column and line number.
             javax.xml.stream.Location xmlLocation = xmlReader.getLocation();
             String location = source.getUrl();
             if (location == null) {
-                // This will happen for external subclasses of Source, but we
-                // can't
-                // really know what to use as an accurate source URL. So we use
-                // the xmlLocation instead, as it's all we've got.
-                location = xmlLocation.getSystemId();
+                // Not a file (DB) so let's provide the component name
+                location = source.getDescriptor().getQualifiedName();
             }
             if (location.startsWith("file:")) {
                 location = location.substring(5);
@@ -191,6 +212,17 @@ public class XMLParser implements Parser {
             return new Location(source.getSystemId(), source.getLastModified());
         }
         return null;
+    }
+
+    /**
+     * Convenience method to use input factory to create steam reader
+     *
+     * @param reader reader
+     * @return xml stream reader implementation
+     * @throws XMLStreamException
+     */
+    public XMLStreamReader createXMLStreamReader(Reader reader) throws XMLStreamException {
+        return xmlInputFactory.createXMLStreamReader(reader);
     }
 
 }

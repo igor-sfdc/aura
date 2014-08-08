@@ -25,7 +25,7 @@ import org.auraframework.def.LayoutsDef;
 import org.auraframework.impl.AuraImplTestCase;
 import org.auraframework.impl.root.component.BaseComponentDefImpl;
 import org.auraframework.impl.source.StringSource;
-import org.auraframework.system.AuraContext.Access;
+import org.auraframework.system.AuraContext.Authentication;
 import org.auraframework.system.AuraContext.Format;
 import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.test.annotation.ThreadHostileTest;
@@ -50,8 +50,7 @@ public class CachingDefRegistryImplTest extends AuraImplTestCase {
     public void setUp() throws Exception {
         super.setUp();
         // Establish a PROD context
-        Aura.getContextService().startContext(Mode.PROD, null, Format.JSON, Access.AUTHENTICATED, laxSecurityApp);
-
+        Aura.getContextService().startContext(Mode.PROD, null, Format.JSON, Authentication.UNAUTHENTICATED, laxSecurityApp);
     }
 
     @Override
@@ -67,9 +66,12 @@ public class CachingDefRegistryImplTest extends AuraImplTestCase {
      * Automation to verify that, in test mode definitions are fetched fresh for each request.
      */
     public void testDefinitionsFetchingInTestMode() throws Exception {
+        Aura.getContextService().endContext();
+        Aura.getContextService().startContext(Mode.PROD, null, Format.JSON, Authentication.AUTHENTICATED);
+        
         // Obtain the definition of an application without layout and make sure the layoutsDefDescriptor is null
         ApplicationDef appWithNoLayout = addSourceAutoCleanup(ApplicationDef.class,
-                "<aura:application></aura:application>").getDef();
+                "<aura:application access=\"public\"></aura:application>").getDef();
         DefDescriptor<ApplicationDef> appDesc = appWithNoLayout.getDescriptor();
         assertNotNull("Test failed to retrieve definition of an application.", appWithNoLayout);
         assertNull("Application should not have had any layouts associted with it.",
@@ -92,7 +94,7 @@ public class CachingDefRegistryImplTest extends AuraImplTestCase {
 
         Aura.getContextService().endContext();
         // Fetch definition in TEST mode
-        Aura.getContextService().startContext(Mode.UTEST, null, Format.JSON, Access.AUTHENTICATED);
+        Aura.getContextService().startContext(Mode.UTEST, null, Format.JSON, Authentication.AUTHENTICATED);
         appWithNoLayout = definitionService.getDefinition(appDesc);
         DefDescriptor<LayoutsDef> layoutDefDesc = appWithNoLayout.getLayoutsDefDescriptor();
         assertNotNull("Test failed to retrieve definition of an application.", appWithNoLayout);
@@ -130,7 +132,7 @@ public class CachingDefRegistryImplTest extends AuraImplTestCase {
         // Have to stop and start context because a given def is cached in MasterDefRegistry per request (context of the
         // request)
         Aura.getContextService().endContext();
-        Aura.getContextService().startContext(Mode.PROD, null, Format.JSON, Access.AUTHENTICATED, laxSecurityApp);
+        Aura.getContextService().startContext(Mode.PROD, null, Format.JSON, Authentication.AUTHENTICATED);
 
         StringSource<?> source = (StringSource<?>) getSource(dd);
         source.addOrUpdate(String.format(markup, "<aura:attribute type=\"String\" name=\"attr\"/>"));
@@ -166,7 +168,7 @@ public class CachingDefRegistryImplTest extends AuraImplTestCase {
         // Have to stop and start context because a given def is cached in MasterDefRegistry per request (context of the
         // request)
         Aura.getContextService().endContext();
-        Aura.getContextService().startContext(Mode.PROD, null, Format.JSON, Access.AUTHENTICATED, laxSecurityApp);
+        Aura.getContextService().startContext(Mode.PROD, null, Format.JSON, Authentication.UNAUTHENTICATED, laxSecurityApp);
         StringSource<?> source = (StringSource<?>) getSource(dd);
         source.addOrUpdate(String.format(markup, "<aura:attribute type=\"String\" name=\"attr\"/>"));
         source.setLastModified(startTimeStamp + 5);

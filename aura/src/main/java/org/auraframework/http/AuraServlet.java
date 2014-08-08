@@ -22,7 +22,6 @@ import java.io.StringReader;
 import java.net.URI;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletException;
@@ -36,18 +35,14 @@ import org.auraframework.def.BaseComponentDef;
 import org.auraframework.def.ComponentDef;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.DefDescriptor.DefType;
-import org.auraframework.def.DependencyDef;
-import org.auraframework.def.DescriptorFilter;
+//import org.auraframework.def.DependencyDef;
+//import org.auraframework.def.DescriptorFilter;
 import org.auraframework.ds.resourceloader.BundleResourceAccessorFactory;
 import org.auraframework.http.RequestParam.EnumParam;
 import org.auraframework.http.RequestParam.StringParam;
 import org.auraframework.instance.Action;
-import org.auraframework.instance.Application;
-import org.auraframework.instance.BaseComponent;
-import org.auraframework.instance.Component;
 import org.auraframework.service.ContextService;
 import org.auraframework.service.DefinitionService;
-import org.auraframework.service.InstanceService;
 import org.auraframework.service.LoggingService;
 import org.auraframework.service.SerializationService;
 import org.auraframework.service.ServerService;
@@ -61,17 +56,11 @@ import org.auraframework.throwable.NoAccessException;
 import org.auraframework.throwable.SystemErrorException;
 import org.auraframework.throwable.quickfix.QuickFixException;
 import org.auraframework.util.AuraTextUtil;
-import org.auraframework.util.json.Json;
 import org.auraframework.util.json.JsonReader;
 import org.auraframework.util.json.JsonStreamReader.JsonParseException;
 
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
-
-// DCHASMAN TODO Move this into its own aura-heroku module
-/*
- * import javax.servlet.ServletException; import org.eclipse.jetty.webapp.*;
- */
 
 /**
  * The servlet for initialization and actions in Aura.
@@ -90,7 +79,7 @@ import com.google.common.io.ByteStreams;
  * <ul>
  * <li>GET(AuraServlet:JSON): Fetch additional aura app/component
  * <ul>
- * <li>GET(AuraResourceServlet:MANIFESt):optional get the manifest</li>
+ * <li>GET(AuraResourceServlet:MANIFEST):optional get the manifest</li>
  * <li>GET(AuraResourceServlet:CSS):get the styles for a component</li>
  * <li>GET(AuraResourceServlet:JS):get the definitions for a component</li>
  * <li>GET(AuraResourceServlet:JSON):???</li>
@@ -138,9 +127,8 @@ public class AuraServlet extends AuraBaseServlet {
      * @param response the response (for setting the location header.
      * @returns true if we are finished with the request.
      */
-    private boolean handleNoCacheRedirect(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-    	//
+    private void handleNoCacheRedirect(String nocache, HttpServletResponse response) throws IOException {
+        //
         // FIXME:!!!
         // This is part of the appcache refresh, forcing a reload while
         // avoiding the appcache. It is here because (fill in the blank).
@@ -148,17 +136,9 @@ public class AuraServlet extends AuraBaseServlet {
         // This should probably be handled a little differently, maybe even
         // before we do any checks at all.
         //
-        String nocache = nocacheParam.get(request);
-        if (nocache == null || nocache.isEmpty()) { 
-        	System.out.println("AuraServlet.handleNoCacheRedirect, nocache is null or empty, return false for request:"
-        			+request.toString()); 
-        	return false; 
-        }
         response.setContentType("text/plain");
         response.setStatus(HttpServletResponse.SC_MOVED_TEMPORARILY);
         String newLocation = "/";
-        System.out.println("AuraServlet.handleNoCacheRedirect,set response with 302, request:"
-        +request.toString());
         try {
             final URI uri = new URI(nocache);
             final String fragment = uri.getFragment();
@@ -179,7 +159,6 @@ public class AuraServlet extends AuraBaseServlet {
 
         setNoCache(response);
         response.setHeader(HttpHeaders.LOCATION, newLocation);
-        return true;
     }
 
     /**
@@ -193,20 +172,27 @@ public class AuraServlet extends AuraBaseServlet {
      */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        DefinitionService definitionService;
         AuraContext context;
         String tagName;
         DefType defType;
-        response.setCharacterEncoding(UTF_ENCODING);
-        context = Aura.getContextService().getCurrentContext();
-        // REVIEWME: osgi Added this fallback code to account for handling URL's like /aura/images/images/write_blog.png
-        // There is likely a better solution (i.e., these URL's should not have gotten here in the first place)
-        if (context == null) {
-            handleAsStaticResourceRequest(request, response);
-            return;
-        }
-        
+
+        // Initial setup. This should never fail.
+        //
         try {
+            response.setCharacterEncoding(UTF_ENCODING);
+            setBasicHeaders(response);
+            context = Aura.getContextService().getCurrentContext();
+
+            // REVIEWME: osgi Added this fallback code to account for handling URL's like /aura/images/images/write_blog.png
+            // There is likely a better solution (i.e., these URL's should not have gotten here in the first place)
+            if (context == null) {
+                handleAsStaticResourceRequest(request, response);
+                return;
+            }
+
             response.setContentType(getContentType(context.getFormat()));
+            definitionService = Aura.getDefinitionService();
         } catch (RuntimeException re) {
             //
             // If we can't get this far, log the exception and bolt.
@@ -218,53 +204,66 @@ public class AuraServlet extends AuraBaseServlet {
             return;
         }
 
+        DefDescriptor<? extends BaseComponentDef> defDescriptor;
         BaseComponentDef def;
+
+        //
+        // Now check and fetch parameters.
+        // These are not formally part of the Aura API, as this is the initial
+        // request. All we need are a tag/type or descriptor. Except, of course,
+        // the special case of nocache, which is required by the appcache handling.
+        // I would love for a simpler way to be figured out.
+        //
         try {
-            //
-            // Make sure we get the fw uid into the context.
-            //
-            context.setFrameworkUID(Aura.getConfigAdapter().getAuraFrameworkNonce());
+            String nocache = nocacheParam.get(request);
+            if (nocache != null && !nocache.isEmpty()) {
+                handleNoCacheRedirect(nocache, response);
+                return;
+            }
             tagName = tag.get(request);
             defType = defTypeParam.get(request, DefType.COMPONENT);
-
-            //
-            // TODO: this should disappear!!!!! -GPO
-            // Verify why it is here.
-            //
-            if (handle404(request, response, tagName, defType)) { return; }
-
-            //
-            // TODO: evaluate this for security.
-            //
-            if (handleNoCacheRedirect(request, response)) { return; }
-
-            DefinitionService definitionService = Aura.getDefinitionService();
-            DefDescriptor<? extends BaseComponentDef> defDescriptor = definitionService.getDefDescriptor(tagName,
-                    defType == DefType.APPLICATION ? ApplicationDef.class : ComponentDef.class);
-
-            AuraContext curContext = Aura.getContextService().getCurrentContext();
-            curContext.setApplicationDescriptor(defDescriptor);
-            definitionService.updateLoaded(defDescriptor, false);
-            def = defDescriptor.getDef();
-
-            // discover dependent items that must be added to the context
-            // (to ensure related items such as CSS make it to client)
-            List<DependencyDef> dds = def.getDependencies();
-            for (DependencyDef dd : dds) {
-                DescriptorFilter df = dd.getDependency();
-                if (df.getNamespaceMatch().isConstant()) {
-                    String targetNamespace = df.getNamespaceMatch().toString();
-                    curContext.addPreload(targetNamespace);
-                }
+            if (tagName == null || tagName.isEmpty()) {
+                throw new AuraRuntimeException("Invalid request, tag must not be empty");
             }
 
+            Mode mode = context.getMode();
+            if (!isValidDefType(defType, mode)) {
+                send404(request, response);
+                return;
+            }
+
+            if (context.getFormat() != Format.HTML) {
+                throw new AuraRuntimeException("Invalid request, GET must use HTML");
+            }
+
+            defDescriptor = definitionService.getDefDescriptor(tagName,
+                    defType == DefType.APPLICATION ? ApplicationDef.class : ComponentDef.class);
         } catch (RequestParam.InvalidParamException ipe) {
             handleServletException(new SystemErrorException(ipe), false, context, request, response, false);
             return;
         } catch (RequestParam.MissingParamException mpe) {
             handleServletException(new SystemErrorException(mpe), false, context, request, response, false);
             return;
+        } catch (Throwable t) {
+            handleServletException(new SystemErrorException(t), false, context, request, response, false);
+            return;
+        }
+
+        try {
+            context.setFrameworkUID(Aura.getConfigAdapter().getAuraFrameworkNonce());
+
+            context.setApplicationDescriptor(defDescriptor);
+            definitionService.updateLoaded(defDescriptor);
+            def = definitionService.getDefinition(defDescriptor);
+
+            if (!context.isTestMode() && !context.isDevMode()) {
+                assertAccess(def);
+            }
         } catch (QuickFixException qfe) {
+            //
+            // Whoops. we need to set up our preloads correctly here.
+            //
+            setupQuickFix(context);
             handleServletException(qfe, true, context, request, response, false);
             return;
         } catch (Throwable t) {
@@ -272,99 +271,8 @@ public class AuraServlet extends AuraBaseServlet {
             return;
         }
 
-        switch (context.getFormat()) {
-        case JSON:
-            handleJsonFormat(request, response, tagName, defType, getComponentAttributes(request));
-            break;
-        case HTML:
-            handleHtmlFormat(request, response, def, getComponentAttributes(request));
-            break;
-        default:
-            break;
-        }
-    }
-
-    private void handleAsStaticResourceRequest(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        // FIXME: osgi This code is similar to what AuraNoopServlet has and needs to be refactored (if it survives)
-        String resource = request.getRequestURI();
-        InputStream resourceStream = BundleResourceAccessorFactory.get().getResource(resource);
-        if (resourceStream != null) {
-            String mimeType = mimeTypesMap.getContentType(resource);
-            response.setContentType(mimeType);
-            try {
-                ByteStreams.copy(resourceStream, response.getOutputStream());
-            } finally {
-                resourceStream.close();
-            }
-        } else {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
-        }
-        return;
-    }
-
-    /**
-     * Allow the servlet to override page access.
-     *
-     * FIXME: this is totally bogus and should be handled by the security provider - GPO.
-     */
-    private boolean handle404(HttpServletRequest request, HttpServletResponse response, String tagName, DefType defType)
-            throws ServletException, IOException {
-        AuraContext context = Aura.getContextService().getCurrentContext();
-        Mode mode = context.getMode();
-
-        if (!isValidDefType(defType, mode)) {
-            send404(request, response);
-            return true;
-        }
-
-        return false;
-    }
-
-    protected boolean isValidDefType(DefType defType, Mode mode) {
-        return (defType == DefType.APPLICATION || defType == DefType.COMPONENT);
-    }
-
-    private void handleJsonFormat(HttpServletRequest request, HttpServletResponse response, String tagName,
-            DefType defType, Map<String, Object> attributes) throws IOException, ServletException {
-        InstanceService instanceService = Aura.getInstanceService();
-        AuraContext context = Aura.getContextService().getCurrentContext();
-        LoggingService loggingService = Aura.getLoggingService();
-        boolean written = false;
-
-        BaseComponent<?, ?> component = null;
-        try {
-            setNoCache(response);
-
-            if (defType == DefType.APPLICATION) {
-                Application app = instanceService.getInstance(tagName, ApplicationDef.class, attributes);
-                component = app;
-            } else if (defType == DefType.COMPONENT) {
-                component = (Component)instanceService.getInstance(tagName, ComponentDef.class, attributes);
-            }
-            Map<String, Object> map = Maps.newHashMap();
-            map.put("token", getToken());
-            map.put("context", context);
-            map.put("component", component);
-
-            PrintWriter out = response.getWriter();
-            out.write(CSRF_PROTECT);
-            written = true;
-            loggingService.startTimer(LoggingService.TIMER_SERIALIZATION);
-            loggingService.startTimer(LoggingService.TIMER_SERIALIZATION_AURA);
-            Json.serialize(map, out, context.getJsonSerializationContext());
-        } catch (Throwable e) {
-            handleServletException(e, false, context, request, response, written);
-        } finally {
-            loggingService.stopTimer(LoggingService.TIMER_SERIALIZATION_AURA);
-            loggingService.stopTimer(LoggingService.TIMER_SERIALIZATION);
-        }
-    }
-
-    private void handleHtmlFormat(HttpServletRequest request, HttpServletResponse response, BaseComponentDef def,
-            Map<String, Object> attributes) throws IOException, ServletException {
         SerializationService serializationService = Aura.getSerializationService();
         LoggingService loggingService = Aura.getLoggingService();
-        response.setCharacterEncoding(UTF_ENCODING);
 
         try {
             if (shouldCacheHTMLTemplate(request)) {
@@ -377,14 +285,26 @@ public class AuraServlet extends AuraBaseServlet {
             // Prevents Mhtml Xss exploit:
             PrintWriter out = response.getWriter();
             out.write("\n    ");
-            serializationService.write(def, attributes, def.getDescriptor().getDefType().getPrimaryInterface(), out);
+            serializationService.write(def, getComponentAttributes(request),
+                    def.getDescriptor().getDefType().getPrimaryInterface(), out);
         } catch (Throwable e) {
-            AuraContext context = Aura.getContextService().getCurrentContext();
             handleServletException(e, false, context, request, response, true);
         } finally {
             loggingService.stopTimer(LoggingService.TIMER_SERIALIZATION_AURA);
             loggingService.stopTimer(LoggingService.TIMER_SERIALIZATION);
         }
+    }
+
+    private void assertAccess(BaseComponentDef def) throws QuickFixException {
+        String defaultNamespace = Aura.getConfigAdapter().getDefaultNamespace();
+        DefDescriptor<?> referencingDescriptor = (defaultNamespace != null && !defaultNamespace.isEmpty())
+                ? Aura.getDefinitionService().getDefDescriptor(String.format("%s:servletAccess", defaultNamespace), ApplicationDef.class)
+                : null;
+        Aura.getDefinitionService().getDefRegistry().assertAccess(referencingDescriptor, def);
+    }
+
+    protected boolean isValidDefType(DefType defType, Mode mode) {
+        return (defType == DefType.APPLICATION || defType == DefType.COMPONENT);
     }
 
     private Map<String, Object> getComponentAttributes(HttpServletRequest request) {
@@ -416,11 +336,28 @@ public class AuraServlet extends AuraBaseServlet {
         ServerService serverService = Aura.getServerService();
         AuraContext context = contextService.getCurrentContext();
         response.setCharacterEncoding(UTF_ENCODING);
+        setBasicHeaders(response);
         boolean written = false;
+        setNoCache(response);
 
         try {
-            if (context.getFormat() != Format.JSON) { throw new AuraRuntimeException(
-                    "Invalid request, post must use JSON"); }
+            if (context.getFormat() != Format.JSON) {
+                throw new AuraRuntimeException("Invalid request, post must use JSON");
+            }
+            response.setContentType(getContentType(Format.JSON));
+            String msg = messageParam.get(request);
+            if (msg == null) {
+                throw new AuraRuntimeException("Invalid request, no message");
+            }
+            //
+            // handle transaction beacon JSON data
+            // FIXME: this should be an action.
+            //
+            String beaconData = beaconParam.get(request);
+            if (!"undefined".equals(beaconData) && !AuraTextUtil.isNullEmptyOrWhitespace(beaconData)) {
+                loggingService.setValue(LoggingService.BEACON_DATA, new JsonReader().read(beaconData));
+            }
+
 
             String fwUID = Aura.getConfigAdapter().getAuraFrameworkNonce();
             if (!fwUID.equals(context.getFrameworkUID())) {
@@ -428,13 +365,7 @@ public class AuraServlet extends AuraBaseServlet {
             }
             context.setFrameworkUID(fwUID);
 
-            Message<?> message;
-            setNoCache(response);
-
-            response.setContentType(getContentType(context.getFormat()));
-            String msg = messageParam.get(request);
-
-            if (msg == null) { throw new AuraRuntimeException("Invalid request, no message"); }
+            Message message;
 
             loggingService.startTimer(LoggingService.TIMER_DESERIALIZATION);
             try {
@@ -460,46 +391,33 @@ public class AuraServlet extends AuraBaseServlet {
                 validateCSRF(csrfToken.get(request));
             }
 
-            if (context.getApplicationDescriptor() != null) {
+            DefDescriptor<? extends BaseComponentDef> applicationDescriptor = context.getApplicationDescriptor();
+            if (applicationDescriptor != null) {
                 // ClientOutOfSync will drop down.
                 try {
-                    Aura.getDefinitionService().updateLoaded(context.getApplicationDescriptor(), false);
+                    Aura.getDefinitionService().updateLoaded(applicationDescriptor);
                 } catch (QuickFixException qfe) {
                     //
                     // ignore quick fix. If we got a 'new' quickfix, it will be thrown as
                     // a client out of sync exception, since the UID will not match.
                     //
                 }
-            }
 
-            // handle transaction beacon JSON data
-            String beaconData = beaconParam.get(request);
-            if (!"undefined".equals(beaconData) && !AuraTextUtil.isNullEmptyOrWhitespace(beaconData)) {
-                loggingService.setValue(LoggingService.BEACON_DATA, new JsonReader().read(beaconData));
-            }
-
-            Message<?> result = serverService.run(message, context);
-            if (result != null) {
-                loggingService.startTimer(LoggingService.TIMER_SERIALIZATION);
-                loggingService.startTimer(LoggingService.TIMER_SERIALIZATION_AURA);
-                try {
-                    context.setSerializePreLoad(false);
-                    PrintWriter out = response.getWriter();
-                    out.write(CSRF_PROTECT);
-                    written = true;
-
-                    Map<String, Object> attributes = null;
-                    if (isBootstrapAction) {
-                        attributes = Maps.newHashMap();
-                        attributes.put("token", getToken());
-                    }
-
-                    serializationService.write(result, attributes, out);
-                } finally {
-                    loggingService.stopTimer(LoggingService.TIMER_SERIALIZATION_AURA);
-                    loggingService.stopTimer(LoggingService.TIMER_SERIALIZATION);
+                if (!context.isTestMode() && !context.isDevMode()) {
+                    assertAccess(applicationDescriptor.getDef());
                 }
             }
+
+            Map<String, Object> attributes = null;
+            if (isBootstrapAction) {
+                attributes = Maps.newHashMap();
+                attributes.put("token", getToken());
+            }
+
+            PrintWriter out = response.getWriter();
+            written = true;
+            out.write(CSRF_PROTECT);
+            serverService.run(message, context, out, attributes);
         } catch (RequestParam.InvalidParamException ipe) {
             handleServletException(new SystemErrorException(ipe), false, context, request, response, false);
             return;
@@ -515,5 +433,23 @@ public class AuraServlet extends AuraBaseServlet {
 
     protected void sendPost404(HttpServletRequest request, HttpServletResponse response) {
         throw new NoAccessException("Missing required perms, or tried to access inaccessible namespace.");
+    }
+
+    private void handleAsStaticResourceRequest(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        // FIXME: osgi This code is similar to what AuraNoopServlet has and needs to be refactored (if it survives)
+        String resource = request.getRequestURI();
+        InputStream resourceStream = BundleResourceAccessorFactory.get().getResource(resource);
+        if (resourceStream != null) {
+            String mimeType = mimeTypesMap.getContentType(resource);
+            response.setContentType(mimeType);
+            try {
+                ByteStreams.copy(resourceStream, response.getOutputStream());
+            } finally {
+                resourceStream.close();
+            }
+        } else {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+        }
+        return;
     }
 }

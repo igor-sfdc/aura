@@ -1,0 +1,41 @@
+<!--
+
+    Copyright (C) 2013 salesforce.com, inc.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+-->
+<aura:documentation>
+	<aura:description>
+		<p>
+			The expression in <code>isTrue</code> is re-evaluated every time any value used in the expression changes. When the results of the expression change, it triggers a re-rendering of the component.
+		     Use <code>aura:if</code> instead if you want to instantiate the components in either its body or the else attribute, but not both. Otherwise, use <code>aura:renderIf</code> if you expect to show the components for both the true and false states, and it would require a server round trip to instantiate the components that aren't initially rendered.
+		</p>
+		
+	</aura:description>	
+	<aura:example name="renderIfExample" ref="uiExamples:displayRenderIf" label="Using aura:renderIf">
+		Use <code>aura:renderIf</code> if you are passing an expression into another component. When you press the <b>Toggle</b> button in this example, the expression <code>{!v.display || v.display}</code> is reevaluated and passed into another component, which has this markup.
+	<pre>&lt;aura:component>
+    &lt;aura:attribute name="display" type="Boolean" default="true"/>
+
+    &lt;aura:renderif isTrue="{!v.display}">
+        True
+
+        &lt;aura:set attribute="else">
+          False
+        &lt;/aura:set>
+    &lt;/aura:renderif>
+&lt;/aura:component>
+	</pre></aura:example>
+	
+</aura:documentation>

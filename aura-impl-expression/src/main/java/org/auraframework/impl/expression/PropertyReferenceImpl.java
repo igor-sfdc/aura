@@ -33,6 +33,8 @@ import org.auraframework.util.AuraTextUtil;
 import org.auraframework.util.json.Json;
 import org.auraframework.util.json.JsonSerializer.NoneSerializer;
 
+import com.google.common.collect.ImmutableList;
+
 /**
  * an expression in aura
  */
@@ -47,6 +49,10 @@ public class PropertyReferenceImpl implements PropertyReference {
     public PropertyReferenceImpl(String expr, Location l) {
         // TODO: delete this constructor, splitting should be done by the parser
         this(AuraTextUtil.splitSimple(".", expr), l);
+    }
+
+    public PropertyReferenceImpl(Iterable<String> pieces, Location l) {
+        this(ImmutableList.copyOf(pieces), l);
     }
 
     protected PropertyReferenceImpl(List<String> pieces, Location l) {
@@ -124,7 +130,6 @@ public class PropertyReferenceImpl implements PropertyReference {
         return toString(false);
     }
 
-    // curly bang no more?
     public String toString(boolean curlyBang) {
         return AuraTextUtil.collectionToString(pieces, ".", null, curlyBang ? "{!" : null, curlyBang ? "}" : null);
     }
@@ -154,11 +159,7 @@ public class PropertyReferenceImpl implements PropertyReference {
     private static class Serializer extends NoneSerializer<PropertyReferenceImpl> {
         @Override
         public void serialize(Json json, PropertyReferenceImpl value) throws IOException {
-            // json.writeString(value.toString(true));
-            json.writeMapBegin();
-            json.writeMapEntry("exprType", value.getExpressionType());
-            json.writeMapEntry("path", value.pieces);
-            json.writeMapEnd();
+            json.writeString(value.toString(true));
         }
     }
 

@@ -6,11 +6,13 @@
             "attributes" : {'start': 5 }
         });
         a.setCallback(cmp,function(a){
-            var c = $A.newCmpDeprecated(a.getReturnValue());
-            cmp.find('placeHolder').getValue('v.body').push(c);
-            $A.endMark("Fetch component");
+        	var c = $A.newCmpDeprecated(a.getReturnValue());
+            var body = cmp.find('placeHolder').get("v.body");
+            body.push(c);
+            cmp.find('placeHolder').set('v.body', body);
+            $A.Perf.endMark("Fetch component");
         });
-        $A.mark("Fetch component");
+        $A.Perf.mark("Fetch component");
         $A.enqueueAction(a);
     }
 })

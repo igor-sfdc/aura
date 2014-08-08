@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-{
+({
     submit : function(component, event, helper) {
         // find out who clicked submit and display inputed value
         var cmpName = event.source.get("v.buttonTitle");
@@ -24,9 +24,9 @@
         var inputCmpValue = component.find(inputCmpName).get("v.value");
         $A.log(inputCmpValue);
 
-        //component.find(outputCmpName).getAttributes().setValue("value", "**" + inputCmpValue + "**");
+        //component.find(outputCmpName).set("v.value", "**" + inputCmpValue + "**");
         helper.goToServer(this, component, event, cmpName, inputCmpValue);
 
         helper.incermentSubmitCount(component);
     }
-}
+})

@@ -15,10 +15,6 @@
  */
 package org.auraframework.http;
 
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -29,11 +25,13 @@ import org.auraframework.def.DefDescriptor;
 import org.auraframework.impl.system.DefDescriptorImpl;
 import org.auraframework.system.AuraContext;
 import org.auraframework.system.AuraContext.Mode;
+import org.auraframework.system.Client.Type;
+import org.auraframework.system.Client;
 import org.auraframework.system.SourceListener;
 import org.auraframework.test.AuraTestCase;
 import org.auraframework.test.DummyHttpServletRequest;
 import org.auraframework.test.DummyHttpServletResponse;
-import org.auraframework.test.util.AuraPrivateAccessor;
+import org.auraframework.test.client.UserAgent;
 
 /**
  * Simple (non-integration) test case for {@link AuraResourceServlet}, most useful for exercising hard-to-reach error
@@ -55,7 +53,7 @@ public class AuraResourceServletTest extends AuraTestCase {
         // Start a context to fetch manifests; the other details don't matter
         // much 'cause we'll error out. Then try to fetch one, with that error:
         Aura.getContextService().startContext(AuraContext.Mode.UTEST, AuraContext.Format.MANIFEST,
-                AuraContext.Access.PUBLIC);
+                AuraContext.Authentication.UNAUTHENTICATED);
 
         HttpServletRequest request = new DummyHttpServletRequest() {
             @Override
@@ -88,7 +86,7 @@ public class AuraResourceServletTest extends AuraTestCase {
 
     public void testAddAppManifestCookie() throws Exception {
         Aura.getContextService().startContext(AuraContext.Mode.UTEST, AuraContext.Format.MANIFEST,
-                AuraContext.Access.PUBLIC);
+                AuraContext.Authentication.UNAUTHENTICATED);
 
         DefDescriptor<ApplicationDef> nopreload = DefDescriptorImpl.getInstance("appCache:nopreload",
                 ApplicationDef.class);
@@ -133,148 +131,135 @@ public class AuraResourceServletTest extends AuraTestCase {
         }
     }
 
+    /*
+     * for W-2136514 
+     * this test is to verify we cache CSS by appDescriptor+browserType, 
+     * so when different browser request on the same page, they don't get each other's cache one
+     * server cache CSS for cmp too.
+     */
+    private void runTestRequestFromDifferentBrowserOnSamePage(String ua, Type uaType, String browserType, String cssMsgToVerify) throws Exception {
+    	String cmpname = "appCache:withpreload";
+    	String cmporapp = "app";
+    	DefDescriptor<ApplicationDef> appDesc = DefDescriptorImpl.getInstance(cmpname,
+    			ApplicationDef.class);
+        AuraContext context = Aura.getContextService()
+                .startContext(Mode.DEV, AuraContext.Format.CSS, AuraContext.Authentication.AUTHENTICATED, appDesc);
+        Client clientWEBKIT = new Client(ua);
+        assertEquals(uaType,clientWEBKIT.getType());
+		context.setClient(clientWEBKIT);
+		final String uid = context.getDefRegistry().getUid(null, appDesc);
+        context.addLoaded(appDesc, uid);
+        Mode mode = context.getMode();
+        final boolean minify = !(mode.isTestMode() || mode.isDevMode());
+        final String mKey = minify ? "MIN:" : "DEV:";
+
+        DummyHttpServletRequest request = new DummyHttpServletRequest(){
+            @Override
+            public long getDateHeader(String name) {
+                return -1;
+            }
+        };
+        request.setQueryParam(AuraResourceRewriteFilter.TYPE_PARAM, cmporapp);
+        HttpServletResponse response = new DummyHttpServletResponse();
+        AuraResourceServlet servlet = new AuraResourceServlet();
+        servlet.doGet(request, response);
+
+        final String key = "CSS:" + context.getClient().getType() + "$" + mKey + uid;
+        // Verify something was actually added to cache
+        String cssCache = context.getDefRegistry().getCachedString(uid, appDesc, key);
+        assertNotNull("Nothing added to CSS cache", cssCache);
+        if(!cssMsgToVerify.isEmpty()) {
+        	assertTrue(cssCache.contains(cssMsgToVerify));
+        }
+        
+        Aura.getContextService().endContext();
+    }
+    
+    public void testRequestFromDifferentBrowserOnSamePage() throws Exception {
+    	runTestRequestFromDifferentBrowserOnSamePage(UserAgent.IE9.getUserAgentString(),Type.IE9,"IE9","");
+    	//ui:button has special session for IE7 in button.css under @if (IE7){...}
+    	runTestRequestFromDifferentBrowserOnSamePage(UserAgent.IE7.getUserAgentString(),Type.IE7,"IE7","display:inline; zoom:1; overflow:visible!important");
+    }
+    
+    
     /**
      * Verify the CSS cache is cleared in DEV mode after a source change. Usually this would be picked up by the file
      * source monitor, but we'll just emulate a source change for the sake of speed and simplicity. Original dev caching
      * story: W-1450222
      */
     public void testCssCacheClearedOnSourceChange() throws Exception {
-        // DEV mode and Authenticated access so css is actually cached on servlet
-        Aura.getContextService().startContext(AuraContext.Mode.DEV, AuraContext.Format.CSS,
-                AuraContext.Access.AUTHENTICATED);
+        DefDescriptor<ApplicationDef> appDesc = DefDescriptorImpl.getInstance("appCache:withpreload",
+                ApplicationDef.class);
+        AuraContext context = Aura.getContextService()
+                .startContext(Mode.DEV, AuraContext.Format.CSS, AuraContext.Authentication.AUTHENTICATED, appDesc);
+        final String uid = context.getDefRegistry().getUid(null, appDesc);
+        context.addLoaded(appDesc, uid);
+        Mode mode = context.getMode();
+        final boolean minify = !(mode.isTestMode() || mode.isDevMode());
+        final String mKey = minify ? "MIN:" : "DEV:";
 
-        doGetToPopulateCache();
+        DummyHttpServletRequest request = new DummyHttpServletRequest(){
+            @Override
+            public long getDateHeader(String name) {
+                return -1;
+            }
+        };
+        request.setQueryParam(AuraResourceRewriteFilter.TYPE_PARAM, "app");
+        HttpServletResponse response = new DummyHttpServletResponse();
+        AuraResourceServlet servlet = new AuraResourceServlet();
+        servlet.doGet(request, response);
+
+        final String key = "CSS:" + context.getClient().getType() + "$" + mKey + uid;
 
         // Verify something was actually added to cache
-        Object cssCache = AuraPrivateAccessor.get(AuraResourceServlet.class, "cssCache");
-        @SuppressWarnings("unchecked")
-        Map<String, String> cache = (Map<String, String>) cssCache;
-        assertTrue("Nothing added to CSS cache", cache.size() > 0);
+        String cssCache = context.getDefRegistry().getCachedString(uid, appDesc, key);
+        assertNotNull("Nothing added to CSS cache", cssCache);
 
         // Now force a source change event and verify cache is emptied
-        Aura.getDefinitionService().onSourceChanged(null, SourceListener.SourceMonitorEvent.changed);
-        assertTrue("CSS cache not cleared after source change event", cache.isEmpty());
+        Aura.getDefinitionService().onSourceChanged(null, SourceListener.SourceMonitorEvent.changed, null);
+
+        cssCache = context.getDefRegistry().getCachedString(uid, appDesc, key);
+        assertNull("CSS cache not cleared after source change event", cssCache);
     }
 
     /**
      * Verify cache of Javascript definitions is cleared on source change in DEV mode.
+     *
+     * FIXME: this test should not be here.... it should be on MDR.
      */
     public void testJsCacheClearedOnSourceChange() throws Exception {
-        // DEV mode and Authenticated access so js is actually cached on servlet
-        Aura.getContextService().startContext(AuraContext.Mode.DEV, AuraContext.Format.JS,
-                AuraContext.Access.AUTHENTICATED);
-
-        doGetToPopulateCache();
-
-        // Verify something was actually added to cache
-        Object jsCache = AuraPrivateAccessor.get(AuraResourceServlet.class, "definitionCache");
-        @SuppressWarnings("unchecked")
-        Map<String, String> cache = (Map<String, String>) jsCache;
-        assertTrue("Nothing added to JS cache", cache.size() > 0);
-
-        // Now force a source change event and verify cache is emptied
-        Aura.getDefinitionService().onSourceChanged(null, SourceListener.SourceMonitorEvent.changed);
-        assertTrue("JS cache not cleared after source change event", cache.isEmpty());
-    }
-
-    private void doGetToPopulateCache() throws Exception {
-        DefDescriptor<ApplicationDef> nopreload = DefDescriptorImpl.getInstance("appCache:withpreload",
+        DefDescriptor<ApplicationDef> appDesc = DefDescriptorImpl.getInstance("appCache:withpreload",
                 ApplicationDef.class);
-        Aura.getContextService().getCurrentContext().setApplicationDescriptor(nopreload);
+        AuraContext context = Aura.getContextService()
+                .startContext(Mode.DEV, AuraContext.Format.JS, AuraContext.Authentication.AUTHENTICATED, appDesc);
+        final String uid = context.getDefRegistry().getUid(null, appDesc);
+        context.addLoaded(appDesc, uid);
+        Mode mode = context.getMode();
+        final boolean minify = !(mode.isTestMode() || mode.isDevMode());
+        final String mKey = minify ? "MIN:" : "DEV:";
 
-        HttpServletRequest request = new DummyHttpServletRequest();
+        DummyHttpServletRequest request = new DummyHttpServletRequest(){
+            @Override
+            public long getDateHeader(String name) {
+                return -1;
+            }
+        };
+        request.setQueryParam(AuraResourceRewriteFilter.TYPE_PARAM, "app");
         HttpServletResponse response = new DummyHttpServletResponse();
         AuraResourceServlet servlet = new AuraResourceServlet();
         servlet.doGet(request, response);
+
+        final String key = "JS:" + mKey + uid;
+
+        // Verify something was actually added to cache
+        String jsCache = context.getDefRegistry().getCachedString(uid, appDesc, key);
+        assertNotNull("Nothing added to JS cache", jsCache);
+
+        // Now force a source change event and verify cache is emptied
+        Aura.getDefinitionService().onSourceChanged(null, SourceListener.SourceMonitorEvent.changed, null);
+
+        jsCache = context.getDefRegistry().getCachedString(uid, appDesc, key);
+        assertNull("JS cache not cleared after source change event", jsCache);
     }
 
-    /**
-     * Sanity check to make sure that app.js doesn't blow up
-     */
-    public void testWriteDefinitionsWithoutDupes() throws Exception {
-        Aura.getContextService().startContext(AuraContext.Mode.DEV, AuraContext.Format.JS,
-                AuraContext.Access.AUTHENTICATED);
-
-        // prime def cache
-        StringBuilder output = new StringBuilder();
-        AuraResourceServlet.writeDefinitions(output);
-        String text = output.toString();
-        final String dupeCheck = "$A.clientService.initDefs(";
-        if (text.indexOf(dupeCheck) != text.lastIndexOf(dupeCheck)) {
-            fail("found duplicated code in: " + text);
-        }
-
-        // now check that defs not re-written with unempty cache
-        output = new StringBuilder();
-        AuraResourceServlet.writeDefinitions(output);
-        text = output.toString();
-        if (text.indexOf(dupeCheck) != text.lastIndexOf(dupeCheck)) {
-            fail("found duplicated code in: " + text);
-        }
-    }
-    
-    /**
-     * Sanity check to make sure that app.css does not have duplicate copy of component CSS.
-     * Component CSS was being added twice, once because they were part of preload namespace 
-     * and a second time because of component dependency. This test mocks such duplication.  
-     * W-1588568
-     */
-    public void testWriteCssWithoutDupes() throws Exception{
-        Aura.getContextService().startContext(AuraContext.Mode.DEV, AuraContext.Format.CSS,
-                AuraContext.Access.AUTHENTICATED);
-        AuraContext ctx =  Aura.getContextService().getCurrentContext();
-        //First reference to preloadTest
-        ctx.addPreload("preloadTest");
-        //preloadTest:test_SimpleApplication has the second explicit reference to preloadTest as a preload namespace
-        DefDescriptor<ApplicationDef> appDesc = Aura.getDefinitionService().getDefDescriptor("preloadTest:test_SimpleApplication", ApplicationDef.class);
-        ctx.setApplicationDescriptor(appDesc);
-        Aura.getDefinitionService().updateLoaded(appDesc, false);
-        
-        StringBuilder output = new StringBuilder();
-        AuraResourceServlet.writeCss(output);
-        
-        //A snippet of component css
-        String cssPiece = "AuraResourceServletTest-testWriteCssWithoutDupes";
-        Pattern pattern = Pattern.compile(cssPiece);
-        Matcher matcher = pattern.matcher(output.toString());
-        int count = 0;
-        while(matcher.find() && count<3) count++;
-        assertEquals("Component CSS repeated", 1, count);
-    }
-
-    /**
-     * Verify super CSS is before CSS of components extending it. ui:input before ui:inputText before ui:inputNumber
-     * before ui:inputPercent
-     *
-     * This test needs to be refactored if/when empty CSS declarations are removed.
-     *
-     * @throws Exception
-     */
-    public void testCSSOrder() throws Exception {
-        Aura.getContextService().startContext(AuraContext.Mode.DEV, AuraContext.Format.CSS,
-                AuraContext.Access.AUTHENTICATED);
-        AuraContext ctx =  Aura.getContextService().getCurrentContext();
-        DefDescriptor<ApplicationDef> appDesc = Aura.getDefinitionService().getDefDescriptor("auratest:test_SimpleServerRenderedPage", ApplicationDef.class);
-        ctx.setApplicationDescriptor(appDesc);
-        Aura.getDefinitionService().updateLoaded(appDesc, false);
-
-        StringBuilder output = new StringBuilder();
-        AuraResourceServlet.writeCss(output);
-
-        String css = output.toString();
-
-        assertTrue("ui:input CSS should be before ui:inputText",
-                css.indexOf(".uiInput") < css.indexOf(".uiInputText"));
-        assertTrue("ui:inputText CSS should be before ui:inputNumber",
-                css.indexOf(".uiInputText") < css.indexOf(".uiInputNumber"));
-        assertTrue("ui:inputNumber CSS should be before ui:inputPercent",
-                css.indexOf(".uiInputNumber") < css.indexOf(".uiInputPercent"));
-        // Verify CSS sorts alphabetically when frequency (# of dependents) the same (inputPercent, inputRange, and
-        // inputFile all have 0 dependents).
-        assertTrue("ui:inputPercent CSS should be before ui:inputRange",
-                css.indexOf(".uiInputPercent") < css.indexOf(".uiInputRange"));
-        assertTrue("ui:inputFile CSS should be before ui:inputPercent",
-                css.indexOf(".uiInputFile") < css.indexOf(".uiInputPercent"));
-
-    }
 }

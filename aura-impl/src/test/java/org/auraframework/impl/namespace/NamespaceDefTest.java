@@ -65,11 +65,14 @@ public class NamespaceDefTest extends AuraImplTestCase {
         assertEquals("red", def.getStyleTokens().get("FOO"));
     }
 
-    public void testStyleTokens() throws Exception {
+    /* tokens functionality deprecated by themes */
+    public void _testStyleTokens() throws Exception {
         DefinitionService defService = Aura.getDefinitionService();
         StyleDef styleDef = defService.getDefinition("namespaceDefTest.testStyleTokens", StyleDef.class);
         assertEquals(
-                ".namespaceDefTestTestStyleTokens{background-color:red;color:FOOL;border-color:black}",
+                ".namespaceDefTestTestStyleTokens {background-color:red; color:FOOL; border-color:black; " +
+                        "background:-webkit-linear-gradient(top, hsl(0, 80%, 70%), #bada55); " +
+                        "background:linear-gradient(to bottom, hsl(0, 80%, 70%), #bada55)}",
                 styleDef.getCode());
     }
 }

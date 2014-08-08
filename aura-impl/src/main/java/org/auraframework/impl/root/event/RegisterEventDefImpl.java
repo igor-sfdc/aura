@@ -18,11 +18,14 @@ package org.auraframework.impl.root.event;
 import java.io.IOException;
 import java.util.Set;
 
+import org.auraframework.Aura;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.EventDef;
 import org.auraframework.def.RegisterEventDef;
 import org.auraframework.impl.system.DefinitionImpl;
 import org.auraframework.impl.util.AuraUtil;
+import org.auraframework.system.AuraContext;
+import org.auraframework.system.MasterDefRegistry;
 import org.auraframework.throwable.AuraUnhandledException;
 import org.auraframework.throwable.quickfix.InvalidDefinitionException;
 import org.auraframework.throwable.quickfix.QuickFixException;
@@ -42,7 +45,7 @@ public final class RegisterEventDefImpl extends DefinitionImpl<EventDef> impleme
 
     protected RegisterEventDefImpl(Builder builder) {
         super(builder);
-        this.isGlobal = builder.isGlobal;
+        this.isGlobal = builder.getAccess() != null && builder.getAccess().isGlobal();
         this.attName = builder.attName;
         this.hashCode = createHashCode();
     }
@@ -98,13 +101,22 @@ public final class RegisterEventDefImpl extends DefinitionImpl<EventDef> impleme
     @Override
     public void validateReferences() throws QuickFixException {
         super.validateReferences();
+        
         EventDef event = getEventDescriptor().getDef();
         if (event == null) {
             throw new InvalidDefinitionException("Cannot register event of type " + getEventDescriptor(), getLocation());
         }
+        
         if (!event.getEventType().canBeFired()) {
             throw new InvalidDefinitionException("Cannot fire event of type: " + getEventDescriptor(), getLocation());
         }
+        
+        AuraContext context = Aura.getContextService().getCurrentContext();
+        DefDescriptor<?> referencingDesc = context.getCurrentCallingDescriptor();
+    	if (referencingDesc != null) {
+	        MasterDefRegistry registry = Aura.getDefinitionService().getDefRegistry();
+	    	registry.assertAccess(referencingDesc, event);
+    	}        
     }
 
     @Override
@@ -127,20 +139,11 @@ public final class RegisterEventDefImpl extends DefinitionImpl<EventDef> impleme
             super(EventDef.class);
         }
 
-        private boolean isGlobal;
         private String attName;
 
         @Override
         public RegisterEventDefImpl build() {
             return new RegisterEventDefImpl(this);
-        }
-
-        /**
-         * Sets whether or not this instance is isGlobal.
-         */
-        public Builder setIsGlobal(boolean isGlobal) {
-            this.isGlobal = isGlobal;
-            return this;
         }
 
         /**

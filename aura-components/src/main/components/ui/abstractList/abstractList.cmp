@@ -15,7 +15,12 @@
     limitations under the License.
 
 -->
-<aura:component implements="ui:visible, ui:pagingInterface" extensible="true" abstract="true" support="proto" description="An abstract component which provides a basic layout for the ui:list component.">
+<aura:component extensible="true" 
+				abstract="true" 
+				implements="ui:visible, ui:pagingInterface"  
+				support="GA" 
+				description="An abstract component that provides a basic layout for the ui:list component.">
+				
     <aura:attribute name="itemTemplate" type="Aura.ComponentDefRef[]" required="true" description="A ComponentDefRef to use as the template for each generated row in the list."/>
     <aura:attribute name="items" type="Object[]" description="An array of arbitrary map objects representing the rows of data in the list."/>
     <aura:attribute name="itemVar" type="String" required="true" description="The name by which to refer to the current data object inside of the template for each row."/>
@@ -30,14 +35,18 @@
     <aura:registerEvent name="refresh" type="ui:refresh" description="The event fired when the component is refreshed."/>
     <aura:handler name="refresh" action="{!c.refresh}"/>
 
+	<aura:registerEvent name="addRemove" type="ui:addRemove" description="Command event to insert or remove items"/>
+	<aura:handler name="addRemove" action="{!c.addRemove}"/>
+
     <aura:handler name="init" action="{!c.init}" value="{!this}"/>
+    
     <div class="{!v.class + (v.visible == false ? ' invisible' : '')}" role="{!v.role}">
         {!v.header}
         
         <div class="listContent">
             {!v.body}
 			<div class="emptyListContent">
-					{!v.emptyListContent}
+				{!v.emptyListContent}
 			</div>
             <div class="loadingIndicator">
                 <div class="background"></div>

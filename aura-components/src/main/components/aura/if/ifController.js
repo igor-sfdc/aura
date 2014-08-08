@@ -15,24 +15,27 @@
  */
 ({
     handleTheTruth: function(cmp, evt, helper) {
-        var isTrue = cmp.getValue("v.isTrue");
-        var current = isTrue.unwrap();
-        var previous = isTrue.getPreviousValue();
-        var isReallyTrue = current === true || current === "true";
-        var wasReallyTrue = previous === true || previous === "true";
-        if (isReallyTrue !== wasReallyTrue) {
+        var isReallyTrue = $A.util.getBooleanValue(cmp.get("v.isTrue"));
+        
+        if (isReallyTrue !== cmp._wasReallyTrue) {
+        	cmp._wasReallyTrue = isReallyTrue;
+        	
             // so it reallyChanged™, swap out the components and store the old ones in either _true or _false
-            var realbody = cmp.getValue("v.realbody");
-            var oldcmps = realbody.unwrap();
+            var realbody = cmp.get("v.realbody");
+            
             var switchTo = "_" + isReallyTrue;
-            var switchFrom = "_" + wasReallyTrue;
-            cmp[switchFrom] = oldcmps;
+            var switchFrom = "_" + !isReallyTrue;
+            
+            cmp[switchFrom] = realbody;
+            
             var newcmps = cmp[switchTo];
+            
             // undefined means we haven't ever instantiated this facet
             if ($A.util.isUndefined(newcmps)) {
                 newcmps = cmp[switchTo] = helper.createRealBody(cmp, isReallyTrue, false);
             }
-            realbody.setValue(newcmps);
+            
+            cmp.setAndRelease("v.realbody", newcmps)
         }
     }
 })

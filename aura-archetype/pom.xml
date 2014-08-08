@@ -8,7 +8,7 @@
   <parent>
     <groupId>org.auraframework</groupId>
     <artifactId>aura-framework</artifactId>
-    <version>0.367-SNAPSHOT</version>
+    <version>0.1318-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -40,7 +40,6 @@
                      on the current Aura framework ${project.version} -->
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
-                <version>2.6</version>
                 <executions>
                     <execution>
                         <id>copy-resources</id>
@@ -71,7 +70,27 @@
 
     <profiles>
         <profile>
-            <id>test-archetype</id>
+            <id>runIntTests</id>
+            <activation>
+                <property>
+                    <name>runIntTests</name>
+                </property>
+            </activation>
+            <build>
+                <testResources>
+                    <testResource>
+                        <directory>src/test/resources</directory>
+                    </testResource>
+                </testResources>
+            </build>
+        </profile>
+        <profile>
+            <id>perfTests</id>
+            <activation>
+                <property>
+                    <name>perfTests</name>
+                </property>
+            </activation>
             <build>
                 <testResources>
                     <testResource>

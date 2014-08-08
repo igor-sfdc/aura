@@ -17,8 +17,6 @@ package org.auraframework.def;
 
 import java.util.List;
 
-import org.auraframework.css.parser.ThemeOverrideMap;
-import org.auraframework.system.AuraContext.Access;
 import org.auraframework.throwable.quickfix.QuickFixException;
 
 /**
@@ -32,11 +30,7 @@ public interface ApplicationDef extends BaseComponentDef {
 
     DefDescriptor<LayoutsDef> getLayoutsDefDescriptor();
 
-    Access getAccess();
-
     DefDescriptor<EventDef> getLocationChangeEventDescriptor() throws QuickFixException;
-
-    DefDescriptor<SecurityProviderDef> getSecurityProviderDefDescriptor() throws QuickFixException;
 
     Boolean isAppcacheEnabled() throws QuickFixException;
 
@@ -45,7 +39,16 @@ public interface ApplicationDef extends BaseComponentDef {
     Boolean isOnePageApp() throws QuickFixException;
 
     /**
-     * Gets the map of overridden {@link ThemeDef}s, or null if not specified.
+     * Gets the application-wide override themes, if present.
+     * <p>
+     * Note that this differs from the "component theme" ({@link #getCmpTheme()}), as this is specifically the
+     * application-wide override theme. In contrast, the component theme is applicable only to its component/app
+     * bundle's css. Note that even if an application also has a component theme, it does not have an impact on this
+     * value.
+     * <p>
+     * In other words, this is the value from the "theme" attribute on the app tag.
+     * 
+     * @return The list of override themes, or an empty list if none specified.
      */
-    ThemeOverrideMap getThemeOverrides();
+    List<DefDescriptor<ThemeDef>> getThemeDescriptors();
 }

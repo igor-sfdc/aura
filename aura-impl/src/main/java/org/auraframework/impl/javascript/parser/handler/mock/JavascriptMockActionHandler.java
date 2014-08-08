@@ -27,6 +27,7 @@ import org.auraframework.def.ControllerDef;
 import org.auraframework.def.TestSuiteDef;
 import org.auraframework.instance.Action.State;
 import org.auraframework.system.Source;
+import org.auraframework.test.Resettable;
 import org.auraframework.test.mock.Answer;
 import org.auraframework.test.mock.DelegatingStubHandler;
 import org.auraframework.test.mock.Invocation;
@@ -34,6 +35,7 @@ import org.auraframework.test.mock.MockAction;
 import org.auraframework.test.mock.Stub;
 import org.auraframework.throwable.quickfix.InvalidDefinitionException;
 import org.auraframework.throwable.quickfix.QuickFixException;
+import org.auraframework.impl.javascript.controller.JavascriptControllerDef.Builder;
 
 import com.google.common.collect.ImmutableList;
 
@@ -56,7 +58,7 @@ public class JavascriptMockActionHandler extends JavascriptMockHandler<Controlle
         List<Stub<?>> stubs = getStubs(map.get("stubs"));
 
         return (ControllerDef) Proxy.newProxyInstance(this.getClass().getClassLoader(),
-                new Class<?>[] { ControllerDef.class }, new DelegatingStubHandler(controllerDef, stubs));
+                new Class<?>[] { ControllerDef.class, Resettable.class}, new DelegatingStubHandler(controllerDef, stubs));
     }
 
     @Override
@@ -136,5 +138,12 @@ public class JavascriptMockActionHandler extends JavascriptMockHandler<Controlle
             List<?> parameters = getParameters();
             return method.getName().equals(getMethodName()) && parameters.get(0).equals(args[0]);
         }
+    }
+
+    @Override
+    protected ControllerDef createDefinition(Throwable error) {
+        Builder builder = new Builder();
+        builder.setParseError(error);
+        return builder.build();
     }
 }

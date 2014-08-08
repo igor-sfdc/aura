@@ -15,7 +15,7 @@
     limitations under the License.
 
 -->
-<aura:component model="java://org.auraframework.docs.SizeModel">
+<aura:component model="java://org.auraframework.docs.SizeModel" access="global">
     <aura:attribute name="myDate" type="Date" default="" />
     <aura:attribute name="sizes" type="List" description="A list of aura.components.ui.InputOption."/>
     <aura:attribute name="invalidEmail" type="Boolean" default="false"/>
@@ -46,7 +46,7 @@
             <ui:inputDate class="formInput" aura:id="inDOB" value="1990-01-01" displayDatePicker="true"/>
         </div>
         <div class="row">
-            <ui:inputSelect label="Size" aura:id="inSize" options="{!m.sizes}"/>
+            <ui:inputSelect class="formInput" label="Size" aura:id="inSize" options="{!m.sizes}"/>
         </div>
         <div class="row">
             <ui:label class="formLabel" label="Appointment Time" for="inAppt"/>

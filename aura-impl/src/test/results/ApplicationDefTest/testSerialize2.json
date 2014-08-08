@@ -5,47 +5,96 @@
     "superDef":{
       "serId":2,
       "value":{
-        "descriptor":"markup://aura:application"
+        "descriptor":"markup://aura:application",
+        "rendererDef":{
+          "serId":3,
+          "value":{
+            "descriptor":"js://aura.component",
+            "render":
+function(component) {
+        var rendering = component.getRendering();
+        return rendering ? rendering : $A.render(component.get("v.body"));
+    },
+            "afterRender":
+function(component) {
+        var body = component.get("v.body");
+        $A.afterRender(body);
+    },
+            "rerender":
+function(component) {
+        var body = component.get("v.body");
+        return $A.rerender(body);
+    },
+            "unrender":
+function(component) {
+        var body = component.get("v.body");
+        
+        $A.unrender(body);
+
+        var elements = component.getElements();
+        for (var key in elements){
+            var element = elements[key];
+            delete elements[key];
+            aura.util.removeElement(element);
+        }
+    }
+          }
+        },
+        "attributeDefs":[
+          {
+            "serId":4,
+            "value":{
+              "name":"body",
+              "type":"aura://Aura.Component[]"
+            }
+          }
+        ],
+        "interfaces":[
+          "markup://aura:rootComponent"
+        ],
+        "isAbstract":true,
+        "locationChangeEventDef":{
+          "serId":5,
+          "value":{
+            "descriptor":"markup://aura:locationChange",
+            "type":"APPLICATION",
+            "superDef":{
+              "serId":6,
+              "value":{
+                "descriptor":"markup://aura:applicationEvent",
+                "type":"APPLICATION",
+                "attributes":{
+
+                }
+              }
+            },
+            "attributes":{
+              "token":{
+                "serId":7,
+                "value":{
+                  "name":"token",
+                  "type":"aura://String"
+                }
+              },
+              "querystring":{
+                "serId":8,
+                "value":{
+                  "name":"querystring",
+                  "type":"aura://String"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "attributeDefs":[
       {
-        "serId":3,
-        "value":{
-          "descriptor":"body",
-          "typeDefDescriptor":"aura://Aura.Component[]",
-          "required":false,
-          "visibility":"PUBLIC"
-        }
+        "serRefId":4
       }
     ],
     "locationChangeEventDef":{
-      "serId":4,
-      "value":{
-        "descriptor":"markup://aura:locationChange",
-        "type":"APPLICATION",
-        "superDef":{
-          "serId":5,
-          "value":{
-            "descriptor":"markup://aura:applicationEvent",
-            "type":"APPLICATION",
-            "attributes":{
-
-            }
-          }
-        },
-        "attributes":{
-          "token":{
-            "serId":6,
-            "value":{
-              "descriptor":"token",
-              "typeDefDescriptor":"aura://String",
-              "required":false,
-              "visibility":"PUBLIC"
-            }
-          }
-        }
-      }
+      "serRefId":5
     }
   }
 }

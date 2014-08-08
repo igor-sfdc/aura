@@ -31,6 +31,7 @@ import org.apache.http.protocol.HttpContext;
 import org.auraframework.controller.java.ServletConfigController;
 import org.auraframework.def.ApplicationDef;
 import org.auraframework.def.DefDescriptor;
+import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.test.AuraHttpTestCase;
 import org.auraframework.test.annotation.ThreadHostileTest;
 import org.auraframework.test.annotation.UnAdaptableTest;
@@ -60,8 +61,8 @@ public class AppCacheManifestHttpTest extends AuraHttpTestCase {
         super(name);
     }
 
-    private ManifestInfo getManifestInfo(String appPath) throws Exception {
-        HttpGet get = obtainGetMethod(appPath + "?aura.mode=PROD");
+    private ManifestInfo getManifestInfo(String appPath, Mode mode) throws Exception {
+        HttpGet get = obtainGetMethod(appPath + String.format("?aura.mode=%s",mode.toString()));
         HttpResponse response = perform(get);
         String responseBody = getResponseBody(response);
         get.releaseConnection();
@@ -73,6 +74,9 @@ public class AppCacheManifestHttpTest extends AuraHttpTestCase {
             url = m.group(2);
         }
         return new ManifestInfo(url, lastmod);
+    }
+    private ManifestInfo getManifestInfo(String appPath) throws Exception {
+        return getManifestInfo(appPath, Mode.PROD);
     }
 
     private String getManifestErrorUrl(String manifestURI) {
@@ -93,7 +97,7 @@ public class AppCacheManifestHttpTest extends AuraHttpTestCase {
 
     private List<String> getRequiredLinks() throws Exception {
         List<String> required = Lists.newArrayList();
-        required.add(".*/aura_prod\\.js\\?aura.fwuid=.*");
+        required.add(".*/aura_prod\\.js");
         return required;
     }
 
@@ -151,6 +155,7 @@ public class AppCacheManifestHttpTest extends AuraHttpTestCase {
     }
 
     private void assertManifestHeaders(HttpResponse response) throws Exception {
+    	assertAntiClickjacking(response);
         String cacheControlHeader = String.format(",%s,", response.getFirstHeader(HttpHeaders.CACHE_CONTROL).getValue()
                 .replaceAll("\\s", ""));
         if (!cacheControlHeader.contains(",no-cache,") || !cacheControlHeader.contains(",no-store,")) {
@@ -347,8 +352,7 @@ public class AppCacheManifestHttpTest extends AuraHttpTestCase {
                 "/auraFW/resources/aura/resetCSS.css" };
 
         String appMarkup = String.format(baseApplicationTag,
-                "useAppcache=\"true\" render=\"client\"  preload=\"appCache\" " +
-                        "securityProvider=\"java://org.auraframework.java.securityProvider.LaxSecurityProvider\" " +
+                "useAppcache=\"true\" render=\"client\" " +
                         " controller=\"java://org.auraframework.impl.java.controller.TestController\" " +
                         "additionalAppCacheURLs=\"%s\"", "");
 
@@ -373,5 +377,29 @@ public class AppCacheManifestHttpTest extends AuraHttpTestCase {
                     String.format(".*%s.*/app\\.js", serializedContextFragment)),
                     manifest.lastmod);
         }
+    }
+    
+    /**
+     * 
+     * UIPerf, UIPerfUi, UIPerfCSS, walltimelocale are uncombinable in PTEST mode.
+     */
+    public void testUncombinableResourceUrlsAreAddedToAppCacheManifest()throws Exception{
+        setHttpUserAgent(APPCACHE_SUPPORTED_USERAGENT);
+        ManifestInfo manifest = getManifestInfo("/clientLibraryTest/clientLibraryTest.app", Mode.PTEST);
+        
+        HttpGet get  = obtainGetMethod(manifest.url);
+        HttpResponse response = perform(get);
+        assertEquals("Failed to fetch manifest", HttpStatus.SC_OK,getStatusCode(response));
+        String responseString = getResponseBody(response);
+        get.releaseConnection();
+        assertNotNull(responseString);
+        
+        assertTrue("Manifest doesn't contain combinable CSS resource url", responseString.contains("/resources.css"));
+        assertTrue("Manifest doesn't contain combinable JS resource url", responseString.contains("/resources.js"));
+        
+        //Verify the urls of uncombinable resources
+        assertTrue("Missing UIPerf", responseString.contains("/UIPerf/UIPerf") || responseString.contains("perf/ormance.js"));
+        assertTrue("Missing Moment", responseString.contains("/moment/moment.js"));
+        assertTrue("Missing Walltime", responseString.contains("walltime-js/walltime.js"));
     }
 }

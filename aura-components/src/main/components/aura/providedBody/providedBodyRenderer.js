@@ -16,22 +16,31 @@
 ({
     // this is a direct copy of componentRenderer, except using realbody
     render: function(component){
-        var body = component.getValue("v.realbody");
-        return $A.render(body);
+        var body = component.get("v.realbody");
+        //$A.mark("render iteration body " + component.getGlobalId());
+        var ret = $A.render(body);
+        //$A.endMark("render iteration body " + component.getGlobalId());
+        return ret;
     },
 
     afterRender: function(component){
-        var body = component.getAttributes().getValue("realbody");
+        var body = component.get("v.realbody");
+        //$A.mark("afterRender iteration body " + component.getGlobalId());
         $A.afterRender(body);
+        //$A.endMark("afterRender iteration body " + component.getGlobalId());
     },
 
     rerender: function(component){
-        var body = component.getAttributes().getValue("realbody");
-        $A.rerender(body);
+        var body = component.get("v.realbody");
+        //$A.mark("rerender iteration body " + component.getGlobalId());
+        var ret = $A.rerender(body);
+        //$A.endMark("rerender iteration body " + component.getGlobalId());
+        return ret
     },
 
     unrender : function(component){
-        var body = component.getAttributes().getValue("realbody");
+        var body = component.get("v.realbody");
+        //$A.mark("unrender iteration body " + component.getGlobalId());
         $A.unrender(body);
 
         var elements = component.getElements();
@@ -40,5 +49,6 @@
             delete elements[key];
             aura.util.removeElement(element);
         }
+        //$A.endMark("unrender iteration body " + component.getGlobalId());
     }
 })

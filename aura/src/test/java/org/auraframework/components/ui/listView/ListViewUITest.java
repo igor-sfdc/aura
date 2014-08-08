@@ -22,20 +22,23 @@ import java.util.Map;
 
 import org.auraframework.test.WebDriverTestCase;
 import org.auraframework.test.WebDriverUtil.BrowserType;
+import org.auraframework.test.annotation.PerfTest;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.ExpectedCondition;
 
 public class ListViewUITest extends WebDriverTestCase {
 
     private final static String EMPTY_LIST_MESSAGE = "No records to display.";
+    private final String URL = "/uitest/listView_Test.app";
 
     public ListViewUITest(String name) {
         super(name);
     }
 
     public void testEmptyListGeneratedColumns() throws Exception {
-        open("/uitest/listViewTest.app");
+        open(URL);
         WebDriver driver = this.getDriver();
 
         WebElement tableElement = driver.findElement(By.id("ui:listView:test-empty-list-generated-columns"));
@@ -46,7 +49,6 @@ public class ListViewUITest extends WebDriverTestCase {
         // Header
         assertTrue("The thead in an empty list with single-level generated columns thead should contain one row",
                 getNumRows(tHeadElement) == 1);
-        System.out.println(getCellsInRow(tHeadElement, "th"));
         assertTrue("Empty list with generated columns should not contain any header cells",
                 getCellsInRow(tHeadElement, "th").size() == 0);
 
@@ -62,7 +64,7 @@ public class ListViewUITest extends WebDriverTestCase {
     }
 
     public void testEmptyListSpecifiedColumns() throws Exception {
-        open("/uitest/listViewTest.app");
+        open(URL);
         WebDriver driver = this.getDriver();
 
         WebElement tableElement = driver.findElement(By.id("ui:listView:test-empty-list-specified-columns"));
@@ -90,8 +92,9 @@ public class ListViewUITest extends WebDriverTestCase {
         assertTrue("tfoot element should contain no rows", tFootElement.findElements(By.tagName("tr")).size() == 0);
     }
 
+    @PerfTest
     public void testListGeneratedColumns() throws Exception {
-        open("/uitest/listViewTest.app");
+        open(URL);
         WebDriver driver = this.getDriver();
 
         List<Map<String, String>> expectedData = ListViewTestData.GENERATED_LIST_DATA;
@@ -129,7 +132,7 @@ public class ListViewUITest extends WebDriverTestCase {
     }
 
     public void testListSpecifiedColumns() throws Exception {
-        open("/uitest/listViewTest.app");
+        open(URL);
         WebDriver driver = this.getDriver();
 
         List<Map<String, String>> expectedData = ListViewTestData.SPECIFIED_LIST_DATA;
@@ -203,30 +206,30 @@ public class ListViewUITest extends WebDriverTestCase {
     }
 
     public void testCellClickEvent() throws Exception {
-        open("/uitest/listViewTest.app");
+        open(URL);
 
         WebDriver driver = this.getDriver();
         WebElement tableElement = driver.findElement(By.id("ui:listView:test-list-events-webdriver-test"));
         WebElement tBodyElement = tableElement.findElement(By.tagName("tbody"));
         tBodyElement.findElement(By.tagName("tr")).findElement(By.tagName("td")).click();
 
-        assertTrue("Test component's cell click handler was not invoked after click event",
-                isGlobalVariableDefinedInWindow("cellClickFired"));
+        waitForGlobalVariableDefinedInWindow("cellClickFired",
+                "Test component's cell click handler was not invoked after click event");
     }
 
     // For some reason Android doesn't want to click on the header element. This test isn't really relevant to Android
     // anyway though because the actual use case would be touch events instead of clicks.
     @ExcludeBrowsers({ BrowserType.ANDROID_PHONE, BrowserType.ANDROID_TABLET })
     public void testHeaderClickEvent() throws Exception {
-        open("/uitest/listViewTest.app");
+        open(URL);
 
         WebDriver driver = this.getDriver();
         WebElement tableElement = driver.findElement(By.id("ui:listView:test-list-events-webdriver-test"));
         WebElement tHeadElement = tableElement.findElement(By.tagName("thead"));
         tHeadElement.findElement(By.tagName("tr")).findElement(By.tagName("th")).click();
 
-        assertTrue("Test component's header click handler was not invoked after click event",
-                isGlobalVariableDefinedInWindow("headerClickFired"));
+        waitForGlobalVariableDefinedInWindow("headerClickFired",
+                "Test component's header click handler was not invoked after click event");
     }
 
     /**
@@ -235,9 +238,15 @@ public class ListViewUITest extends WebDriverTestCase {
      * @param variableName name of the variable we're looking for
      * @return true if the variable is present, false otherwise
      */
-    private boolean isGlobalVariableDefinedInWindow(String variableName) {
-        String script = "return !(typeof " + variableName + " === 'undefined')";
-        return (Boolean) auraUITestingUtil.getRawEval(script);
+    private void waitForGlobalVariableDefinedInWindow(final String variableName, final String errorMsg) {
+        auraUITestingUtil.waitUntil(new ExpectedCondition<Boolean>() {
+            String script = "return !(typeof " + variableName + " === 'undefined')";
+
+            @Override
+            public Boolean apply(WebDriver d) {
+                return (Boolean) auraUITestingUtil.getRawEval(script);
+            }
+        }, errorMsg);
     }
 
     /**

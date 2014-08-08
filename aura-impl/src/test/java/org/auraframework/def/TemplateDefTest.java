@@ -20,6 +20,7 @@ import org.auraframework.impl.AuraImplTestCase;
 import org.auraframework.impl.root.parser.handler.XMLHandler.InvalidSystemAttributeException;
 import org.auraframework.instance.Component;
 import org.auraframework.throwable.AuraRuntimeException;
+import org.auraframework.throwable.quickfix.InvalidDefinitionException;
 import org.junit.Ignore;
 
 /**
@@ -259,15 +260,56 @@ public class TemplateDefTest extends AuraImplTestCase {
             boolean expectException) {
         try {
             desc.getDef();
-            if (expectException)
+            if (expectException) {
                 fail(msg);
+            }
         } catch (Exception e) {
-            if (expectException && e instanceof AuraRuntimeException) {
+            if (expectException && e instanceof InvalidDefinitionException) {
                 assertTrue(e.getMessage().contains("script tags only allowed in templates"));
                 return;
-            } else
+            } else {
                 fail(msg);
+            }
         }
     }
+    
+    /**
+     * Verify the new errorTitle attribute, with default error message.
+     */
+    public void testDefaultErrorTitleAttributeInTemplate() throws Exception {    	       
+        DefDescriptor<ComponentDef> errorTitleIntemplate = addSourceAutoCleanup(
+                ComponentDef.class,
+                String.format(
+                        baseComponentTag,
+                        "isTemplate='true' extends='aura:template' ",
+                        ""));
+        
+        StringBuffer sb = new StringBuffer();
+        Component template = Aura.getInstanceService().getInstance(errorTitleIntemplate);
+        Aura.getRenderingService().render(template, sb);
+        String result = sb.toString();
+        assertTrue("errorTitle attribute on aura:template has wrong text: "+result,
+                result.contains("Looks like there's a problem:"));
+        
+    }
 
+    /**
+     * Verify the new errorTitle attribute, when error message is provided in template.
+     */
+    public void testCustomErrorTitleAttributeInTemplate() throws Exception {
+    	String errorTitle = "<aura:set attribute='errorTitle'>Looks like there's a problem.</aura:set>";        
+        DefDescriptor<ComponentDef> errorTitleIntemplate = addSourceAutoCleanup(
+                ComponentDef.class,
+                String.format(
+                        baseComponentTag,
+                        "isTemplate='true' extends='aura:template' ",
+                        errorTitle));
+        
+        StringBuffer sb = new StringBuffer();
+        Component template = Aura.getInstanceService().getInstance(errorTitleIntemplate);
+        Aura.getRenderingService().render(template, sb);
+        String result = sb.toString();
+        assertTrue("errorTitle attribute on aura:template has wrong text",
+                result.contains("Looks like there's a problem."));              
+    }
 }

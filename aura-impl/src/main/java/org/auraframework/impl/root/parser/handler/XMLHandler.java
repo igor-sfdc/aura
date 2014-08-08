@@ -40,11 +40,11 @@ public abstract class XMLHandler<T extends Definition> {
 
     private static final String SYSTEM_TAG_PREFIX = "aura";
 
-    public final static Set<String> SYSTEM_TAGS = ImmutableSet.of(ForEachDefHandler.TAG, ApplicationDefHandler.TAG,
+    public final static Set<String> SYSTEM_TAGS = ImmutableSet.of(ApplicationDefHandler.TAG,
             AttributeDefHandler.TAG, ComponentDefHandler.TAG, EventDefHandler.TAG, InterfaceDefHandler.TAG,
-            EventHandlerDefHandler.TAG, LayoutDefHandler.TAG, LayoutsDefHandler.TAG, LayoutItemDefHandler.TAG,
-            RegisterEventHandler.TAG, AttributeDefRefHandler.TAG, DependencyDefHandler.TAG, NamespaceDefHandler.TAG,
-            ThemeDefHandler.TAG);
+            EventHandlerDefHandler.TAG, ImportDefHandler.TAG, LayoutDefHandler.TAG, LayoutsDefHandler.TAG,
+            LayoutItemDefHandler.TAG, RegisterEventHandler.TAG, AttributeDefRefHandler.TAG, DependencyDefHandler.TAG,
+            NamespaceDefHandler.TAG, ThemeDefHandler.TAG);
 
     protected final XMLStreamReader xmlReader;
     protected final XMLStreamWriter xmlWriter;
@@ -63,7 +63,6 @@ public abstract class XMLHandler<T extends Definition> {
         this.xmlReader = xmlReader;
         this.xmlWriter = null;
         this.source = source;
-        validateAttributes();
     }
 
     protected XMLHandler() {
@@ -75,7 +74,7 @@ public abstract class XMLHandler<T extends Definition> {
     /**
      * Handles the XML for this object and returns a new definition. Expects that the reader has already been moved to a
      * START_ELEMENT, and when this method returns it will leave the reader at the appropriate END_ELEMENT
-     * 
+     *
      * @throws XMLStreamException If the stream is not queued up properly
      * @throws QuickFixException
      */
@@ -106,22 +105,34 @@ public abstract class XMLHandler<T extends Definition> {
     }
 
     /**
-     * Since we do not have namespace support enabled on the xmlreader, there doesn't seem to be a good api to get
-     * namespaced attributes. Unlike tags, the simple get does actually strip off the namespace. So, we see if the
-     * simple name matches at all, and if it does, we iterate through all attributes to do the exact match, including
-     * namespace.
+     * Gets system attribute by prepending system prefix.
+     *
+     * @param name attribute name
+     * @return attribute value
      */
     protected String getSystemAttributeValue(String name) {
-        String ret = getAttributeValue(name);
-        if (!AuraTextUtil.isNullEmptyOrWhitespace(ret)) {
-            for (int i = 0; i < xmlReader.getAttributeCount(); i++) {
-                if (xmlReader.getAttributeLocalName(i).equalsIgnoreCase(name)
-                        && SYSTEM_TAG_PREFIX.equalsIgnoreCase(xmlReader.getAttributePrefix(i))) {
-                    return xmlReader.getAttributeValue(i);
+        // W-2316503: remove compatibility code for both SJSXP and Woodstox
+        String value = getAttributeValue(SYSTEM_TAG_PREFIX + ":" + name);
+        if (value != null) {
+            // woodstox
+            // With IS_NAMESPACE_AWARE disabled, woodstox will not set attribute prefix
+            // so we can get the value from entire attribute name
+            return value;
+        } else {
+            // sjsxp
+            // defaults to setting attribute prefix regardless of IS_NAMESPACE_AWARE setting
+            value = getAttributeValue(name);
+            if (!AuraTextUtil.isNullEmptyOrWhitespace(value)) {
+                // ensure system prefixed value of attribute ie "id" vs "aura:id"
+                for (int i = 0; i < xmlReader.getAttributeCount(); i++) {
+                    if (xmlReader.getAttributeLocalName(i).equalsIgnoreCase(name)
+                            && SYSTEM_TAG_PREFIX.equalsIgnoreCase(xmlReader.getAttributePrefix(i))) {
+                        return xmlReader.getAttributeValue(i);
+                    }
                 }
             }
+            return null;
         }
-        return null;
     }
 
     protected boolean getBooleanAttributeValue(String name) {
@@ -136,7 +147,7 @@ public abstract class XMLHandler<T extends Definition> {
         throw new AuraRuntimeException(String.format(message, args), getLocation());
     }
 
-    private void validateAttributes() {
+    protected void validateAttributes() {
         if (!isSystemTag()) {
             return;
         }
@@ -167,11 +178,23 @@ public abstract class XMLHandler<T extends Definition> {
             return false;
         }
 
-        String fullName = name.getLocalPart();
+        String fullName;
         // namespaceURI normally seems to be empty string
         if (!namespaceURI.equals("")) {
             fullName = String.format("%s:%s", namespaceURI, name.getLocalPart());
+        } else {
+            fullName = name.getLocalPart();
         }
         return SYSTEM_TAGS.contains(fullName.toLowerCase());
+    }
+
+    /**
+     * Whether name is system "aura" prefixed
+     *
+     * @param name tag or attribute name
+     * @return whether name is system "aura" prefixed
+     */
+    public static boolean isSystemPrefixed(String name, String prefix) {
+        return SYSTEM_TAG_PREFIX.equalsIgnoreCase(prefix) || name.regionMatches(true, 0, SYSTEM_TAG_PREFIX + ":", 0, 5);
     }
 }

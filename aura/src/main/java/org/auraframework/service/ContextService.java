@@ -20,7 +20,7 @@ import java.util.Set;
 import org.auraframework.def.BaseComponentDef;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.system.AuraContext;
-import org.auraframework.system.AuraContext.Access;
+import org.auraframework.system.AuraContext.Authentication;
 import org.auraframework.system.AuraContext.Format;
 import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.system.SourceLoader;
@@ -40,47 +40,63 @@ public interface ContextService extends AuraService {
     /**
      * Start a AuraContext with the given Mode, Format, and Access
      */
-    AuraContext startContext(Mode mode, Format format, Access access, DefDescriptor<? extends BaseComponentDef> appDesc);
+    AuraContext startContext(Mode mode, Format format, Authentication access, DefDescriptor<? extends BaseComponentDef> appDesc);
 
     /**
      * Start a AuraContext and include these extra source loaders
      * 
      * @throws QuickFixException
      */
-    AuraContext startContext(Mode mode, Set<SourceLoader> loaders, Format format, Access access,
+    AuraContext startContext(Mode mode, Set<SourceLoader> loaders, Format format, Authentication access,
             DefDescriptor<? extends BaseComponentDef> appDesc) throws QuickFixException;
 
     /**
      * Start a AuraContext with the given Mode, Format, and Access
      */
-    AuraContext startContext(Mode mode, Format format, Access access);
+    AuraContext startContext(Mode mode, Format format, Authentication access);
 
     /**
      * Start a AuraContext and include these extra source loaders
      * 
      * @throws QuickFixException
      */
-    AuraContext startContext(Mode mode, Set<SourceLoader> loaders, Format format, Access access)
+    AuraContext startContext(Mode mode, Set<SourceLoader> loaders, Format format, Authentication access)
             throws QuickFixException;
 
     /**
      * Start a AuraContext and include debug tool usage
      */
-	AuraContext startContext(Mode mode, Format format, Access access,
-			DefDescriptor<? extends BaseComponentDef> appDesc, boolean isDebugToolEnabled);
+    AuraContext startContext(Mode mode, Format format, Authentication access,
+                    DefDescriptor<? extends BaseComponentDef> appDesc, boolean isDebugToolEnabled);
 	
-	/**
+    /**
      * Start a AuraContext and include extra source loaders and debug tool usage
      */
-	AuraContext startContext(Mode mode, Set<SourceLoader> loaders,
-			Format format, Access access,
-			DefDescriptor<? extends BaseComponentDef> appDesc,
-			boolean isDebugToolEnabled);
+    AuraContext startContext(Mode mode, Set<SourceLoader> loaders,
+                    Format format, Authentication access,
+                    DefDescriptor<? extends BaseComponentDef> appDesc,
+                    boolean isDebugToolEnabled);
 	
     /**
      * Close the current AuraContext, no matter which type it is.
      */
     void endContext();
+
+    /**
+     * Push a 'system-only' context used for private rendering.
+     *
+     * This call may only be used once a context has been established. Once you push the
+     * server context, you must always popServerContext(). (i.e. with a try {} finally {}.
+     * Anything done within the system context will not be serialized to the client.
+     *
+     * @return the system context in force.
+     */
+    AuraContext pushSystemContext();
+
+    /**
+     * Pop a system context previously pushed.
+     */
+    void popSystemContext();
 
     /**
      * Get the current context if there is one. Throws a runtime exception if
@@ -97,11 +113,4 @@ public interface ContextService extends AuraService {
      * Throw a RuntimeException if no context is currently established.
      */
     void assertEstablished();
-
-    /**
-     * Throws a NoAccessException if the current root application's security
-     * provider denies access to the def described by the given descriptor.
-     */
-    void assertAccess(DefDescriptor<?> desc) throws QuickFixException;
-
 }

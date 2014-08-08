@@ -34,51 +34,114 @@ import org.auraframework.util.json.JsonSerializable;
  *            {@link ComponentDef}, {@link EventDef}, etc.
  */
 public interface DefDescriptor<T extends Definition> extends JsonSerializable,
-		Serializable, Comparable<DefDescriptor<?>> {
+        Serializable, Comparable<DefDescriptor<?>> {
 
-	public static final String MARKUP_PREFIX = "markup";
-	public static final String CSS_PREFIX = "css";
-	public static final String TEMPLATE_CSS_PREFIX = "templateCss";
-	public static final String JAVASCRIPT_PREFIX = "js";
-	public static final String COMPOUND_PREFIX = "compound";
-	public static final String JAVA_PREFIX = "java";
+    public static final String MARKUP_PREFIX = "markup";
+    public static final String CSS_PREFIX = "css";
+    public static final String TEMPLATE_CSS_PREFIX = "templateCss";
+    public static final String JAVASCRIPT_PREFIX = "js";
+    public static final String COMPOUND_PREFIX = "compound";
+    public static final String JAVA_PREFIX = "java";
 
+    public static final class DescriptorKey {
+        private final String name;
+        private final Class<? extends Definition> clazz;
+        private final DefDescriptor<? extends Definition> bundle;
+
+        public DescriptorKey(String name, Class<? extends Definition> clazz) {
+            this(name, clazz, null);
+        }
+
+        public DescriptorKey(String name, Class<? extends Definition> clazz, DefDescriptor<? extends Definition> bundle) {
+            // FIXME: this case flattening would remove the extra copies of
+            // definitions.
+            // If we go case sensitive, we won't want it though.
+            // this.qualifiedName = qualifiedName.toLowerCase();
+            this.name = name;
+            this.clazz = clazz;
+            this.bundle = bundle;
+        }
+
+        @Override
+        public int hashCode() {
+            return name.hashCode() + clazz.hashCode() + (bundle !=null?bundle.hashCode():0);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (!(obj instanceof DescriptorKey)) {
+                return false;
+            }
+            DescriptorKey dk = (DescriptorKey) obj;
+            return dk.clazz.equals(clazz) && dk.name.equals(name)
+                && (dk.bundle == bundle || dk.bundle != null && dk.bundle.equals(bundle));
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public Class<? extends Definition> getClazz() {
+            return clazz;
+        }
+
+        public DefDescriptor<? extends Definition> getBundle() {
+            return bundle;
+    }
+    }
+    
 	public static enum DefType {
 		ATTRIBUTE(AttributeDef.class), //
-		APPLICATION(ApplicationDef.class), //
-		COMPONENT(ComponentDef.class), //
-		EVENT(EventDef.class), //
+		APPLICATION(ApplicationDef.class, true), //
+		COMPONENT(ComponentDef.class, true), //
+		EVENT(EventDef.class, true), //
 		HELPER(HelperDef.class), //
-		INTERFACE(InterfaceDef.class), //
+		INTERFACE(InterfaceDef.class, true), //
 		CONTROLLER(ControllerDef.class), //
 		MODEL(ModelDef.class), //
+		LIBRARY(LibraryDef.class, true), //
+		INCLUDE(IncludeDef.class), //
 		RENDERER(RendererDef.class), //
-		SECURITY_PROVIDER(SecurityProviderDef.class), //
 		ACTION(ActionDef.class), //
 		TYPE(TypeDef.class), //
 		STYLE(StyleDef.class), //
-		THEME(ThemeDef.class), //
-		DOCUMENTATION(DocumentationDef.class), //
-		TESTSUITE(TestSuiteDef.class), //
-		TESTCASE(TestCaseDef.class), //
-		PROVIDER(ProviderDef.class), //
-		LAYOUTS(LayoutsDef.class), //
-		LAYOUT(LayoutDef.class), //
-		LAYOUT_ITEM(LayoutItemDef.class), //
-		NAMESPACE(NamespaceDef.class);
+		THEME(ThemeDef.class, true), //
+        THEME_DEF_REF(ThemeDefRef.class), //
+        THEME_PROVIDER(ThemeDescriptorProviderDef.class), //
+        THEME_MAP_PROVIDER(ThemeMapProviderDef.class), //
+        VAR(VarDef.class), //
+        DOCUMENTATION(DocumentationDef.class), //
+        DESCRIPTION(DescriptionDef.class), //
+        EXAMPLE(ExampleDef.class), //
+        TESTSUITE(TestSuiteDef.class), //
+        TESTCASE(TestCaseDef.class), //
+        PROVIDER(ProviderDef.class), //
+        LAYOUTS(LayoutsDef.class), //
+        LAYOUT(LayoutDef.class), //
+        LAYOUT_ITEM(LayoutItemDef.class), //
+        NAMESPACE(NamespaceDef.class),
+        RESOURCE(ResourceDef.class);
 
+		
 		private static Map<Class<? extends Definition>, DefType> defTypeMap;
-
+		
 		private final Class<? extends Definition> clz;
+		private final boolean definesBundle;
 
 		private DefType(Class<? extends Definition> clz) {
+		    this(clz, false);
+		}
+		
+		private DefType(Class<? extends Definition> clz, boolean definesBundle) {
 			this.clz = clz;
-
+			this.definesBundle = definesBundle;
 			mapDefType(clz, this);
 		}
 
-		private static void mapDefType(Class<? extends Definition> clz,
-				DefType defType) {
+        private static void mapDefType(Class<? extends Definition> clz, DefType defType) {
 			if (defTypeMap == null) {
 				defTypeMap = new HashMap<Class<? extends Definition>, DefType>();
 			}
@@ -88,6 +151,13 @@ public interface DefDescriptor<T extends Definition> extends JsonSerializable,
 
 		public Class<? extends Definition> getPrimaryInterface() {
 			return clz;
+		}
+		
+		/**
+		 * Indicated this def type can stand alone in a bundle.
+		 */
+		public boolean definesBundle() {
+		    return definesBundle;
 		}
 
 		public static boolean hasDefType(Class<?> primaryInterface) {
@@ -151,6 +221,18 @@ public interface DefDescriptor<T extends Definition> extends JsonSerializable,
 	 *         parse serialized representations
 	 */
 	DefType getDefType();
+
+
+    /**
+     * get the 'bundle' for this descriptor.
+     *
+     * If we have a bundle for the descriptor, then the descriptor is for a file within the
+     * bundle, and it is fully specified by the bundle descriptor plus the name from this
+     * descriptor.
+     *
+     * @return the bundle associated with this descriptor.
+     */
+    DefDescriptor<? extends Definition> getBundle();
 
 	/**
 	 * Gets the actual definition described by this descriptor, compiling it if

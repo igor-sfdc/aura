@@ -64,11 +64,10 @@ var priv = {
     loadEventQueue : [],
     appcacheDownloadingEventFired : false,
     isOutdated : false,
-    isUnloading : false,
     initDefsObservers : [],
     isDisconnected : false,
     foreground : new $A.ns.FlightCounter(1),
-    background : new $A.ns.FlightCounter(1),
+    background : new $A.ns.FlightCounter(3),
     actionQueue : new ActionQueue(),
 
     /**
@@ -77,16 +76,11 @@ var priv = {
      * @private
      */
     checkAndDecodeResponse : function(response, noStrip) {
-        if (priv.isUnloading) {
-            return null;
-        }
-
-        var storage = Action.prototype.getStorage();
         var e;
 
         // failure to communicate with server
         if (priv.isDisconnectedOrCancelled(response)) {
-            priv.setConnectedFalse();
+            priv.setConnected(false);
             return null;
         }
 
@@ -144,10 +138,10 @@ var priv = {
             // if the error on the server is meant to trigger a client-side
             // event...
             if ($A.util.isUndefinedOrNull(resp)) {
-                // #if {"excludeModes" : ["PRODUCTION"]}
+                //#if {"excludeModes" : ["PRODUCTION", "PRODUCTIONDEBUG"]}
                 $A.error("Communication error, invalid JSON: " + text);
                 // #end
-                // #if {"modes" : ["PRODUCTION"]}
+                // #if {"modes" : ["PRODUCTION", "PRODUCTIONDEBUG"]}
                 $A.error("Communication error, please retry or reload the page");
                 // #end
                 return null;
@@ -162,14 +156,14 @@ var priv = {
                 // there the error message will be meaningless. This code thu does much the same
                 // thing, but in a different way so that we get a real error message.
                 // !!!!!!!!!!HACK ALERT!!!!!!!!!!
-                // #if {"excludeModes" : ["PRODUCTION"]}
+                //#if {"excludeModes" : ["PRODUCTION", "PRODUCTIONDEBUG"]}
                 if (resp["message"] && resp["stack"]) {
                     $A.error(resp["message"] + "\n" + resp["stack"]);
                 } else {
                     $A.error("Communication error, invalid JSON: " + text);
                 }
                 // #end
-                // #if {"modes" : ["PRODUCTION"]}
+                // #if {"modes" : ["PRODUCTION", "PRODUCTIONDEBUG"]}
                 if (resp["message"]) {
                     $A.error(resp["message"]);
                 } else {
@@ -188,10 +182,10 @@ var priv = {
 
         var responseMessage = $A.util.json.decode(text, true);
         if ($A.util.isUndefinedOrNull(responseMessage)) {
-            // #if {"excludeModes" : ["PRODUCTION"]}
+            //#if {"excludeModes" : ["PRODUCTION", "PRODUCTIONDEBUG"]}
             $A.error("Communication error, invalid JSON: " + text);
             // #end
-            // #if {"modes" : ["PRODUCTION"]}
+            // #if {"modes" : ["PRODUCTION", "PRODUCTIONDEBUG"]}
             $A.error("Communication error, please retry or reload the page");
             // #end
             return null;
@@ -199,6 +193,11 @@ var priv = {
         return responseMessage;
     },
 
+    /**
+     * fire an event passed back on the wire as an 'event exception'
+     *
+     * @param {Object} resp the response from the server.
+     */
     throwExceptionEvent : function(resp) {
         var evtObj = resp["event"];
         var descriptor = evtObj["descriptor"];
@@ -233,7 +232,7 @@ var priv = {
      * Process a single action/response.
      * 
      * Note that it does this inside an $A.run to provide protection against error returns, and to notify the user if an
-     * error occurs.
+     * erroroccurs.
      * 
      * @private
      * @param {Action}
@@ -245,16 +244,15 @@ var priv = {
      */
     singleAction : function(action, noAbort, actionResponse) {
         var key = action.getStorageKey();
-        var that = this;
 
         $A.run(function() {
-            var storage, toStore, needUpdate;
+            var storage, toStore, needUpdate, errorHandler;
 
             needUpdate = action.updateFromResponse(actionResponse);
 
             if (noAbort || !action.isAbortable()) {
                 if (needUpdate) {
-                    action.finishAction($A.getContext());
+                	action.finishAction($A.getContext());
                 }
                 if (action.isRefreshAction()) {
                     action.fireRefreshEvent("refreshEnd");
@@ -265,8 +263,18 @@ var priv = {
             storage = action.getStorage();
             if (storage) {
                 toStore = action.getStored(storage.getName());
+                errorHandler = action.getStorageErrorHandler();
+                
                 if (toStore) {
-                    storage.put(key, toStore);
+                    try {
+                        storage.put(key, toStore);
+                    } catch (error) {
+                        if (errorHandler && $A.util.isFunction(errorHandler)) {
+                            errorHandler(error);
+                        } else {
+                            $A.error(error);
+                        }
+                    }
                 }
             }
         }, key);
@@ -292,9 +300,7 @@ var priv = {
         var responseMessage = this.checkAndDecodeResponse(response);
         var that = this;
         var noAbort = (abortableId === this.actionQueue.getLastAbortableTransactionId());
-        var i;
 
-        var errors = [];
         //
         // Note that this is a very specific assertion. We can either be called back from an empty stack
         // (the normal case, after an XHR has gone to the server), or we can be called back from inside
@@ -306,6 +312,18 @@ var priv = {
                 this.auraStack = [];
             }
         }
+        
+        var stackName = "actionCallback["; 
+        var actionsToSend = collector.getActionsToSend(); 
+        for (var n = 0; n < actionsToSend.length; n++) { 
+        	var actionToSend = actionsToSend[n]; 
+        	if (n > 0) { 
+        		stackName += ", "; 
+    		}
+
+        	stackName += actionToSend.getStorageKey(); 
+    	}
+        stackName += "]";
 
         $A.run(function() {
             var action, actionResponses;
@@ -361,7 +379,7 @@ var priv = {
                     }
                     that.singleAction(action, noAbort, actionResponse);
                 }
-            } else if (priv.isDisconnectedOrCancelled(response) && !priv.isUnloading) {
+            } else if (priv.isDisconnectedOrCancelled(response)) {
                 var actions = collector.getActionsToSend();
 
                 for ( var m = 0; m < actions.length; m++) {
@@ -373,10 +391,10 @@ var priv = {
                     }
                 }
             }
+            $A.Perf.endMark("Completed Action Callback - XHR " + collector.getNum());
             priv.fireDoneWaiting();
-        }, "actionCallback");
+        }, stackName);
 
-        $A.endMark("Completed Action Callback - XHR " + collector.getNum());
     },
 
     /**
@@ -412,8 +430,8 @@ var priv = {
      *            the flight counter under which the actions should be run.
      */
     request : function(actions, flightCounter) {
-        $A.mark("AuraClientService.request");
-        $A.mark("Action Request Prepared");
+        $A.Perf.mark("AuraClientService.request");
+        $A.Perf.mark("Action Request Prepared");
         var that = this;
         //
         // NOTE: this is done here, before the callback to avoid a race condition of someone else queueing up
@@ -424,7 +442,7 @@ var priv = {
             that.finishRequest(collector, flightCounter, abortableId);
         });
         collector.process();
-        $A.mark("Action Group " + collector.getCollectorId() + " enqueued");
+        $A.Perf.mark("Action Group " + collector.getCollectorId() + " enqueued");
     },
 
     /**
@@ -451,6 +469,27 @@ var priv = {
         if (actionsToSend.length > 0) {
             collector.setNum($A.getContext().incrementNum());
 
+            var markDescription = undefined;
+            // #if {"modes" : ["PTEST"]}
+            markDescription = ": [";
+            for (var m = 0; m < actionsToSend.length; m++) {
+                if (actionsToSend[m].def) {
+                    markDescription += "'" + actionsToSend[m].def.name
+                } else {
+                    markDescription += "'undefined";
+                }
+                if (actionsToSend[m].background) {
+                    markDescription += "<BG>'";
+                } else {
+                    markDescription += "'";
+                }
+                if (m < actionsToSend.length - 1) {
+                    markDescription += ",";
+                }
+            }
+            markDescription += "]";
+            // #end
+
             // clientService.requestQueue reference is mutable
             flightCounter.send();
             var requestConfig = {
@@ -469,18 +508,19 @@ var priv = {
                     "aura.num" : collector.getNum()
                     // #if {"modes" : ["PTEST"]}
                     ,
-                    "beaconData" : $A.getBeaconData()
+                    "beaconData" : $A.Perf.getBeaconData()
                 // #end
-                }
+                },
+                "markDescription" : markDescription
             };
-            $A.endMark("Action Group " + collector.getCollectorId() + " enqueued");
+            $A.Perf.endMark("Action Group " + collector.getCollectorId() + " enqueued");
 
             // clear the beaconData
             // #if {"modes" : ["PTEST"]}
-            $A.clearBeaconData();
+            $A.Perf.clearBeaconData();
             // #end
 
-            $A.endMark("Action Request Prepared");
+            $A.Perf.endMark("Action Request Prepared");
             $A.util.transport.request(requestConfig);
 
             setTimeout(function() {
@@ -492,26 +532,24 @@ var priv = {
         }
     },
 
+    isBB10 : function() {
+        var ua = navigator.userAgent;
+        return (ua.indexOf("BB10") > 0 && ua.indexOf("AppleWebKit") > 0);
+    },
+
     hardRefresh : function() {
         var url = location.href;
-        //debug for flapper
-        var date; var currentTime;
-        if(window.localStorage) {
-        	date = new Date();
-            currentTime = date.getTime();
-        	window.localStorage.setItem("hardRefresh_touched","url:"+url+",TS:"+currentTime);
-        }
-        //aura.assert(false,"bang from hardRefresh ");
         if (!priv.isManifestPresent() || url.indexOf("?nocache=") > -1) {
-        	//debug for flapper
-        	if(window.localStorage) {
-        		date = new Date();
-                currentTime = date.getTime();
-            	window.localStorage.setItem("hardRefresh_touched","!isManifestPresent or url contains nocache,location.reload,"+",TS:"+currentTime);
-            }
             location.reload(true);
             return;
         }
+
+        // if BB10 and using application cache
+        if (priv.isBB10() && window.applicationCache
+            && window.applicationCache.status !== window.applicationCache.UNCACHED) {
+            url = location.protocol + "//" + location.host + location.pathname + "?b=" + Date.now();
+        }
+
         var params = "?nocache=" + encodeURIComponent(url);
         // insert nocache param here for hard refresh
         var hIndex = url.indexOf("#");
@@ -529,14 +567,23 @@ var priv = {
             url = url.substring(0, cutIndex);
         }
 
-        location.href = url + params;
-        //debug for flapper
-    	if(window.localStorage) {
-    		date = new Date();
-            currentTime = date.getTime();
-        	window.localStorage.setItem("hardRefresh_touched","append nocache to url:"+location.href+",TS:"+currentTime);
-        }
+                
+        var sIndex = url.lastIndexOf("/");
+        var appName = url.substring(sIndex+1,url.length);
+        var newUrl = appName + params;
+        //use history.pushState to change the url of current page without actually loading it.
+        //AuraServlet will force the reload when GET request with current url contains '?nocache=someUrl' 
+        //after reload, someUrl will become the current url.
+        //state is null: don't need to track the state with popstate
+        //title is null: don't want to set the page title.
+        history.pushState(null,null,newUrl);
         
+    	//fallback to old way : set location.href will trigger the reload right away
+    	//we need this because when AuraResourceServlet's GET request with a 'error' cookie, 
+    	//AuraServlet doesn't get to do the GET reqeust
+    	if( (location.href).indexOf("?nocache=") > -1 ) {
+    		location.href = (url + params);
+    	}
     },
 
     flushLoadEventQueue : function() {
@@ -574,15 +621,6 @@ var priv = {
 
     handleAppcacheChecking : function(e) {
     	document._appcacheChecking = true;
-    	//debug for flapper
-        var date; var currentTime;
-        if(window.localStorage) {
-        	date = new Date();
-            currentTime = date.getTime();
-            var old = window.localStorage.getItem("handleAppcacheChecking");
-            var update = old?(old+"; TS:"+currentTime):("TS:"+currentTime);
-            window.localStorage.setItem("handleAppcacheChecking",update);
-        }
         if (priv.isDevMode()) {
             // TODO IBOGDANOV Why are you checking in commented out code like
             // this???
@@ -594,15 +632,6 @@ var priv = {
     },
 
     handleAppcacheUpdateReady : function(event) {
-    	//debug for flapper
-        var date; var currentTime;
-        if(window.localStorage) {
-        	date = new Date();
-            currentTime = date.getTime();
-        	var old = window.localStorage.getItem("handleAppcacheUpdateReady");
-            var update = old?(old+"; TS:"+currentTime):("TS:"+currentTime);
-            window.localStorage.setItem("handleAppcacheUpdateReady",update);
-        }
     	if (window.applicationCache.swapCache) {
             window.applicationCache.swapCache();
         }
@@ -622,43 +651,32 @@ var priv = {
     },
 
     handleAppcacheError : function(e) {
-    	//debug for flapper
-        var date; var currentTime;
-        if(window.localStorage) {
-        	date = new Date();
-            currentTime = date.getTime();
-        	var old = window.localStorage.getItem("handleAppcacheError");
-            var update = old?(old+"; TS:"+currentTime):("TS:"+currentTime);
-            window.localStorage.setItem("handleAppcacheError",update);
-        }
     	if (e.stopImmediatePropagation) {
             e.stopImmediatePropagation();
         }
         if (window.applicationCache
                 && (window.applicationCache.status === window.applicationCache.UNCACHED || window.applicationCache.status === window.applicationCache.OBSOLETE)) {
-        	//debug for flapper
-            if(window.localStorage) {
-            	date = new Date();
-                currentTime = date.getTime();
-            	window.localStorage.setItem("handleAppcacheError2",
-            			"window.applicationCache.status"+window.applicationCache.status+", return, TS:"+currentTime);
-            }
         	return;
         }
+
+        /**
+         * BB10 triggers appcache ERROR when the current manifest is a 404.
+         * Other browsers triggers OBSOLETE and we refresh the page to get
+         * the new manifest.
+         *
+         * For BB10, we append cache busting param to url to force BB10 browser
+         * not to use cached HTML via hardRefresh
+         */
+        if (priv.isBB10()) {
+            priv.hardRefresh();
+        }
+
         var manifestURL = priv.getManifestURL();
         if (priv.isDevMode()) {
             priv.showProgress(-1);
         }
 
         if (manifestURL) {
-        	//debug for flapper
-            if(window.localStorage) {
-            	date = new Date();
-                currentTime = date.getTime();
-               
-            	window.localStorage.setItem("handleAppcacheError2",
-            			"send GET reqeust for manifestURL:"+manifestURL+", TS:"+currentTime);
-            }
             setTimeout(function() {
                 $A.util.transport.request({
                     "url" : manifestURL,
@@ -679,15 +697,6 @@ var priv = {
     },
 
     handleAppcacheDownloading : function(e) {
-    	//debug for flapper
-        var date; var currentTime;
-        if(window.localStorage) {
-        	date = new Date();
-            currentTime = date.getTime();
-            var old = window.localStorage.getItem("handleAppcacheDownloading");
-            var update = old?(old+"; TS:"+currentTime):("TS:"+currentTime);
-            window.localStorage.setItem("handleAppcacheDownloading",update);
-        }
         if (priv.isDevMode()) {
             var progress = Math.round(100 * e.loaded / e.total);
             priv.showProgress(progress + 1);
@@ -697,15 +706,6 @@ var priv = {
     },
 
     handleAppcacheProgress : function(e) {
-    	//debug for flapper
-        var date; var currentTime;
-        if(window.localStorage) {
-        	date = new Date();
-            currentTime = date.getTime();
-            var old = window.localStorage.getItem("handleAppcacheProgress");
-            var update = old?(old+"; TS:"+currentTime):("TS:"+currentTime);
-            window.localStorage.setItem("handleAppcacheProgress",update);
-        }
         if (priv.isDevMode()) {
             var progress = Math.round(100 * e.loaded / e.total);
             priv.showProgress(progress);
@@ -713,41 +713,16 @@ var priv = {
     },
 
     handleAppcacheNoUpdate : function(e) {
-    	//debug for flapper
-        var date; var currentTime;
-        if(window.localStorage) {
-        	date = new Date();
-            currentTime = date.getTime();
-            var old = window.localStorage.getItem("handleAppcacheNoUpdate");
-            var update = old?(old+"; TS:"+currentTime):("TS:"+currentTime);
-            window.localStorage.setItem("handleAppcacheNoUpdate",update);
-        }
         if (priv.isDevMode()) {
             priv.showProgress(100);
         }
     },
 
     handleAppcacheCached : function(e) {
-    	//debug for flapper
-        var date; var currentTime;
-        if(window.localStorage) {
-        	date = new Date();
-            currentTime = date.getTime();
-            var old = window.localStorage.getItem("handleAppcacheCached");
-            var update = old?(old+"; TS:"+currentTime):("TS:"+currentTime);
-            window.localStorage.setItem("handleAppcacheCached",update);
-        }
     	priv.showProgress(100);
     },
 
     handleAppcacheObsolete : function(e) {
-    	if(window.localStorage) {
-        	date = new Date();
-            currentTime = date.getTime();
-            var old = window.localStorage.getItem("handleAppcacheObsolete");
-            var update = old?(old+"; TS:"+currentTime):("TS:"+currentTime);
-            window.localStorage.setItem("handleAppcacheObsolete",update);
-        }
     	priv.hardRefresh();
     },
 
@@ -791,28 +766,24 @@ var priv = {
         }
         return false;
     },
-
-    setConnectedFalse : function() {
-        if (priv.isDisconnected) {
-            return;
-        }
-        e = $A.get("e.aura:connectionLost");
+    
+    setConnected : function(isConnected) {
+    	var isDisconnected = !isConnected;
+    	if (isDisconnected === priv.isDisconnected) {
+    		// Already in desired state so no work to be done:
+    		return;
+    	}
+    	
+        e = $A.get(isDisconnected ? "e.aura:connectionLost" : "e.aura:connectionResumed");
         if (e) {
-            priv.isDisconnected = true;
+            priv.isDisconnected = isDisconnected;
             e.fire();
         } else {
             // looks like no definitions loaded yet
-            alert("Connection lost");
+            alert(isDisconnected ? "Connection lost" : "Connection resumed");
         }
     }
 };
-
-$A.ns.Util.prototype.on(window, "beforeunload", function(event) {
-    if (!$A.util.isIE) {
-        priv.isUnloading = true;
-        priv.requestQueue = [];
-    }
-});
 
 $A.ns.Util.prototype.on(window, "load", function(event) {
     // Lazy load data-src scripts

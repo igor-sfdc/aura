@@ -21,7 +21,12 @@ Test.Aura.Controller.ActionQueueTest = function() {
     // Mock the exp() function defined in Aura.js, this is originally used for exposing members using a export.js file
     Mocks.GetMock(Object.Global(), "exp", function() {
     })(function() {
+	// Action objects are used for tests here
+	// #import aura.controller.Action
+	
+	//This file is testing the implementation for ActionQueue, so import that
         // #import aura.controller.ActionQueue
+	
     });
 
     var serverDef = {
@@ -30,6 +35,21 @@ Test.Aura.Controller.ActionQueueTest = function() {
         },
         isClientAction : function() {
             return false;
+        },
+        isCaboose : function() {
+            return false;
+        }
+    };
+
+    var serverCabooseDef = {
+        isServerAction : function() {
+            return true;
+        },
+        isClientAction : function() {
+            return false;
+        },
+        isCaboose : function() {
+            return true;
         }
     };
 
@@ -39,6 +59,9 @@ Test.Aura.Controller.ActionQueueTest = function() {
         },
         isClientAction : function() {
             return true;
+        },
+        isCaboose : function() {
+            return false;
         }
     };
 
@@ -89,7 +112,7 @@ Test.Aura.Controller.ActionQueueTest = function() {
         [ Fact ]
         function EnqueuesAction() {
             // Arrange
-            var expected = new Action();
+            var expected = new Action(serverDef);
             var target = new ActionQueue();
 
             // Act
@@ -101,9 +124,52 @@ Test.Aura.Controller.ActionQueueTest = function() {
         }
 
         [ Fact ]
+        function SetsXHR() {
+            // Arrange
+            var target = new ActionQueue();
+            var serverAction = new Action(serverDef);
+
+            // Act
+            target.enqueue(serverAction);
+            var actual = target.xhr;
+
+            // Assert
+            Assert.Equal(true, actual);
+        }
+        [ Fact ]
+        function DoesntSetXHROnCaboose() {
+            // Arrange
+            var target = new ActionQueue();
+            var serverCabooseAction = new Action(serverCabooseDef);
+            serverCabooseAction.caboose = true;
+
+            // Act
+            target.enqueue(serverCabooseAction);
+            var actual = target.xhr;
+
+            // Assert
+            Assert.Equal(false, actual);
+        }
+        [ Fact ]
+        function LeavesXHROnCaboose() {
+            // Arrange
+            var target = new ActionQueue();
+            var serverAction = new Action(serverDef);
+            var serverCabooseAction = new Action(serverCabooseDef);
+
+            // Act
+            target.enqueue(serverAction);
+            target.enqueue(serverCabooseAction);
+            var actual = target.xhr;
+
+            // Assert
+            Assert.Equal(true, actual);
+        }
+
+        [ Fact ]
         function EnqueuesAbortableAction() {
             // Arrange
-            var expected = new Action();
+            var expected = new Action(serverDef);
             expected.setAbortable(true);
             var target = new ActionQueue();
 
@@ -120,7 +186,7 @@ Test.Aura.Controller.ActionQueueTest = function() {
         [ Fact ]
         function CallsClearPreviousAbortableActionsWhenAbortableActionIsEnqueuedOnNewTransaction() {
             var expected = [ "lastTransaction" ];
-            var abortable = new Action();
+            var abortable = new Action(serverDef);
             abortable.setAbortable(true);
             var target = new ActionQueue();
             target.incrementNextTransactionId();
@@ -140,7 +206,7 @@ Test.Aura.Controller.ActionQueueTest = function() {
 
         [ Fact ]
         function DoesNotCallClearPreviousAbortableActionsWhenAbortableActionIsEnqueuedOnCurrentTransaction() {
-            var abortable = new Action();
+            var abortable = new Action(serverDef);
             abortable.setAbortable(true);
             var target = new ActionQueue();
             target.clearPreviousAbortableActions = Stubs.GetMethod();
@@ -152,7 +218,7 @@ Test.Aura.Controller.ActionQueueTest = function() {
 
         [ Fact ]
         function DoesNotCallClearPreviousAbortableActionsWhenNonAbortableActionIsEnqueuedOnNewTransaction() {
-            var action = new Action();
+            var action = new Action(serverDef);
             var target = new ActionQueue();
             target.incrementNextTransactionId();
             target.clearPreviousAbortableActions = Stubs.GetMethod();
@@ -167,9 +233,9 @@ Test.Aura.Controller.ActionQueueTest = function() {
     function ClearPreviousAbortableActions() {
         [ Fact ]
         function PrunesOldAbortableAction() {
-            var old = new Action();
+            var old = new Action(serverDef);
             old.setAbortable(true);
-            var expected = new Action();
+            var expected = new Action(serverDef);
             expected.setAbortable(true);
             var target = new ActionQueue();
             target.actions = [ old ];
@@ -183,15 +249,15 @@ Test.Aura.Controller.ActionQueueTest = function() {
 
         [ Fact ]
         function PrunesOldAbortableActionsFromSet() {
-            var oldest = new Action();
+            var oldest = new Action(serverDef);
             oldest.setAbortable(true);
-            var nonAbortable1 = new Action();
-            var older = new Action();
+            var nonAbortable1 = new Action(serverDef);
+            var older = new Action(serverDef);
             older.setAbortable(true);
-            var nonAbortable2 = new Action();
-            var old = new Action();
+            var nonAbortable2 = new Action(serverDef);
+            var old = new Action(serverDef);
             old.setAbortable(true);
-            var expected = new Action();
+            var expected = new Action(serverDef);
             expected.setAbortable(true);
             var target = new ActionQueue();
             target.actions = [ oldest, nonAbortable1, older, nonAbortable2, old ];
@@ -205,15 +271,15 @@ Test.Aura.Controller.ActionQueueTest = function() {
 
         [ Fact ]
         function CallsAbortOnPrunedActions() {
-            var older = new Action();
+            var older = new Action(serverDef);
             older.setAbortable(true);
             older.abort = Stubs.GetMethod();
-            var nonAbortable = new Action();
+            var nonAbortable = new Action(serverDef);
             nonAbortable.abort = Stubs.GetMethod();
-            var old = new Action();
+            var old = new Action(serverDef);
             old.setAbortable(true);
             old.abort = Stubs.GetMethod();
-            var expected = new Action();
+            var expected = new Action(serverDef);
             expected.setAbortable(true);
             expected.abort = Stubs.GetMethod();
             var target = new ActionQueue();
@@ -242,7 +308,7 @@ Test.Aura.Controller.ActionQueueTest = function() {
 
         [ Fact ]
         function ReturnsEmptyListIfNoClientActions() {
-            var background = new Action(serverDef, null, null, true);
+            var background = new Action(serverDef, null, null, null, true);
             var server = new Action(serverDef);
             var target = new ActionQueue();
             target.actions = [ background, server ];
@@ -268,8 +334,8 @@ Test.Aura.Controller.ActionQueueTest = function() {
         [ Fact ]
         function ReturnsClientActionsFromSet() {
             var first = new Action(clientDef);
-            var background = new Action(serverDef, null, null, true);
-            var second = new Action(clientDef, null, null, true);
+            var background = new Action(serverDef, null, null, null, true);
+            var second = new Action(clientDef, null, null, null, true);
             var server = new Action(serverDef);
             var third = new Action(clientDef);
             var target = new ActionQueue();
@@ -285,6 +351,16 @@ Test.Aura.Controller.ActionQueueTest = function() {
     [ Fixture ]
     function GetServerActions() {
         [ Fact ]
+        function ResetsXHR() {
+            var target = new ActionQueue();
+
+            target.xhr = true;
+            target.getServerActions();
+            var actual = target.xhr;
+
+            Assert.Equal(false, actual);
+        }
+        [ Fact ]
         function ReturnsEmptyListIfQueueEmpty() {
             var target = new ActionQueue();
 
@@ -295,7 +371,7 @@ Test.Aura.Controller.ActionQueueTest = function() {
 
         [ Fact ]
         function ReturnsEmptyListIfNoServerActions() {
-            var background = new Action(serverDef, null, null, true);
+            var background = new Action(serverDef, null, null, null, true);
             var client = new Action(clientDef);
             var target = new ActionQueue();
             target.actions = [ background, client ];
@@ -321,7 +397,7 @@ Test.Aura.Controller.ActionQueueTest = function() {
         [ Fact ]
         function ReturnsServerActionsFromSet() {
             var first = new Action(serverDef);
-            var background = new Action(serverDef, null, null, true);
+            var background = new Action(serverDef, null, null, null, true);
             var second = new Action(serverDef);
             var client = new Action(clientDef);
             var third = new Action(serverDef);
@@ -361,8 +437,8 @@ Test.Aura.Controller.ActionQueueTest = function() {
 
         [ Fact ]
         function ReturnsFirstFromFront() {
-            var expected = new Action(serverDef, null, null, true);
-            var other = new Action(serverDef, null, null, true);
+            var expected = new Action(serverDef, null, null, null, true);
+            var other = new Action(serverDef, null, null, null, true);
             var server = new Action(serverDef);
             var client = new Action(clientDef);
             var target = new ActionQueue();
@@ -378,7 +454,7 @@ Test.Aura.Controller.ActionQueueTest = function() {
         function ReturnsFirstFromEnd() {
             var server = new Action(serverDef);
             var client = new Action(clientDef);
-            var expected = new Action(serverDef, null, null, true);
+            var expected = new Action(serverDef, null, null, null, true);
             var target = new ActionQueue();
             target.actions = [ server, client, expected ];
 

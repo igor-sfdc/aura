@@ -22,13 +22,12 @@
      * named auraStorage:init in templates?
      */
     testDuplicateNamedStorage : {
-        exceptionsAllowedDuringInit : ["Storage named 'dupNamedStorage' already exists!"],
+        auraErrorsExpectedDuringInit : ["Storage named 'dupNamedStorage' already exists!"],
         attributes : {
             dupNamedStorage : true
         },
         test : [
             function(cmp) {
-                $A.test.expectAuraError("Storage named 'dupNamedStorage' already exists!");
                 $A.test.assertTruthy(cmp.find("dupNamedStorage1"));
                 $A.test.assertTruthy(cmp.find("dupNamedStorage2"),
                                 "Duplicate named storage not registered using auraStorage:init");
@@ -802,15 +801,16 @@
             defaultAutoRefreshInterval : 0 // refresh every action
         },
         test : [function(cmp) {
-        	$A.test.setTestTimeout(30000);
+            $A.test.setTestTimeout(30000);
             cmp._testName = "testSkipReplayOnIdenticalRefreshWithComponents";
             this.resetCounter(cmp, "testSkipReplayOnIdenticalRefreshWithComponents");
             $A.test.addWaitFor(false, $A.test.isActionPending);
         }, function(cmp) {
-        	var a = $A.run(function(){
+            var a = $A.run(function(){
                 return cmp.getDef().getHelper()
                     .executeAction(cmp, "c.fetchDataRecordWithComponents", {testName:cmp._testName},
-                        function(a){a.setStorable();})
+                        function(a){a.setStorable();},
+                        function(a){$A.test.clearAndAssertComponentConfigs(a);});
                 });
             $A.test.addWaitFor("1", function(){return $A.test.getText(cmp.find("callbackCounter").getElement())},
                 function() {
@@ -828,9 +828,10 @@
             var now = new Date().getTime();
             $A.test.addWaitFor(true, function() { return now < new Date().getTime(); }, function(){});
         }, function(cmp) {
-        	var a = $A.run(function(){
+            var a = $A.run(function(){
                     return cmp.getDef().getHelper().executeAction(cmp, "c.fetchDataRecordWithComponents", {testName:cmp._testName},
-                        function(a){a.setStorable();})
+                        function(a){a.setStorable();},
+                        function(a){$A.test.clearAndAssertComponentConfigs(a);});
                 });
             $A.test.addWaitFor("refreshEnd", function(){return $A.test.getText(cmp.find("refreshEnd").getElement());},
                 function() {
@@ -865,7 +866,8 @@
         }, function(cmp) {
             var a = $A.run(function(){
                 return cmp.getDef().getHelper().executeAction(cmp, "c.fetchDataRecordWithComponents",
-                    {testName:cmp._testName, extraComponentsCreated:true}, function(a){a.setStorable();})
+                    {testName:cmp._testName, extraComponentsCreated:true}, function(a){a.setStorable();},
+                        function(a){$A.test.clearAndAssertComponentConfigs(a);});
             });
             $A.test.addWaitFor("1", function(){return $A.test.getText(cmp.find("callbackCounter").getElement())},
                 function() {
@@ -878,7 +880,8 @@
             // this response will be different(has extra component but same return value) so callback count should be +2 (for get(), then refresh())
             var a = $A.run(function(){
                     return cmp.getDef().getHelper().executeAction(cmp, "c.fetchDataRecordWithComponents",
-                        {testName:cmp._testName, extraComponentsCreated:true}, function(a){a.setStorable();})
+                        {testName:cmp._testName, extraComponentsCreated:true}, function(a){a.setStorable();},
+                        function(a){$A.test.clearAndAssertComponentConfigs(a);});
                 });
             $A.test.addWaitFor("3", function(){return $A.test.getText(cmp.find("callbackCounter").getElement())},
                 function() {
@@ -922,6 +925,8 @@
             a.setParams({testName : "testRefreshErrorResponseNotStored"});
             a.setStorable();
             a.setCallback(cmp, function(action){
+            	//sanity check
+            	$A.test.assertEquals(action.getReturnValue(),"anything really","we are not using the correct stub");
                 cmp.getDef().getHelper().findAndSetText(cmp, "callbackCounter",
                     parseInt(cmp.find("callbackCounter").getElement().innerHTML)+1);
             });
@@ -956,16 +961,24 @@
             a.setParams({testName : "testRefreshErrorResponseNotStored"});
             a.setStorable();
             a.setCallback(cmp, function(action){
-                    cmp.getDef().getHelper().findAndSetText(cmp, "callbackCounter",
-                        parseInt(cmp.find("callbackCounter").getElement().innerHTML)+1);
-                });
+                var newCount = parseInt(cmp.find("callbackCounter").getElement().innerHTML) + 1;
+                cmp.getDef().getHelper().findAndSetText(cmp, "callbackCounter", newCount);
+                // first action run will be stored refresh action
+                if (newCount == 4) {
+                    $A.storageService.getStorage("actions").adapter.getItem(a.getStorageKey(),
+                        function(item){
+                            $A.test.assertEquals(cmp._originalExpiration, item.expires, "Refresh action not run");
+                        });
+                }
+            });
             $A.test.enqueueAction(a);
-            $A.test.addWaitFor("4", function(){return $A.test.getText(cmp.find("callbackCounter").getElement())},
+            $A.test.addWaitFor("5", function(){return $A.test.getText(cmp.find("callbackCounter").getElement())},
                 function(){
                     $A.storageService.getStorage("actions").adapter.getItem(a.getStorageKey(),
                         function(item){
-                            $A.test.assertEquals(cmp._originalExpiration, item.expires,
-                                "storage expiration was not updated after refresh");
+                            // after new action is run, it is stored with new expires time
+                            $A.test.assertTrue(cmp._originalExpiration < item.expires,
+                                    "storage expiration was not updated after refresh");
                         });
                 });
         } ]

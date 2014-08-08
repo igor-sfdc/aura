@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-.THIS.datePicker-openIcon {
+.THIS + .datePicker-openIcon {
     position: relative;
     top: 1px;
     left: -22px;
@@ -21,4 +21,24 @@
     width: 12px;
     height: 15px;
     background: url('/auraFW/resources/aura/images/icon_openCalendar.png') no-repeat 0 0;
+}
+
+.THIS + .datePicker-openIcon + .clearIcon,
+.THIS + .clearIcon {
+    position: relative;
+    top: 2px;
+    left: -22px;
+    display: none;
+    width: 15px;
+    height: 15px;
+    background: url('/auraFW/resources/aura/images/clear.png') no-repeat 0 0;
+}
+
+.THIS + .datePicker-openIcon + .clearIcon.display,
+.THIS + .clearIcon.display {
+    display: inline-block;
+}
+
+.THIS + .datePicker-openIcon.hide {
+    display: none;
 }

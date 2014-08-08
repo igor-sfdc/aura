@@ -19,6 +19,7 @@ import java.io.IOException;
 
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.util.json.Json.Serialization.ReferenceType;
+import org.auraframework.util.json.Json.Serialization.ReferenceScope;
 
 /**
  * serialize some thing
@@ -35,10 +36,20 @@ public interface JsonSerializer<T> extends AuraServiceProvider {
      */
     ReferenceType getReferenceType(T value);
 
+    /**
+     * Get the reference type for the value's Class. Defaults to NONE
+     */
+    ReferenceScope getReferenceScope(T value);
+
     public static abstract class IdentitySerializer<T> implements JsonSerializer<T> {
         @Override
         public final ReferenceType getReferenceType(T value) {
             return ReferenceType.IDENTITY;
+        }
+
+        @Override
+        public final ReferenceScope getReferenceScope(T value) {
+            return ReferenceScope.ACTION;
         }
     }
 
@@ -46,6 +57,11 @@ public interface JsonSerializer<T> extends AuraServiceProvider {
         @Override
         public final ReferenceType getReferenceType(T value) {
             return ReferenceType.NONE;
+        }
+
+        @Override
+        public final ReferenceScope getReferenceScope(T value) {
+            return ReferenceScope.ACTION;
         }
     }
 

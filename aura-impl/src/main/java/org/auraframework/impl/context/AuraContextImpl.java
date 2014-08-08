@@ -16,28 +16,62 @@
 package org.auraframework.impl.context;
 
 import java.io.IOException;
-import java.util.*;
 
-import javax.xml.stream.XMLStreamException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import org.apache.log4j.Logger;
 import org.auraframework.Aura;
-import org.auraframework.def.*;
+import org.auraframework.css.MutableThemeList;
+import org.auraframework.css.ThemeList;
+import org.auraframework.def.ApplicationDef;
+import org.auraframework.def.BaseComponentDef;
+import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.DefDescriptor.DefType;
+import org.auraframework.def.Definition;
+import org.auraframework.def.EventType;
+import org.auraframework.def.ThemeDef;
 import org.auraframework.http.AuraBaseServlet;
-import org.auraframework.instance.*;
-import org.auraframework.system.*;
+import org.auraframework.impl.css.ThemeListImpl;
+import org.auraframework.instance.Action;
+import org.auraframework.instance.BaseComponent;
+import org.auraframework.instance.Event;
+import org.auraframework.instance.GlobalValueProvider;
+import org.auraframework.instance.Instance;
+import org.auraframework.instance.InstanceStack;
+import org.auraframework.instance.ValueProviderType;
+import org.auraframework.system.AuraContext;
+import org.auraframework.system.Client;
+
+import org.auraframework.system.LoggingContext.KeyValueLogger;
+import org.auraframework.system.MasterDefRegistry;
 import org.auraframework.test.TestContext;
 import org.auraframework.test.TestContextAdapter;
-import org.auraframework.throwable.AuraUnhandledException;
+import org.auraframework.throwable.SystemErrorException;
 import org.auraframework.throwable.quickfix.InvalidEventTypeException;
 import org.auraframework.throwable.quickfix.QuickFixException;
-import org.auraframework.util.AuraTextUtil;
-import org.auraframework.util.json.*;
+import org.auraframework.util.json.BaseJsonSerializationContext;
+import org.auraframework.util.json.Json;
+import org.auraframework.util.json.JsonSerializationContext;
+import org.auraframework.util.json.JsonSerializer;
 import org.auraframework.util.json.JsonSerializer.NoneSerializer;
+import org.auraframework.util.json.JsonSerializers;
 
-import com.google.common.collect.*;
+import java.util.Deque;
 
 public class AuraContextImpl implements AuraContext {
+    private static final Logger logger = Logger.getLogger(AuraContextImpl.class);
     public static class SerializationContext extends BaseJsonSerializationContext {
         public SerializationContext() {
             super(false, false, -1, -1, false);
@@ -58,19 +92,14 @@ public class AuraContextImpl implements AuraContext {
         }
     }
 
-    private static class GlobalIdSorter implements Comparator<BaseComponent<?, ?>> {
+    private static class DefSorter implements Comparator<Definition> {
         @Override
-        public int compare(BaseComponent<?, ?> arg0, BaseComponent<?, ?> arg1) {
-            String gid0 = arg0.getGlobalId();
-            String gid1 = arg1.getGlobalId();
-            List<String> gid0split = AuraTextUtil.splitSimple(":", gid0, 2);
-            List<String> gid1split = AuraTextUtil.splitSimple(":", gid1, 2);
-            return (Integer.parseInt(gid0split.get(gid0split.size() - 1))
-                - Integer.parseInt(gid1split.get(gid1split.size() - 1)));
+        public int compare(Definition arg0, Definition arg1) {
+            return arg0.getDescriptor().compareTo(arg1.getDescriptor());
         }
     }
 
-    private static final GlobalIdSorter GID_SORTER = new GlobalIdSorter();
+    private static final DefSorter DEFSORTER = new DefSorter();
 
     private static class Serializer extends NoneSerializer<AuraContext> {
         private final boolean forClient;
@@ -85,6 +114,13 @@ public class AuraContextImpl implements AuraContext {
 
         public static final String DELETED = "deleted";
 
+        private void writeDefs(Json json, String name, List<Definition> writable) throws IOException {
+            if (writable.size() > 0) {
+                Collections.sort(writable, DEFSORTER);
+                json.writeMapEntry(name, writable);
+            }
+        }
+
         @Override
         public void serialize(Json json, AuraContext ctx) throws IOException {
             json.writeMapBegin();
@@ -98,28 +134,42 @@ public class AuraContextImpl implements AuraContext {
                     json.writeMapEntry("cmp", String.format("%s:%s", appDesc.getNamespace(), appDesc.getName()));
                 }
             }
-            if (ctx.getSerializePreLoad()) {
-                json.writeMapEntry("preloads", ctx.getPreloads());
+
+            if (ctx.getSerializeThemes()) {
+                ThemeList themes = ctx.getThemeList();
+                if (!themes.isEmpty()) {
+                    List<String> stringed = Lists.newArrayList();
+                    for (DefDescriptor<ThemeDef> theme : themes) {
+                        stringed.add(theme.getQualifiedName());
+                    }
+                    json.writeMapEntry("themes", stringed);
+                }
+
+                Optional<String> dynamicVarsUid = themes.getActiveDynamicVarsUid();
+                if (dynamicVarsUid.isPresent()) {
+                    json.writeMapEntry("dynamicVarsUid", dynamicVarsUid.get());
+                }
             }
+
             if (ctx.getRequestedLocales() != null) {
-                List<String> locales = new ArrayList<String>();
+                List<String> locales = new ArrayList<>();
                 for (Locale locale : ctx.getRequestedLocales()) {
                     locales.add(locale.toString());
                 }
                 json.writeMapEntry("requestedLocales", locales);
             }
-            Map<String,String> loadedStrings = Maps.newHashMap();
+            Map<String, String> loadedStrings = Maps.newHashMap();
             Map<DefDescriptor<?>, String> clientLoaded = Maps.newHashMap();
             clientLoaded.putAll(ctx.getClientLoaded());
-            for (Map.Entry<DefDescriptor<?>,String> entry : ctx.getLoaded().entrySet()) {
+            for (Map.Entry<DefDescriptor<?>, String> entry : ctx.getLoaded().entrySet()) {
                 loadedStrings.put(String.format("%s@%s", entry.getKey().getDefType().toString(),
-                                                entry.getKey().getQualifiedName()), entry.getValue());
+                        entry.getKey().getQualifiedName()), entry.getValue());
                 clientLoaded.remove(entry.getKey());
             }
             if (forClient) {
                 for (DefDescriptor<?> deleted : clientLoaded.keySet()) {
                     loadedStrings.put(String.format("%s@%s", deleted.getDefType().toString(),
-                                deleted.getQualifiedName()), DELETED);
+                            deleted.getQualifiedName()), DELETED);
                 }
             }
             if (loadedStrings.size() > 0) {
@@ -166,21 +216,45 @@ public class AuraContextImpl implements AuraContext {
                     json.writeArrayEnd();
                 }
 
-                Map<String, BaseComponent<?, ?>> components = ctx.getComponents();
-                if (!components.isEmpty()) {
-                    List<BaseComponent<?, ?>> sorted = Lists.newArrayList(components.values());
-                    Collections.sort(sorted, GID_SORTER);
-                    json.writeMapKey("components");
-                    json.writeMapBegin();
+                //
+                // Now comes the tricky part, we have to serialize all of the definitions that are
+                // required on the client side, and, of all types. This way, we won't have to handle
+                // ugly cases of actual definitions nested inside our configs, and, we ensure that
+                // all dependencies actually get sent to the client. Note that the 'loaded' set needs
+                // to be updated as well, but that needs to happen prior to this.
+                //
+                Map<DefDescriptor<? extends Definition>, Definition> defMap;
 
-                    for (BaseComponent<?, ?> component : sorted) {
-                        if (component.hasLocalDependencies()) {
-                            json.writeMapEntry(component.getGlobalId(), component);
+                defMap = ctx.getDefRegistry().filterRegistry(ctx.getPreloadedDefinitions());
+
+                if (defMap.size() > 0) {
+                    List<Definition> componentDefs = Lists.newArrayList();
+                    List<Definition> eventDefs = Lists.newArrayList();
+                    List<Definition> libraryDefs = Lists.newArrayList();
+
+                    for (Map.Entry<DefDescriptor<? extends Definition>, Definition> entry : defMap.entrySet()) {
+                        DefDescriptor<? extends Definition> desc = entry.getKey();
+                        DefType dt = desc.getDefType();
+                        Definition d = entry.getValue();
+                        //
+                        // Ignore defs that ended up not being valid. This is arguably something
+                        // that the MDR should have done when filtering.
+                        //
+                        if (d != null) {
+                            if (DefType.COMPONENT.equals(dt) || DefType.APPLICATION.equals(dt)) {
+                                componentDefs.add(d);
+                            } else if (DefType.EVENT.equals(dt)) {
+                                eventDefs.add(d);
+                            } else if (DefType.LIBRARY.equals(dt)) {
+                                libraryDefs.add(d);
+                            }
                         }
                     }
-
-                    json.writeMapEnd();
+                    writeDefs(json, "componentDefs", componentDefs);
+                    writeDefs(json, "eventDefs", eventDefs);
+                    writeDefs(json, "libraryDefs", libraryDefs);
                 }
+                ctx.serializeAsPart(json);
             }
             json.writeMapEnd();
         }
@@ -195,11 +269,11 @@ public class AuraContextImpl implements AuraContext {
     // serializer just for passing context in a url
     public static final Serializer HTML_SERIALIZER = new Serializer(false, true);
 
-    private final Set<DefDescriptor<?>> staleChecks = new HashSet<DefDescriptor<?>>();
+    private final Set<DefDescriptor<?>> staleChecks = new HashSet<>();
 
     private final Mode mode;
 
-    private final Access access;
+    private final Authentication access;
 
     private final MasterDefRegistry masterRegistry;
 
@@ -213,9 +287,9 @@ public class AuraContextImpl implements AuraContext {
 
     private String num;
 
-    private String currentNamespace;
+    private final Set<String> dynamicNamespaces = Sets.newLinkedHashSet();
 
-    private final LinkedHashSet<String> preloadedNamespaces = Sets.newLinkedHashSet();
+    private Set<DefDescriptor<?>> preloadedDefinitions = null;
 
     private final Format format;
 
@@ -224,25 +298,17 @@ public class AuraContextImpl implements AuraContext {
     private final Map<DefDescriptor<?>, String> loaded = Maps.newLinkedHashMap();
     private final Map<DefDescriptor<?>, String> clientLoaded = Maps.newLinkedHashMap();
 
-    private final Map<String, BaseComponent<?, ?>> componentRegistry = Maps.newLinkedHashMap();
-
-    private int nextId = 1;
-
     private String contextPath = "";
 
-    private boolean serializePreLoad = true;
-
     private boolean serializeLastMod = true;
+
+    private boolean serializeThemes = false; // only needed for CSS urls
 
     private boolean preloading = false;
 
     private DefDescriptor<? extends BaseComponentDef> appDesc;
 
-    private BaseComponentDef app;
-
-    private boolean appLoaded = false;
-
-    private DefDescriptor<?> preloadingDesc;
+    private DefDescriptor<? extends BaseComponentDef> loadingAppDesc;
 
     private List<Locale> requestedLocales;
 
@@ -253,19 +319,21 @@ public class AuraContextImpl implements AuraContext {
     private final List<Event> clientEvents = Lists.newArrayList();
 
     private String fwUID;
-    
+
     private final boolean isDebugToolEnabled;
 
+    private InstanceStack fakeInstanceStack;
+
+    private MutableThemeList themes = new ThemeListImpl();
+
+    private Deque<DefDescriptor<?>> callingDescriptorStack = Lists.newLinkedList();
+
+    private static final int MAX_COMPONENT_COUNT        = 10000;
+    private int componentCount;
+
     public AuraContextImpl(Mode mode, MasterDefRegistry masterRegistry, Map<DefType, String> defaultPrefixes,
-            Format format, Access access, JsonSerializationContext jsonContext,
+            Format format, Authentication access, JsonSerializationContext jsonContext,
             Map<ValueProviderType, GlobalValueProvider> globalProviders, boolean isDebugToolEnabled) {
-        if (access == Access.AUTHENTICATED) {
-            preloadedNamespaces.add("aura");
-            preloadedNamespaces.add("ui");
-            if (mode == Mode.DEV) {
-                preloadedNamespaces.add("auradev");
-            }
-        }
         this.mode = mode;
         this.masterRegistry = masterRegistry;
         this.defaultPrefixes = defaultPrefixes;
@@ -277,49 +345,21 @@ public class AuraContextImpl implements AuraContext {
     }
 
     @Override
-    public void addPreload(String preload) {
-        preloadedNamespaces.add(preload);
-    }
-
-    @Override
-    public void clearPreloads() {
-        preloadedNamespaces.clear();
-    }
-
-    @Override
     public boolean isPreloaded(DefDescriptor<?> descriptor) {
         if (preloading) {
             return false;
         }
-        
-        if (appDesc != null && !appLoaded) {
-            appLoaded = true;
-            try {
-                app = masterRegistry.getDef(appDesc);
-            } catch (QuickFixException qfe) {
-                // we just don't have an app, ignore this.
-            } catch (AuraUnhandledException ahe) {
-                // Ugh! our file has been created, but not written?
-                // TODO: W-1486796
-                if (!(ahe.getCause() instanceof XMLStreamException)) {
-                    throw ahe;
-                }
-            }
+        if (dynamicNamespaces.contains(descriptor.getNamespace())) {
+            return true;
         }
-        
-        if (app != null) {
-            for (DependencyDef dd : app.getDependencies()) {
-                if (dd.getDependency().matchDescriptor(descriptor)) {
-                    return true;
-                }
-            }
+        if (preloadedDefinitions != null) {
+            return preloadedDefinitions.contains(descriptor);
         }
-        
-        return preloadedNamespaces.contains(descriptor.getNamespace());
+        return false;
     }
 
     @Override
-    public Access getAccess() {
+    public Authentication getAccess() {
         return access;
     }
 
@@ -329,13 +369,13 @@ public class AuraContextImpl implements AuraContext {
     }
 
     @Override
-    public Client getClient() {
-        return client;
+    public DefDescriptor<? extends BaseComponentDef> getLoadingApplicationDescriptor() {
+        return (loadingAppDesc != null) ? loadingAppDesc : appDesc;
     }
 
     @Override
-    public Map<String, BaseComponent<?, ?>> getComponents() {
-        return componentRegistry;
+    public Client getClient() {
+        return client;
     }
 
     @Override
@@ -354,8 +394,14 @@ public class AuraContextImpl implements AuraContext {
     }
 
     @Override
+    public DefDescriptor<?> getCurrentCallingDescriptor() {
+        return callingDescriptorStack.peekFirst();
+    }
+
+    @Override
     public String getCurrentNamespace() {
-        return currentNamespace;
+        DefDescriptor<?> caller = getCurrentCallingDescriptor();
+        return caller != null ? caller.getNamespace() : null;
     }
 
     @Override
@@ -364,8 +410,23 @@ public class AuraContextImpl implements AuraContext {
     }
 
     @Override
+    public Map<DefType, String> getDefaultPrefixes() {
+        return defaultPrefixes;
+    }
+
+    @Override
     public MasterDefRegistry getDefRegistry() {
         return masterRegistry;
+    }
+
+    @Override
+    public Set<DefDescriptor<?>> getPreloadedDefinitions() {
+        return preloadedDefinitions;
+    }
+
+    @Override
+    public void setPreloadedDefinitions(Set<DefDescriptor<?>> preloadedDefinitions) {
+        this.preloadedDefinitions = Collections.unmodifiableSet(preloadedDefinitions);
     }
 
     @Override
@@ -394,18 +455,8 @@ public class AuraContextImpl implements AuraContext {
     }
 
     @Override
-    public int getNextId() {
-        return nextId++;
-    }
-
-    @Override
     public String getNum() {
         return num;
-    }
-
-    @Override
-    public Set<String> getPreloads() {
-        return Collections.unmodifiableSet(preloadedNamespaces);
     }
 
     @Override
@@ -416,11 +467,6 @@ public class AuraContextImpl implements AuraContext {
     @Override
     public boolean getSerializeLastMod() {
         return serializeLastMod;
-    }
-
-    @Override
-    public boolean getSerializePreLoad() {
-        return serializePreLoad;
     }
 
     @Override
@@ -444,13 +490,8 @@ public class AuraContextImpl implements AuraContext {
     }
 
     @Override
-    public void registerComponent(BaseComponent<?, ?> component) {
-        Action action = getCurrentAction();
-        if (action != null) {
-            action.registerComponent(component);
-        } else {
-            componentRegistry.put(component.getGlobalId(), component);
-        }
+    public void setLoadingApplicationDescriptor(DefDescriptor<? extends BaseComponentDef> loadingAppDesc) {
+        this.loadingAppDesc = loadingAppDesc;
     }
 
     @Override
@@ -492,8 +533,17 @@ public class AuraContextImpl implements AuraContext {
     }
 
     @Override
-    public void setCurrentNamespace(String namespace) {
-        this.currentNamespace = namespace;
+    public void pushCallingDescriptor(DefDescriptor<?> descriptor) {
+        callingDescriptorStack.push(descriptor);
+    }
+
+    @Override
+    public void popCallingDescriptor() {
+        if (callingDescriptorStack.size()>0) {
+            callingDescriptorStack.pop();
+        } else {
+            logger.warn("Trying to pop a calling descriptor from an empty stack");
+        }
     }
 
     @Override
@@ -512,6 +562,11 @@ public class AuraContextImpl implements AuraContext {
     }
 
     @Override
+    public void addDynamicNamespace(String namespace) {
+        this.dynamicNamespaces.add(namespace);
+    }
+
+    @Override
     public void setRequestedLocales(List<Locale> requestedLocales) {
         this.requestedLocales = requestedLocales;
     }
@@ -519,11 +574,6 @@ public class AuraContextImpl implements AuraContext {
     @Override
     public void setSerializeLastMod(boolean serializeLastMod) {
         this.serializeLastMod = serializeLastMod;
-    }
-
-    @Override
-    public void setSerializePreLoad(boolean serializePreLoad) {
-        this.serializePreLoad = serializePreLoad;
     }
 
     @Override
@@ -552,14 +602,13 @@ public class AuraContextImpl implements AuraContext {
     @Override
     public void setClientLoaded(Map<DefDescriptor<?>, String> clientLoaded) {
         loaded.putAll(clientLoaded);
-        clientLoaded.putAll(clientLoaded);
+        this.clientLoaded.putAll(clientLoaded);
     }
 
     @Override
     public void addLoaded(DefDescriptor<?> descriptor, String uid) {
         loaded.put(descriptor, uid);
     }
-
 
     @Override
     public void dropLoaded(DefDescriptor<?> descriptor) {
@@ -574,16 +623,6 @@ public class AuraContextImpl implements AuraContext {
     @Override
     public Map<DefDescriptor<?>, String> getLoaded() {
         return Collections.unmodifiableMap(loaded);
-    }
-
-    @Override
-    public void setPreloading(DefDescriptor<?> descriptor) {
-        preloadingDesc = descriptor;
-    }
-
-    @Override
-    public DefDescriptor<?> getPreloading() {
-        return preloadingDesc;
     }
 
     @Override
@@ -603,6 +642,120 @@ public class AuraContextImpl implements AuraContext {
 
     @Override
     public boolean getIsDebugToolEnabled() {
-            return isDebugToolEnabled;
+        return isDebugToolEnabled;
+    }
+
+    @Override
+    public int getNextId() {
+        return getInstanceStack().getNextId();
+    }
+
+    @Override
+    public InstanceStack getInstanceStack() {
+        if (currentAction != null) {
+            return currentAction.getInstanceStack();
+        } else {
+            if (fakeInstanceStack == null) {
+                fakeInstanceStack = new InstanceStack();
+            }
+            return fakeInstanceStack;
+        }
+    }
+
+    private static class SBKeyValueLogger implements KeyValueLogger {
+        private StringBuffer sb;
+        private String comma = "";
+
+        public SBKeyValueLogger(StringBuffer sb) {
+            this.sb = sb;
+        }
+
+        @Override
+        public void log(String key, String value) {
+            sb.append(comma);
+            sb.append(key);
+            sb.append("=");
+            sb.append(value);
+            comma = ",";
+        }
+    };
+
+    @Override
+    public void registerComponent(BaseComponent<?, ?> component) {
+        InstanceStack iStack = getInstanceStack();
+        if (iStack.isUnprivileged()) {
+            if (componentCount++ > MAX_COMPONENT_COUNT) {
+                //
+                // This is bad, try to give the poor user an idea of what happened.
+                //
+                Action tmp = getCurrentAction();
+                StringBuffer sb = new StringBuffer();
+                if (tmp != null) {
+                    sb.append(tmp);
+                    sb.append("(");
+                    tmp.logParams(new SBKeyValueLogger(sb));
+                    sb.append(")");
+                } else {
+                    sb.append("request");
+                }
+                throw new SystemErrorException("Too many components for "+sb.toString());
+            }
+        }
+        iStack.registerComponent(component);
+    }
+
+    @Override
+    public void serializeAsPart(Json json) throws IOException {
+        if (fakeInstanceStack != null) {
+            fakeInstanceStack.serializeAsPart(json);
+        }
+    }
+
+    @Override
+    public void setSerializeThemes(boolean serializeThemes) {
+        this.serializeThemes = serializeThemes;
+    }
+
+    @Override
+    public boolean getSerializeThemes() {
+        return serializeThemes;
+    }
+
+    @Override
+    public void addAppThemeDescriptors() throws QuickFixException {
+        DefDescriptor<? extends BaseComponentDef> desc = getLoadingApplicationDescriptor();
+        if (desc != null && desc.getDefType() == DefType.APPLICATION) {
+            try {
+                // the app themes conceptually precedes themes explicitly added to the context.
+                // this is important for the "last declared theme wins" contract
+                themes.prependAll(((ApplicationDef) desc.getDef()).getThemeDescriptors());
+            } catch (QuickFixException qfe) {
+                // either the app or a dependency is invalid, nothing we can do about getting the themes in that case.
+            }
+        }
+    }
+
+    @Override
+    public void appendThemeDescriptor(DefDescriptor<ThemeDef> themeDescriptor) throws QuickFixException {
+        themes.append(themeDescriptor);
+    }
+
+    @Override
+    public ThemeList getThemeList() {
+        return themes;
+    }
+
+    @Override
+    public DefDescriptor<?> getCurrentDescriptor() {
+        DefDescriptor<?> caller = getCurrentCallingDescriptor();
+        if (caller == null) {
+            InstanceStack istack = getInstanceStack();
+            Instance<?> instance = istack.peek();
+            if (instance != null) {
+                caller = instance.getDescriptor();
+            }
+        }
+        
+        return caller;
     }
 }

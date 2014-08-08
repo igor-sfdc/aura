@@ -15,24 +15,48 @@
  */
 package org.auraframework.impl.adapter;
 
+import java.util.Set;
+
+import org.auraframework.Aura;
 import org.auraframework.adapter.MockConfigAdapter;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
 
 import aQute.bnd.annotation.component.Component;
+import org.auraframework.def.DefDescriptor;
+import org.auraframework.def.Definition;
+import org.auraframework.impl.source.StringSourceLoader;
+import org.auraframework.test.TestContext;
+import org.auraframework.test.TestContextAdapter;
+
+import com.google.common.collect.ImmutableSortedSet;
 
 /**
  * ConfigAdapter for Aura tests.
- * 
- * 
+ *
+ *
  * @since 0.0.178
  */
 @Component (provide=AuraServiceProvider.class)
 public class MockConfigAdapterImpl extends ConfigAdapterImpl implements MockConfigAdapter {
+    private static final Set<String> SYSTEM_TEST_NAMESPACES = new ImmutableSortedSet.Builder<String>(String.CASE_INSENSITIVE_ORDER).add(
+    		"auratest", "actionsTest", "attributesTest", "auraStorageTest", "gvpTest", "preloadTest", "clientLibraryTest", "clientApiTest",
+    	"clientServiceTest", "componentTest", "docstest", "expressionTest", "forEachDefTest", "forEachTest", "handleEventTest", "ifTest", "iterationTest",
+    	"layoutServiceTest", "listTest", "loadLevelTest", "perfTest", "performanceTest", "renderingTest", "setAttributesTest", "test", "themeSanityTest", "uitest", "utilTest",
+    	"updateTest", "whitespaceBehaviorTest", "appCache").build();
+
 
     private Boolean isClientAppcacheEnabled = null;
     private Boolean isProduction = null;
     private Boolean isAuraJSStatic = null;
     private Boolean validateCss = null;
+
+    public MockConfigAdapterImpl() {
+        super();
+    }
+
+    public MockConfigAdapterImpl(String resourceCacheDir) {
+        super(resourceCacheDir);
+    }
 
     @Override
     public void reset() {
@@ -81,4 +105,39 @@ public class MockConfigAdapterImpl extends ConfigAdapterImpl implements MockConf
     public boolean validateCss() {
         return (validateCss == null) ? super.validateCss() : validateCss;
     }
+
+	@Override
+	public boolean isPrivilegedNamespace(String namespace) {
+		if (StringSourceLoader.getInstance().isPrivilegedNamespace(namespace) || SYSTEM_TEST_NAMESPACES.contains(namespace) || super.isPrivilegedNamespace(namespace)) {
+			return true;
+		}
+
+        // Check for any local defs with this namespace and consider that as an indicator that we have a privileged
+        // namespace
+        if (namespace != null) {
+            TestContextAdapter testContextAdapter = Aura.get(TestContextAdapter.class);
+            if (testContextAdapter != null) {
+                TestContext testContext = testContextAdapter.getTestContext();
+                if (testContext != null) {
+                    Set<Definition> localDefs = testContext.getLocalDefs();
+                    for (Definition def : localDefs) {
+                    	DefDescriptor<? extends Definition> defDescriptor = def.getDescriptor();
+                    	if(defDescriptor!=null) {
+	                        String ns = defDescriptor.getNamespace();
+	                        if (namespace.equalsIgnoreCase(ns)) {
+	                            return true;
+	                        }
+                    	}
+                    }
+                }
+            }
+        }
+
+        return false;
+	}
+
+	@Override
+	public boolean isUnsecuredNamespace(String namespace) {
+		return super.isUnsecuredNamespace(namespace) || SYSTEM_TEST_NAMESPACES.contains(namespace);
+	}
 }

@@ -24,9 +24,11 @@ import java.util.Set;
 import junit.framework.Assert;
 
 import org.apache.commons.lang3.StringEscapeUtils;
+import org.auraframework.test.SauceUtil;
 import org.auraframework.util.json.JsonReader;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebDriverException;
@@ -46,13 +48,81 @@ import com.google.common.collect.Lists;
 public class AuraUITestingUtil {
     private final WebDriver driver;
     private long timeoutInSecs = 30;
+    private int rerunCount = 0;
 
     public AuraUITestingUtil(WebDriver driver) {
         this.driver = driver;
+        if (SauceUtil.areTestsRunningOnSauce()) {
+            // things are slower in SauceLabs
+            timeoutInSecs = 120;
+        }
     }
 
     public void setTimeoutInSecs(long timeoutInSecs) {
         this.timeoutInSecs = timeoutInSecs;
+    }
+
+    /**
+     * An internal class to wait for and retrieve an element from the driver.
+     */
+    private static class WaitAndRetrieve implements ExpectedCondition<Boolean> {
+        private final By locator;
+        private WebElement found = null;
+
+        public WaitAndRetrieve(By locator) {
+            this.locator = locator;
+        }
+
+        @Override
+        public Boolean apply(WebDriver d) {
+            List<WebElement> elements = d.findElements(locator);
+
+            if (elements.size() > 0) {
+                found = elements.get(0);
+                return true;
+            }
+            return false;
+        }
+
+        public WebElement getFound() {
+            return this.found;
+        }
+
+        @Override
+        public String toString() {
+            return "WaitAndRetrieve: " + this.locator + " found " + this.found;
+        }
+    }
+
+    /**
+     * Waits for element with matching locator to appear in dom.
+     * 
+     * This will wait for at least one element with the locator to appear in the dom, and it will return the first
+     * element found. If there are more than one element that match the locator, this will succeed when the first one
+     * appears.
+     * 
+     * @param msg Error message on timeout.
+     * @param locator By of element waiting for.
+     */
+    public WebElement waitForElement(String msg, By locator) {
+        WaitAndRetrieve war = new WaitAndRetrieve(locator);
+        WebDriverWait wait = new WebDriverWait(driver, timeoutInSecs);
+        wait.withMessage(msg);
+        wait.ignoring(NoSuchElementException.class);
+        wait.until(war);
+        return war.getFound();
+    }
+
+    /**
+     * Waits for element with matching locator to appear in dom.
+     * 
+     * Convenience routine to supply a message.
+     * 
+     * @param locator By of element waiting for.
+     */
+    public WebElement waitForElement(By locator) {
+        String msg = "Element with locator \'" + locator.toString() + "\' never appeared";
+        return waitForElement(msg, locator);
     }
 
     public WebElement findElementAndTypeEventNameInIt(String event) {
@@ -95,6 +165,11 @@ public class AuraUITestingUtil {
 
     public String getFindAtRootExpr(String cmp) {
         String exp = "window.$A.getRoot().find('" + cmp + "')";
+        return exp;
+    }
+
+    public String getEncodedContextForServer() {
+        String exp = "window.$A.getContext().encodeForServer()";
         return exp;
     }
 
@@ -187,7 +262,7 @@ public class AuraUITestingUtil {
         /**
          * Wrap the given javascript to evaluate and then check for any collected errors. Then, return the result and
          * errors back to the WebDriver. We must return as an array because
-         * {@link JavascriptExecutor#executeScript(String, Object...) cannot handle Objects as return values."
+         * {@link JavascriptExecutor#executeScript(String, Object...)} cannot handle Objects as return values."
          */
         String escapedJavascript = StringEscapeUtils.escapeEcmaScript(javascript);
         String wrapper = "var ret,scriptExecException;"
@@ -208,6 +283,7 @@ public class AuraUITestingUtil {
                     + "Arguments: (" + Arrays.toString(args) + ")\n" + "Script:\n" + javascript + "\n", exception);
             String errors = (String) wrapResult.get(1);
             assertJsTestErrors(errors);
+            rerunCount = 0;
             return wrapResult.get(0);
         } catch (WebDriverException e) {
             // shouldn't come here that often as we are also wrapping the js
@@ -215,6 +291,14 @@ public class AuraUITestingUtil {
             Assert.fail("Script execution failed.\n" + "Failure Message: " + e.getMessage() + "\n" + "Arguments: ("
                     + Arrays.toString(args) + ")\n" + "Script:\n" + javascript + "\n");
             throw e;
+        } catch (NullPointerException npe) {
+            // Although it should never happen, ios-driver is occasionally returning null when trying to execute the
+            // wrapped javascript. Re-run the script a couple more times before failing.
+            if (++rerunCount > 2) {
+                Assert.fail("Script execution failed.\n" + "Failure Message: " + npe.getMessage() + "\n"
+                        + "Arguments: (" + Arrays.toString(args) + ")\n" + "Script:\n" + javascript + "\n");
+            }
+            return getEval(javascript, args);
         }
     }
 
@@ -228,11 +312,26 @@ public class AuraUITestingUtil {
     }
 
     /**
+     * @return the User-Agent for the browser we are running tests on
+     */
+    public String getUserAgent() {
+        try {
+            return (String) getRawEval("return window.navigator.userAgent;");
+        } catch (Exception e) {
+            return "error getting User-Agent: " + e;
+        }
+    }
+
+    /**
      * Process the results from $A.test.getErrors(). If there were any errors, then fail the test accordingly.
      * 
      * @param errors the raw results from invoking $A.test.getErrors()
      */
     public void assertJsTestErrors(String errors) {
+        if (errors == null) {
+            return;
+        }
+
         if (!errors.isEmpty()) {
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> errorsList = (List<Map<String, Object>>) new JsonReader().read(errors);
@@ -280,6 +379,32 @@ public class AuraUITestingUtil {
     }
 
     /**
+     * Return Bounding Rectangle Property for given Element
+     * 
+     * @param elementLocalId
+     * @param position = "top, left, right, and bottom"
+     * @return
+     */
+    public String getBoundingRectPropOfElement(String elementGlobalId, String position) {
+        String element = getCmpExpr(elementGlobalId) + ".getElement().getBoundingClientRect()." + position;
+        return getEval(prepareReturnStatement(element)).toString();
+    }
+
+    /**
+     * Given Element className, method would return component globalId which could be used with $A.getCmp(globalId) to
+     * have handle in the component in UI test
+     * 
+     * @param className
+     * @return
+     */
+    public String getCmpGlobalIdGivenElementClassName(String className) {
+        String fields = "field('className',\"get('v.class')\").field(\"conc\", \"isConcrete()\")";
+        String whereClause = "className === '" + className + "' && conc === true";
+        String globalId = findGlobalIdForComponentWithGivenProperties(fields, whereClause);
+        return globalId;
+    }
+
+    /**
      * Check for uncaught Aura or Javascript errors after executing a particular WebDriver function.
      * 
      * @param function a Function accepting a WebDriver instance
@@ -303,8 +428,8 @@ public class AuraUITestingUtil {
      * Look for any quickfix exceptions. These can sometimes reflect a framework load failure but provide a better error
      * message.
      */
-    public void assertNoQuickFixMessage(Set<String> exceptForThese) {
-        String auraErrorMsg = getQuickFixMessage();
+    public void assertNoAuraErrorMessage(Set<String> exceptForThese) {
+        String auraErrorMsg = getAuraErrorMessage();
         if (!auraErrorMsg.isEmpty()) {
             if (exceptForThese != null) {
                 // Compare against any expected failures
@@ -340,31 +465,89 @@ public class AuraUITestingUtil {
      */
     public List<WebElement> findDomElements(final By locator) {
         WebDriverWait wait = new WebDriverWait(driver, timeoutInSecs);
-        return wait.until(new ExpectedCondition<List<WebElement>>() {
-            private List<WebElement> elements = null;
+        return wait.ignoring(StaleElementReferenceException.class).until(new ExpectedCondition<List<WebElement>>() {
 
             @Override
             public List<WebElement> apply(WebDriver d) {
-                if (elements == null) {
-                    elements = driver.findElements(locator);
-                }
-                try {
-                    if (elements.size() > 0 &&
-                            getBooleanEval("return arguments[0].ownerDocument === document", elements.get(0))) {
-                        return elements;
-                    }
-                } catch (StaleElementReferenceException e) {
-                    elements = null;
+                List<WebElement> elements = driver.findElements(locator);
+                if (elements.size() > 0 &&
+                        getBooleanEval("return arguments[0].ownerDocument === document", elements.get(0))) {
+                    return elements;
                 }
                 return null;
             }
         });
     }
 
+    /**
+     * Get an error message from the error div.
+     * 
+     * FIXME: this is _not_ a quick fix message. This is the error box that is used by $A.error. Also note that this
+     * does not check if the box is visible. This box should always be present, and may contain old text that is no
+     * longer relevant. Please don't use this!
+     * 
+     * @return the error message.
+     */
+    @Deprecated
     public String getQuickFixMessage() {
         WebElement errorBox = driver.findElement(By.id("auraErrorMessage"));
         if (errorBox == null) {
-            Assert.fail("Aura quick fix errorBox not found.");
+            Assert.fail("Aura errorBox not found.");
+        }
+        return errorBox.getText();
+    }
+
+    /**
+     * Get the current aura error message.
+     * 
+     * This will fail the test if the div is not found (which means that the page did not load at all). If the box is
+     * not displayed, it returns an empty string.
+     * 
+     * @return any error message that is displayed.
+     */
+    public String getAuraErrorMessage() {
+        WebElement errorBox = driver.findElement(By.id("auraErrorMessage"));
+        if (errorBox == null) {
+            Assert.fail("Aura errorBox not found.");
+        }
+        if (!errorBox.isDisplayed()) {
+            return "";
+        }
+        return errorBox.getText();
+    }
+
+    /**
+     * Assert that our error message is the expected production error message.
+     */
+    public void assertProdErrorMessage() throws Exception {
+        String actual = getAuraErrorMessage().replaceAll("\\s+", " ");
+        Assert.assertEquals("Unable to process your request", actual);
+    }
+
+    /**
+     * Get the quick fix title.
+     */
+    public String getQuickFixTitle() {
+        WebElement toolBar = driver.findElement(By.className("toolbar"));
+        if (toolBar == null) {
+            // This is actually ok, as the box is not rendered if the cause is not present
+            // In this case return an empty string.
+            return "";
+        }
+        return toolBar.getText();
+    }
+
+    /**
+     * Get any 'cause' message from a quick fix exception
+     * 
+     * @return the quick fix cause exception.
+     */
+    public String getQuickFixCause() {
+        WebElement errorBox = driver.findElement(By.className("causeWrapper"));
+        if (errorBox == null) {
+            // This is actually ok, as the box is not rendered if the cause is not present
+            // In this case return an empty string.
+            return "";
         }
         return errorBox.getText();
     }
@@ -441,17 +624,14 @@ public class AuraUITestingUtil {
      * {@link #waitForDocumentReady()}.
      */
     public void waitForAuraFrameworkReady(final Set<String> expectedErrors) {
-        // Umbrella check for any framework load error.
-        if (!getBooleanEval("return !!window.$A")) {
-            Assert.fail("Initialization error: document loaded without $A. Perhaps the initial GET failed.");
-        }
-
         WebDriverWait wait = new WebDriverWait(driver, timeoutInSecs);
-        wait.ignoring(StaleElementReferenceException.class).until(
+        wait.ignoring(StaleElementReferenceException.class)
+        .withMessage("Initializati​on error: Perhaps the initial GET failed")
+        .until(
                 new Function<WebDriver, Boolean>() {
                     @Override
                     public Boolean apply(WebDriver input) {
-                        assertNoQuickFixMessage(expectedErrors);
+                        assertNoAuraErrorMessage(expectedErrors);
                         return isAuraFrameworkReady();
                     }
                 });
@@ -472,13 +652,14 @@ public class AuraUITestingUtil {
      * Finds the WebElement identified by locator and applies the provided Function to it, ignoring
      * StaleElementReferenceException.
      * 
-     * @param locator
-     * @param function
+     * @param locator By locator to find WebElement in the DOM.
+     * @param function Function to run on web
+     * @param message Message to display to user on timeout.
      * @return
      */
-    public <R> R waitForElementFunction(final By locator, final Function<WebElement, R> function) {
+    public <R> R waitForElementFunction(final By locator, final Function<WebElement, R> function, String message) {
         WebDriverWait wait = new WebDriverWait(driver, timeoutInSecs);
-        return wait.until(new ExpectedCondition<R>() {
+        return wait.withMessage(message).until(new ExpectedCondition<R>() {
             private WebElement element = null;
 
             @Override
@@ -496,29 +677,36 @@ public class AuraUITestingUtil {
         });
     }
 
+    public <R> R waitForElementFunction(final By locator, final Function<WebElement, R> function) {
+        return waitForElementFunction(locator, function, "Timeout waiting for element");
+    }
+
     /**
      * Wait for text of an element to be either present or not present.
      * 
-     * @param locator
-     * @param text
-     * @param toBePresent
+     * @param locator By locator to find WebElement in the DOM.
+     * @param text Text on the found WebElement.
+     * @param toBePresent True if we want text passed in as parameter to equal text on found WebElement.
+     * @param message Message to display to user on timeout.
      */
-    public void waitForElementText(final By locator, final String text, final boolean toBePresent) {
+    public void waitForElementText(final By locator, final String text, final boolean toBePresent, String message) {
         waitForElementFunction(locator, new Function<WebElement, Boolean>() {
             @Override
             public Boolean apply(WebElement element) {
                 return toBePresent == element.getText().equals(text);
             }
-        });
+        }, message);
+    }
+
+    public void waitForElementText(final By locator, final String text, final boolean toBePresent) {
+        waitForElementText(locator, text, toBePresent, "Timeout looking for element with text: " + text);
     }
 
     /**
      * Method of exposing accessibility tool to be exposed for testing purposes
      * 
-     * @return ArrayList - either 0,1, or 2.
-     *                            Position 0: Indicates there were no errors
-     *                            Position 1: Indicates that there were errors
-     *                            Position 2: Indicates that something unexpected happened.
+     * @return ArrayList - either 0,1, or 2. Position 0: Indicates there were no errors Position 1: Indicates that there
+     *         were errors Position 2: Indicates that something unexpected happened.
      */
     public ArrayList<String> doAccessibilityCheck() {
         String jsString = "return ((window.$A != null || window.$A !=undefined) && (!$A.util.isUndefinedOrNull($A.devToolService)))? "

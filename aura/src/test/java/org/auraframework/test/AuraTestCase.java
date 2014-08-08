@@ -95,6 +95,7 @@ public abstract class AuraTestCase extends UnitTestCase {
         getMockConfigAdapter().reset();
     }
 
+    // this is not being called
     public String getQualifiedName() {
         return getClass().getCanonicalName() + "." + getName();
     }
@@ -106,6 +107,10 @@ public abstract class AuraTestCase extends UnitTestCase {
 
     protected <T extends Definition> DefDescriptor<T> addSourceAutoCleanup(Class<T> defClass, String contents) {
         return getAuraTestingUtil().addSourceAutoCleanup(defClass, contents);
+    }
+
+    protected void updateStringSource(DefDescriptor<?> desc, String content) {
+        getAuraTestingUtil().updateSource(desc, content);
     }
 
     protected <T extends Definition> DefDescriptor<T> addSourceAutoCleanup(DefDescriptor<T> descriptor, String contents) {
@@ -131,10 +136,6 @@ public abstract class AuraTestCase extends UnitTestCase {
         AuraContext newContext = service.startContext(context.getMode(), context.getFormat(), context.getAccess(),
                 context.getApplicationDescriptor());
         newContext.setLastMod(context.getLastMod());
-        newContext.clearPreloads();
-        for (String preload : context.getPreloads()) {
-            newContext.addPreload(preload);
-        }
     }
 
     /**
@@ -149,7 +150,7 @@ public abstract class AuraTestCase extends UnitTestCase {
         checkExceptionFull(e, clazz, message);
         assertLocation(e, filename);
     }
-    
+
     /**
      * Check to ensure that an exception matches both message regex and location.
      * 
@@ -183,7 +184,7 @@ public abstract class AuraTestCase extends UnitTestCase {
         if (clazz != null) {
             assertEquals("Exception must be " + clazz.getSimpleName(), clazz, e.getClass());
         }
-        
+
         assertEquals("Unexpected message", message, e.getMessage());
     }
 
@@ -194,7 +195,7 @@ public abstract class AuraTestCase extends UnitTestCase {
         if (clazz != null) {
             assertEquals("Exception must be " + clazz.getSimpleName(), clazz, e.getClass());
         }
-        
+
         String message = e.getMessage();
         Pattern pattern = Pattern.compile(regex);
         assertTrue("Unexpected message: " + message, pattern.matcher(message).find());
@@ -227,7 +228,7 @@ public abstract class AuraTestCase extends UnitTestCase {
     }
 
     /**
-     * Just check the exception and message, ignore location.
+     * Check to ensure that an exception message starts with a given message, ignore location.
      */
     protected void checkExceptionStart(Throwable e, Class<?> clazz, String message) {
         if (clazz != null) {
@@ -290,7 +291,7 @@ public abstract class AuraTestCase extends UnitTestCase {
     }
 
     /**
-     * Check to ensure that an exception message starts with a given message, ignore location.
+     * Verify Throwable is from the expected Location.
      */
     private void assertLocation(Throwable e, String expectedLoc) {
         Location l = null;
@@ -303,6 +304,9 @@ public abstract class AuraTestCase extends UnitTestCase {
         assertEquals("Unexpected location.", expectedLoc, l.getFileName());
     }
 
+    /**
+     * Verify Throwable is from the expected Location. Handles differences between running from jars or source.
+     */
     private void assertLocation(Throwable e, Source<?> src) {
         String fileUrl = src.getUrl();
         if (fileUrl.startsWith("jar")) {

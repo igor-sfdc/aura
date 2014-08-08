@@ -24,26 +24,26 @@
             matchEvt.fire();
         }
     },
-    
+
     handleSelectOption: function(cmp, event, autoCompleteCmpName) {
     	var optionCmp = event.getParam("option");
     	var accCmp = cmp.find(autoCompleteCmpName);
         var input = accCmp.find("input");
         var list = accCmp.find("list");
         var value = "";
-        
+
         if (optionCmp.isInstanceOf("uitest:autoComplete_CustomTemplate")) {
-        	value = optionCmp.getValue("v.value").getValue();
+        	value = optionCmp.get("v.value");
         } else if (optionCmp.isInstanceOf("ui:autocompleteOption")) {
-        	value = optionCmp.getValue("v.label").getValue();
-        } 
-        input.setValue("v.value", value);
-        list.setValue("v.visible", false);
+        	value = optionCmp.get("v.label");
+        }
+        input.set("v.value", value);
+        list.set("v.visible", false);
     },
-    
+
     handleMatchDone: function(cmp, event, autoCompleteCmpName) {
     	var input = cmp.find(autoCompleteCmpName + "MatchSize");
-    	input.setValue("v.value", event.getParam("size"));
+    	input.set("v.value", event.getParam("size"));
         console.log("For " + autoCompleteCmpName + " There are " + event.getParam("size") + " matched options.");
-    },
+    }
 })

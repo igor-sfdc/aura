@@ -21,9 +21,11 @@ exp(p,
     "get", p.get,
     "merge", p.merge,
     "setValue", p.setValue,
+    "set", p.set,
     "isExpression", p.isExpression,
     "isLiteral", p.isLiteral,
     "isDirty", p.isDirty,
+    "isUnset", p.isUnset,
     "each", p.each,
     "getRawValue", p.getRawValue,
     "destroy", p.destroy,
@@ -31,4 +33,8 @@ exp(p,
     "unwrap", p.unwrap,
     "put", p.put,
     "addHandler", p.addHandler
+);
+var pr = RawMapValue.prototype;
+exp(pr,
+    "toJSON", pr.toJSON
 );

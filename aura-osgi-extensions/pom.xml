@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.auraframework</groupId>
         <artifactId>aura-framework</artifactId>
-        <version>0.367-SNAPSHOT</version>
+        <version>0.1318-SNAPSHOT</version>
     </parent>
     <artifactId>aura-osgi-extensions</artifactId>
     <dependencies>
@@ -56,10 +56,6 @@
             <groupId>org.mozilla</groupId>
             <artifactId>rhino</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.phloc</groupId>
-            <artifactId>phloc-css</artifactId>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>

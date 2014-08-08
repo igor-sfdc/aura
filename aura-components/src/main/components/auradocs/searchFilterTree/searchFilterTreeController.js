@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-{   
+({   
     /**
      * Perform a search on the tree.
      * 
@@ -68,7 +68,7 @@
                         "traverser" : "PostOrderTraverser",
                         "callback" : function(args) {
                             args.visitor.funcToApply = function(node) {
-                                node.getAttributes().setValue('hidden', false)
+                                node.set('v.hidden', false)
                             };
                             root.getEvent("traverse").setParams(args).fire();
                         }
@@ -77,4 +77,4 @@
             }
         }}).fire();
     }
-}
+})

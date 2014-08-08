@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-{
+({
 	getUnwrapped : function(cmp, action){
-		var curr = cmp.find("outputValue").getValue("v.value");
-		var unwrapped = "\n" + action + curr.unwrap();
-		curr.setValue(unwrapped);
+		var output = cmp.find("outputValue");
+		var curr = output.get("v.value");
+		var unwrapped = "\n" + action + curr;
+		output.set("v.value", unwrapped);
 	}
-}
+})

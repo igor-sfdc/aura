@@ -38,13 +38,14 @@ import org.auraframework.impl.javascript.renderer.JavascriptRendererDef;
 import org.auraframework.impl.javascript.testsuite.JavascriptTestCaseDef;
 import org.auraframework.impl.javascript.testsuite.JavascriptTestSuiteDef;
 import org.auraframework.impl.source.BaseSourceLoader;
-import org.auraframework.impl.source.file.FileJavascriptSourceLoader;
-import org.auraframework.impl.source.resource.ResourceJavascriptSourceLoader;
+import org.auraframework.impl.source.file.FileSourceLoader;
+import org.auraframework.impl.source.resource.ResourceSourceLoader;
 import org.auraframework.impl.system.DefDescriptorImpl;
 import org.auraframework.impl.system.DefinitionImpl;
 import org.auraframework.impl.util.AuraImplFiles;
 import org.auraframework.system.Source;
 import org.auraframework.throwable.AuraRuntimeException;
+import org.auraframework.throwable.quickfix.InvalidDefinitionException;
 import org.auraframework.util.ServiceLocator;
 import org.auraframework.util.json.Json;
 
@@ -277,22 +278,16 @@ public class JavascriptParserTest extends AuraImplTestCase {
      * @throws Exception
      */
     public void testInvalidJSController() throws Exception {
-        DefDescriptor<ControllerDef> descriptor = DefDescriptorImpl
-                .getInstance("js://test.testInvalidJSController",
-                        ControllerDef.class);
+        DefDescriptor<ControllerDef> descriptor = DefDescriptorImpl.getInstance("js://test.testInvalidJSController",
+                ControllerDef.class);
         Source<?> source = getJavascriptSourceLoader().getSource(descriptor);
+        ControllerDef cd = parser.parse(descriptor, source);
         try {
-            parser.parse(descriptor, source);
+            cd.validateDefinition();
             fail("Javascript controller must only contain functions");
         } catch (Exception e) {
-            assertEquals(
-                    "Exception must be "
-                            + AuraRuntimeException.class.getSimpleName(),
-                    AuraRuntimeException.class, e.getClass());
-            e.getMessage().contains(
-                    "Attempted to convert \"global=\" to BigDecimal");
+            this.checkExceptionContains(e, InvalidDefinitionException.class, "Expected ':'");
         }
-
     }
 
     /**
@@ -307,16 +302,13 @@ public class JavascriptParserTest extends AuraImplTestCase {
                 .getInstance("js://test.testNonFunctionElementsInJSController",
                         ControllerDef.class);
         Source<?> source = getJavascriptSourceLoader().getSource(descriptor);
+        ControllerDef cd = parser.parse(descriptor, source);
         try {
-            parser.parse(descriptor, source);
+            cd.validateDefinition();
             fail("Javascript controller must only contain functions");
-        } catch (AuraRuntimeException expected) {
-            assertTrue(expected
-                    .getCause()
-                    .getCause()
-                    .getMessage()
-                    .startsWith(
-                            "Only functions are allowed in javascript controllers"));
+        } catch (Exception e) {
+        	this.checkExceptionContains(e, InvalidDefinitionException.class,
+                            "JsonStreamParseException");
         }
     }
 
@@ -530,7 +522,7 @@ public class JavascriptParserTest extends AuraImplTestCase {
 
     private BaseSourceLoader getJavascriptSourceLoader() {
         if (AuraImplFiles.TestComponents.asFile().exists()) {
-            return new FileJavascriptSourceLoader(
+            return new FileSourceLoader(
                     AuraImplFiles.TestComponents.asFile());
         } else {
             String pkg = ServiceLocator
@@ -538,7 +530,7 @@ public class JavascriptParserTest extends AuraImplTestCase {
                     .get(ComponentLocationAdapter.class,
                             "auraImplTestComponentLocationAdapterImpl")
                     .getComponentSourcePackage();
-            return new ResourceJavascriptSourceLoader(pkg);
+            return new ResourceSourceLoader(pkg);
         }
     }
 }

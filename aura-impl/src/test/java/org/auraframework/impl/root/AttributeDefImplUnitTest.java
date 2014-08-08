@@ -54,7 +54,8 @@ public class AttributeDefImplUnitTest extends
         this.qualifiedDescriptorName = "testAttribute";
     }
 
-    public void testAppendDependenciesNullDefaultValue() throws Exception {
+    // This is incorrect, and I'm not sure what we should test here.
+    public void _testAppendDependenciesNullDefaultValue() throws Exception {
         Set<DefDescriptor<?>> dependencies = Mockito.spy(Sets.<DefDescriptor<?>> newHashSet());
         this.defaultValue = null;
         buildDefinition().appendDependencies(dependencies);
@@ -92,7 +93,7 @@ public class AttributeDefImplUnitTest extends
         buildDefinition().serialize(json);
         InOrder inOrder = Mockito.inOrder(json);
         inOrder.verify(json).writeMapBegin();
-        inOrder.verify(json).writeMapEntry("descriptor", this.descriptor);
+        inOrder.verify(json).writeMapEntry("name", this.descriptor);
         inOrder.verify(json).writeMapEnd();
     }
 
@@ -101,43 +102,29 @@ public class AttributeDefImplUnitTest extends
         buildDefinition().serialize(json);
         InOrder inOrder = Mockito.inOrder(json);
         inOrder.verify(json).writeMapBegin();
-        inOrder.verify(json).writeMapEntry("typeDefDescriptor", this.typeDefDescriptor);
+        inOrder.verify(json).writeMapEntry("type", this.typeDefDescriptor);
         inOrder.verify(json).writeMapEnd();
     }
 
     public void testSerializeDefaultValue() throws Exception {
+    	this.defaultValue = new AttributeDefRefImpl.Builder().setValue("Hello").build();
         Json json = Mockito.mock(Json.class);
-        buildDefinition().serialize(json);
+        AttributeDef def = buildDefinition();
+		def.serialize(json);
         InOrder inOrder = Mockito.inOrder(json);
         inOrder.verify(json).writeMapBegin();
-        inOrder.verify(json).writeMapEntry("defaultValue", this.defaultValue);
+        inOrder.verify(json).writeMapEntry("default", "Hello");
         inOrder.verify(json).writeMapEnd();
     }
 
     public void testSerializeRequired() throws Exception {
+        this.required = true;
+
         Json json = Mockito.mock(Json.class);
         buildDefinition().serialize(json);
         InOrder inOrder = Mockito.inOrder(json);
         inOrder.verify(json).writeMapBegin();
         inOrder.verify(json).writeMapEntry("required", this.required);
-        inOrder.verify(json).writeMapEnd();
-    }
-
-    public void testSerializeSerializeTo() throws Exception {
-        Json json = Mockito.mock(Json.class);
-        buildDefinition().serialize(json);
-        InOrder inOrder = Mockito.inOrder(json);
-        inOrder.verify(json).writeMapBegin();
-        inOrder.verify(json).writeMapEntry("serializeTo", this.serializeTo);
-        inOrder.verify(json).writeMapEnd();
-    }
-
-    public void testSerializeVisibility() throws Exception {
-        Json json = Mockito.mock(Json.class);
-        buildDefinition().serialize(json);
-        InOrder inOrder = Mockito.inOrder(json);
-        inOrder.verify(json).writeMapBegin();
-        inOrder.verify(json).writeMapEntry("visibility", this.visibility);
         inOrder.verify(json).writeMapEnd();
     }
 

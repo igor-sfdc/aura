@@ -15,15 +15,17 @@
  */
 ({
     loadTest : function(cmp){
-        cmp.get("e.activated").setParams({component:cmp.getSuper()}).fire();
-        var frame = document.createElement("iframe");
-        frame.src = cmp.get("m.url");
-        frame.scrolling = "auto";
-        $A.util.on(frame, "load", function(){ 
-        	cmp.getDef().getHelper().runTest(cmp);
-        });
-        var content = cmp.find("content");
-        $A.util.insertFirst(content.getElement(), frame);
+        if (!cmp._testLoaded) {
+            cmp._testLoaded = true;
+            var frame = document.createElement("iframe");
+            frame.src = cmp.get("m.url");
+            frame.scrolling = "auto";
+            $A.util.on(frame, "load", function(){ 
+            	cmp.getDef().getHelper().runTest(cmp);
+            });
+            var content = cmp.find("content");
+            $A.util.insertFirst(content.getElement(), frame);
+        }
     },
 
     runTest : function(cmp){
@@ -41,7 +43,7 @@
                 return;
             }
         }
-        win.aura.test.run(cmp.get("v.case.name"), cmp.get("v.suite.code"), 1);
+        win.aura.test.run(cmp.get("v.case.name"), cmp.get("v.suite.code"), 10);
         cmp.getDef().getHelper().displayResults(cmp, win);
     },
 

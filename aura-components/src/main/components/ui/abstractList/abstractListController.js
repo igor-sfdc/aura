@@ -18,39 +18,98 @@
      * TODO::make pagination work with more than one data provider.
      *
      */
-    handlePageChange: function(component, event, helper) {      
+    handlePageChange: function(component, event, helper) {
         var currentPage = event.getParam("currentPage");
         var pageSize = event.getParam("pageSize");
-        
-        component.getValue("v.currentPage").setValue(currentPage, true);
-        component.getValue("v.pageSize").setValue(pageSize);
-        
+
+        component.set("v.currentPage", currentPage, true);
+        component.set("v.pageSize", pageSize);
+
         helper.triggerDataProvider(component);
     },
-    
+
     handleDataChange: function(component, event, helper) {
-    	component = component.getConcreteComponent();
-    	helper = component.getDef().getHelper();
-    
-    	helper.handleDataChange(component, event);
+    	var concrete = component.getConcreteComponent(),
+    		concreteHelper = concrete.getDef().getHelper(),
+    		callback;
+    	    	
+    	if (concrete._refreshing) {
+    		helper.beforeRefresh(concrete, event);
+    		concrete._refreshing = false;
+    		callback = concrete._callback;
+    	}
+
+    	concreteHelper.handleDataChange(component, event, callback);
+    	concrete._callback = null; // remove reference to avoid a leak
     },
-    
+
     init: function(component, event, helper) {
         helper.init(component);
-        
-        helper.triggerDataProvider(component);
+        helper.initTriggerDataProviders(component);
     },
-    
+
+    // TODO: Support refresh-all behavior
     refresh: function(component, event, helper) {
-    	component.getConcreteComponent().getValue("v.currentPage").setValue(1, true);
-    
-    	var items = component.getConcreteComponent().getValue("v.items");
-    	items.clear();
+    	var concrete = component.getConcreteComponent(),
+    		params = event.getParam("parameters"),
+    		index = 0;
     	
-    	helper.triggerDataProvider(component);
+    	if (params) {
+    		index = params.index;
+    		concrete._callback = params.callback;
+    	}
+
+    	concrete.set("v.currentPage", 1, true);
+    	concrete._refreshing = true;
+        	
+    	helper.triggerDataProvider(component, index);
     },
     
+    /**
+     * Handles removal of a row(s) from the list.
+     * 
+     * Structure your "parameters" (inherited from ui:command) like so:
+     * 
+     * parameters : { 
+     *     timeout  : Number 	// number of milliseconds to use as an animation timeout
+     *     animate  : Function  // invoked to apply whatever animation technique is most appropriate
+     *     callback : Function  // invoked after the timeout and hard removal has occurred
+     * }
+     */
+    addRemove: function (component, event, helper) {
+    	var params = event.getParams(),
+    		timeout = params.parameters && params.parameters.timeout, 	// no default timeout
+    		animate = params.parameters && params.parameters.animate, 	
+    		callback = params.parameters && params.parameters.callback,
+    		items;
+    	
+    	if (params.remove) {
+    		
+    		// Default index and count if necessary.
+    		if (params.last) {
+    			items = component.getConcreteComponent().get('v.items');
+    			params.index = items ? items.length - 1 : null; 
+    			params.count = 1;
+    		}
+    		
+    		if (params.count) {
+    			helper.remove(component, params.index, params.count, timeout, animate, callback);	
+    		}
+    		else {
+    			throw new Error("Remove command must be provided with either a 'count' or 'last' parameter.");
+    		}	
+    	}
+    	else {
+    		throw new Error('Add command not implemented on ui:abstractList.');
+    	}
+    },
+
     triggerDataProvider: function(component, event, helper) {
-    	helper.triggerDataProvider(component);
+    	var params = event.getParam("parameters");
+    	var index = 0;
+    	if (params) {
+    		index = params.index;
+    	}
+    	helper.triggerDataProvider(component, index);
     }
 })

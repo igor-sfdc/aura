@@ -28,7 +28,7 @@
 			pageSize : pageSize
 		}, domEvent);
 
-		component.getValue("v.currentPage").setValue(targetPage);
+		component.set("v.currentPage", targetPage);
 
 		return true;
 	},
@@ -39,7 +39,7 @@
 			return false;
 		}
 
-		var pageSize = parseInt(component.getValue("v.pageSize"), 10);
+		var pageSize = parseInt(component.get("v.pageSize"), 10);
 		if (pageSize == targetPageSize) {
 			return false;
 		}
@@ -50,8 +50,8 @@
 			pageSize : targetPageSize
 		}, domEvent);
 
-		component.getValue("v.currentPage").setValue(targetPage);
-		component.getValue("v.pageSize").setValue(targetPageSize);
+		component.set("v.currentPage", targetPage);
+		component.set("v.pageSize", targetPageSize);
 
 		return true;
 	},
@@ -70,31 +70,31 @@
 
 	updateCalculatedFields : function(component) {
 		component = component.getConcreteComponent();
-		
+
 		var pageSize = component.get("v.pageSize") || 0;
 		var totalItems = parseInt(component.get("v.totalItems"), 10);
 		if (pageSize > 0) {
-			var pageCount = component.getValue("v.pageCount");
+			var pageCount = component.get("v.pageCount");
 			var newPageCount = Math.ceil(totalItems / pageSize);
-			if (!isNaN(newPageCount) && pageCount.getValue() != newPageCount) {
-				pageCount.setValue(newPageCount);
+			if (!isNaN(newPageCount) && pageCount != newPageCount) {
+				component.set("v.pageCount", newPageCount);
 			}
 		} else {
-			component.getValue("v.pageCount").setValue(1);
+			component.set("v.pageCount", 1);
 			pageSize = totalItems;
 		}
 		if (totalItems > 0) {
 			var endIndex = (component.get("v.currentPage") * pageSize) - 1;
 			var startIndex = Math.max(0, endIndex - pageSize + 1);
-			component.getValue("v.startIndex").setValue(startIndex);
-			component.getValue("v.endIndex").setValue(
+			component.set("v.startIndex", startIndex);
+			component.set("v.endIndex",
 					Math.min(endIndex, totalItems - 1));
 		} else {
-			component.getValue("v.currentPage").setValue(0, true);
-			component.getValue("v.startIndex").setValue(-1);
-			component.getValue("v.endIndex").setValue(-1);
+			component.set("v.currentPage", 0, true);
+			component.set("v.startIndex", -1);
+			component.set("v.endIndex", -1);
 		}
-		
+
 		var updateDisplay = component.getDef().getHelper().updateDisplay;
 		if (updateDisplay) {
 			updateDisplay.call(component, component);

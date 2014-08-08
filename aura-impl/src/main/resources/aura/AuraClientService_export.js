@@ -21,6 +21,7 @@ exp(clientService,
     "loadApplication", clientService.loadApplication,
     "loadComponent", clientService.loadComponent,
     "enqueueAction", clientService.enqueueAction,
+    "deferAction", clientService.deferAction,
     "runActions", clientService.runActions,
     "throwExceptionEvent", clientService.throwExceptionEvent,
     "resetToken", clientService.resetToken,
@@ -28,5 +29,8 @@ exp(clientService,
     "setOutdated", clientService.setOutdated,
     "injectComponent", clientService.injectComponent,
     "isConnected", clientService.isConnected,
-    "setConnectedFalse", clientService.setConnectedFalse
+    "setConnected", clientService.setConnected,
+    "isActionInStorage", clientService.isActionInStorage,
+    "revalidateAction", clientService.revalidateAction,
+    "invalidateAction", clientService.invalidateAction
 );

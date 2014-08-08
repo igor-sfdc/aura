@@ -17,13 +17,13 @@
     render : function(cmp){
         var ret = this.superRender();
         var element = cmp.find("span").getElement();
-        var delimiter = cmp.getAttributes().getValue("delimiter").getValue();
-        
-        var value = cmp.getAttributes().get("value");
+        var delimiter = cmp.get("v.delimiter");
+
+        var value = cmp.get("v.value");
         if($A.util.isArray(value)){
             value = value.join(delimiter);
         }
-        
+
         if(element.textContent !== undefined){
         	element.textContent = value;
         }

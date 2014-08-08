@@ -20,11 +20,13 @@ import java.util.List;
 import org.auraframework.test.WebDriverTestCase;
 import org.auraframework.test.WebDriverTestCase.ExcludeBrowsers;
 import org.auraframework.test.WebDriverUtil.BrowserType;
+import org.auraframework.test.annotation.PerfTest;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
+import org.openqa.selenium.support.ui.ExpectedCondition;
 
 /**
  * Tests to verify ui:carousel keyboard interactions and UI.
@@ -33,15 +35,15 @@ import org.openqa.selenium.interactions.Actions;
  * as Actions.moveToElement() yet. Excluded from IE7/8 because uses HTML5 features such as nav.
  */
 @ExcludeBrowsers({ BrowserType.IE7, BrowserType.IE8, BrowserType.ANDROID_PHONE, BrowserType.ANDROID_TABLET,
-        BrowserType.IPAD, BrowserType.IPHONE })
+        BrowserType.IPAD, BrowserType.IPHONE, BrowserType.IPAD_IOS_DRIVER, BrowserType.IPHONE_IOS_DRIVER })
 public class CarouselUITest extends WebDriverTestCase {
 
     private final String URL = "/uitest/carousel_Test.cmp";
     private final String CAROUSEL_XPATH = "//article[contains(@class, 'uitestCarousel_Test')] | //article[contains(@class, 'myclass')]";
-    private final String NAVIGATION_ITEM_SELECTOR = "a[class*='uiCarouselPageIndicatorItem']";
-    private final String NAVIGATION_ITEM_SELECTED_SELECTOR = "a[class*='uiCarouselPageIndicatorItem'][class*='carousel-nav-item-selected']";
+    private final String NAVIGATION_ITEM_SELECTOR = "a[class*='carousel-nav-item']";
+    private final String NAVIGATION_ITEM_SELECTED_SELECTOR = "a[class*='carousel-nav-item-selected']";
     private final String CAROUSEL_PAGE_SELECTOR = "section[class*='uiCarouselPage']";
-    private final String CAROUSEL_PAGE_ITEM_SELECTOR = "li[class*='uiCarouselPageItem']";
+    private final String CAROUSEL_PAGE_ITEM_SELECTOR = "li[class*='pageItem']";
     private final String AURA_RENDERED_BY_ID = "data-aura-rendered-by";
 
     public CarouselUITest(String name) {
@@ -51,6 +53,10 @@ public class CarouselUITest extends WebDriverTestCase {
     /**
      * Able to tab into a page on the carousel.
      */
+    /* Excluding Safari, iOS because driver has issues with element.sendkeys(Keys.TAB) */
+    @ExcludeBrowsers({ BrowserType.IE7, BrowserType.IE8, BrowserType.ANDROID_PHONE, BrowserType.ANDROID_TABLET,
+            BrowserType.IPAD, BrowserType.IPHONE, BrowserType.SAFARI, BrowserType.IPAD_IOS_DRIVER,
+            BrowserType.IPHONE_IOS_DRIVER })
     public void testTabIntoCarouselPage() throws Exception {
         open(URL);
         WebDriver driver = getDriver();
@@ -58,10 +64,12 @@ public class CarouselUITest extends WebDriverTestCase {
         WebElement page = getPageOnCarousel(carousel, 2);
 
         // setup
+        waitForCarouselPageSelected(page);
         WebElement navElement = getNavigationItemSelected(carousel);
         navElement.click();
         assertEquals("Navigation bar element should be in focus.",
                 navElement.getAttribute(AURA_RENDERED_BY_ID), auraUITestingUtil.getUniqueIdOfFocusedElement());
+        waitForCarouselPageSelected(page);
 
         // tab into carousel page
         auraUITestingUtil.pressTab(navElement);
@@ -118,6 +126,10 @@ public class CarouselUITest extends WebDriverTestCase {
     /**
      * Tabing on the last element on a carousel page tabs you out of the carousel.
      */
+    /* Excluding Safari, iOS because driver has issues with element.sendkeys(Keys.TAB) */
+    @ExcludeBrowsers({ BrowserType.IE7, BrowserType.IE8, BrowserType.ANDROID_PHONE, BrowserType.ANDROID_TABLET,
+            BrowserType.IPAD, BrowserType.IPHONE, BrowserType.SAFARI, BrowserType.IPAD_IOS_DRIVER,
+            BrowserType.IPHONE_IOS_DRIVER })
     public void testTabOutOfCarousel() throws Exception {
         open(URL);
         WebDriver driver = getDriver();
@@ -139,6 +151,10 @@ public class CarouselUITest extends WebDriverTestCase {
     /**
      * Tabing out of carousel from the first element on carousel.
      */
+    /* Excluding Safari, iOS because driver has issues with element.sendkeys(Keys.TAB) */
+    @ExcludeBrowsers({ BrowserType.IE7, BrowserType.IE8, BrowserType.ANDROID_PHONE, BrowserType.ANDROID_TABLET,
+            BrowserType.IPAD, BrowserType.IPHONE, BrowserType.SAFARI, BrowserType.IPAD_IOS_DRIVER,
+            BrowserType.IPHONE_IOS_DRIVER })
     public void testShiftTabOutOfCarousel() throws Exception {
         open(URL);
         WebDriver driver = getDriver();
@@ -158,6 +174,7 @@ public class CarouselUITest extends WebDriverTestCase {
     /**
      * Using keyboard arrow keys to get to next page.
      */
+    @PerfTest
     public void testGoToNextPage() throws Exception {
         open(URL);
         WebDriver driver = getDriver();
@@ -238,8 +255,33 @@ public class CarouselUITest extends WebDriverTestCase {
     private WebElement getCarousel(WebDriver d, int carouselNum) {
         List<WebElement> carousels = d.findElements(By.xpath(CAROUSEL_XPATH));
         WebElement carousel = carousels.get(--carouselNum);
-        new Actions(d).moveToElement(carousel).perform();
+        moveToCarousel(d, carousel);
         return carousel;
+    }
+
+    /*
+     * WebDriver.moveToElement() does not work in safari - https://code.google.com/p/selenium/issues/detail?id=4136 This
+     * is a workaround for that.
+     */
+    private boolean moveToCarousel(WebDriver d, WebElement c)
+    {
+        boolean result = false;
+
+        try {
+            new Actions(d).moveToElement(c).perform();
+            result = true;
+        } catch (Exception e) {
+            String mouseOverScript = "if(document.createEvent){" +
+                    "var evObj = document.createEvent('MouseEvents');" +
+                    "evObj.initEvent('mouseover', true, false);" +
+                    "arguments[0].dispatchEvent(evObj);" +
+                    "} else if(document.createEventObject) {" +
+                    "arguments[0].fireEvent('onmouseover');}";
+            auraUITestingUtil.getEval(mouseOverScript, c);
+            result = true;
+        }
+
+        return result;
     }
 
     private List<WebElement> getPagesOnCarousel(WebElement c) {
@@ -276,4 +318,13 @@ public class CarouselUITest extends WebDriverTestCase {
         return pageItems.get(--entityNum).findElement(By.tagName("a")); // return tab-able element
     }
 
+    public void waitForCarouselPageSelected(final WebElement page) {
+        auraUITestingUtil.waitUntil(new ExpectedCondition<Boolean>() {
+            @Override
+            public Boolean apply(WebDriver d) {
+                String cssClass = page.getAttribute("class");
+                return cssClass.contains("carousel-page-selected");
+            }
+        }, timeoutInSecs);
+    }
 }

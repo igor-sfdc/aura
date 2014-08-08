@@ -22,17 +22,20 @@
 		if (!domId) {
 			helper.setAttribute(component, {key: 'domId', value: globalId});
 		}
-						
+		
+		helper.handleErrors(component);
 		return this.superRender();
 	},
-	
 	
 	afterRender: function(component, helper) {
         this.superAfterRender();
 		helper.addInputClass(component);
+
         var concreteCmp = component.getConcreteComponent();
         var concreteHelper = concreteCmp.getDef().getHelper();
         concreteHelper.addInputDomEvents(component);
+        concreteHelper.updateErrorElement(component);
+        
         if (component.get("v.doFormat")) {
             var value = concreteCmp.get("v.value");
             if (!$A.util.isEmpty(value)) {
@@ -43,7 +46,15 @@
     },
     
     rerender: function(component, helper) {
-        helper.handleErrors(component);
+    	var concreteCmp = component.getConcreteComponent();
+        var concreteHelper = concreteCmp.getDef().getHelper();
+        concreteHelper.addInputDomEvents(component);
+        
+        if (!component._creatingAsyncErrorCmp) {
+        	helper.handleErrors(component);
+            helper.updateErrorElement(component);
+        } 
+        
         if (component.get("v.doFormat")) {
             var concreteCmp = component.getConcreteComponent();
             var concreteHelper = concreteCmp.getDef().getHelper();
@@ -53,7 +64,8 @@
                 el.value = concreteHelper.formatValue(concreteCmp);
             }
         }
-        helper.addInputClass(component);
+
         this.superRerender();
+        helper.addInputClass(component);
     }
 })

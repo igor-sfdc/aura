@@ -55,17 +55,19 @@ public class JSTestModel {
         if (def == null) { throw new DefinitionNotFoundException(descriptor); }
         long nonce = System.currentTimeMillis();
 
-        url = String.format("/%s/%s.%s?aura.nonce=%s&aura.mode=AUTO%s", descriptor.getNamespace(),
+        url = String.format("/%s/%s.%s?aura.nonce=%s&aura.mode=AUTO%s&aura.testReset=true", descriptor.getNamespace(),
                 descriptor.getName(), defType == DefType.COMPONENT ? "cmp" : "app", nonce, context.getMode().name());
 
         String test = (String)component.getAttributes().getValue("test");
         tcds = filterTestCases(test);
 
         TestContextAdapter contextAdapter = Aura.get(TestContextAdapter.class);
-        for (TestCaseDef tcd : tcds) {
-            TestContext testContext = contextAdapter.getTestContext(tcd.getDescriptor().getQualifiedName());
-            testContext.getLocalDefs().clear();
-            testContext.getLocalDefs().addAll(tcd.getLocalDefs());
+        if (contextAdapter != null) {
+            for (TestCaseDef tcd : tcds) {
+                TestContext testContext = contextAdapter.getTestContext(tcd.getDescriptor().getQualifiedName());
+                testContext.getLocalDefs().clear();
+                testContext.getLocalDefs().addAll(tcd.getLocalDefs());
+            }
         }
     }
 

@@ -21,43 +21,39 @@
     /**
      * Verify non-preloaded styles are appended to head, while preloaded CSS is not.
      */
-    testStylesAppendedToHead : {
+    testNewDepStylesAppendedToHead : {
         test : function(cmp) {
-            var head = document.getElementsByTagName('head')[0];
-            var styleElements = head.getElementsByTagName('style');
-            var cmpCssPresent = false;
-            var nonPreloadedCssPresent = false;
-            var uiNamespaceCssPresent = false;
+            var config = {componentDef: "preloadTest:test_SpecialCharacter"};
+            var cmpName;
+            $A.run(function(){
+                $A.newCmpAsync(
+                    this,
+                    function(newCmp){
+                        cmpName = newCmp.getDef().getDescriptor().getQualifiedName();
+                        var body = cmp.get("v.body");
+                        body.push(newCmp);
+                        cmp.set("v.body", body);
+                    },
+                    config
+                );
+            });
+            $A.test.addWaitFor(false, $A.test.isActionPending, function(){
 
-            for (var i = 0; i < styleElements.length; i++) {
-                var styleText = this.getStyleElementText(styleElements[i]);
+                var head = document.getElementsByTagName('head')[0];
+                var styleElements = head.getElementsByTagName('style');
+                var stylesText = "";
+                for (var i = 0; i < styleElements.length; i++) {
+                    stylesText += $A.util.getText(styleElements[i]);
+                }
 
-                if (styleText.indexOf(".clientApiTestCssStyleTest") !== -1) {
-                    if (!cmpCssPresent) {
-                        cmpCssPresent = true;
-                    } else {
-                        $A.test.fail("Component CSS is being applied more than once.");
-                    }
-                }
-                if (styleText.indexOf(".testTestValidCSS") !== -1) {
-                    if (!nonPreloadedCssPresent) {
-                        nonPreloadedCssPresent = true;
-                    } else {
-                        $A.test.fail("Non-preloaded CSS is being applied more than once.");
-                    }
-                }
-                if (styleText.indexOf(".uiInputText") !== -1 || styleText.indexOf(".uiOutputText") !== -1) {
-                    if (!uiNamespaceCssPresent) {
-                        uiNamespaceCssPresent = true;
-                    } else {
-                        $A.test.fail("Preloaded CSS is being applied more than once.");
-                    }
-                }
-            }
+                $A.test.assertEquals("markup://preloadTest:test_SpecialCharacter", cmpName,
+                    "Failed to asynchronous component");
+                $A.test.assertTrue(stylesText.indexOf("AuraResourceServletTest-testWriteCssWithoutDupes") !== -1,
+                    "Asynchronous component dependency style element not appended to head.");
+                $A.test.assertTrue(stylesText.indexOf(".testTestValidCSS{color:#1797c0") === -1,
+                    "CSS that should be preloaded found in style element in head.");
 
-            $A.test.assertTrue(cmpCssPresent, "Component style element not appended to head.");
-            $A.test.assertTrue(nonPreloadedCssPresent, "Style of non-preloaded cmp should be appended to head.");
-            $A.test.assertFalse(uiNamespaceCssPresent, "Style of preloaded cmps should not be appended to head.");
+            });
         }
     },
     /**
@@ -78,7 +74,7 @@
         }
     },
     getStyleElementText : function(element) {
-        var browser = $A.getGlobalValueProviders().get("$Browser");
+        var browser = $A.get("$Browser");
         if (browser.isIE7 || browser.isIE8 || browser.isIE9 || browser.isIE10) {
             return element.styleSheet.cssText;
         }

@@ -15,6 +15,7 @@
  */
 package org.auraframework.test;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -24,15 +25,20 @@ import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
 
 import org.auraframework.Aura;
+import org.auraframework.def.BaseComponentDef;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.Definition;
 import org.auraframework.impl.source.StringSourceLoader;
 import org.auraframework.service.DefinitionService;
 import org.auraframework.system.AuraContext;
+import org.auraframework.system.AuraContext.Authentication;
+import org.auraframework.system.AuraContext.Format;
+import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.system.Source;
 import org.auraframework.system.SourceListener;
 import org.auraframework.system.SourceListener.SourceMonitorEvent;
 import org.auraframework.throwable.AuraRuntimeException;
+import org.auraframework.throwable.quickfix.QuickFixException;
 
 import com.google.common.collect.Sets;
 
@@ -84,6 +90,16 @@ public class AuraTestingUtil {
             return StringSourceLoader.getInstance().getSource(descriptor);
         }
     }
+    
+    /**
+     * update source for a resource
+     * @param desc definition descriptor of the resource 
+     * @param content new content for the descriptor 
+     */
+    public void updateSource(DefDescriptor<?> desc, String content) {
+        Source<?> src = getSource(desc);
+        src.addOrUpdate(content);
+    }
 
     /**
      * Generate a {@link DefDescriptor} with a unique name. If namePrefix does not contain a namespace, the descriptor
@@ -120,8 +136,22 @@ public class AuraTestingUtil {
      */
     public <T extends Definition> DefDescriptor<T> addSourceAutoCleanup(Class<T> defClass, String contents,
             String namePrefix) {
+        return addSourceAutoCleanup(defClass, contents, namePrefix, true);
+    }
+    
+    /**
+     * Convenience method to create a description and load a source in one shot.
+     * 
+     * @param defClass interface of the definition represented by this source
+     * @param contents source contents
+     * @param namePrefix package name prefix
+     * @param isPrivilegedNamespace if true, namespace is privileged
+     * @return the {@link DefDescriptor} for the created definition
+     */
+    public <T extends Definition> DefDescriptor<T> addSourceAutoCleanup(Class<T> defClass, String contents,
+            String namePrefix, boolean isPrivilegedNamespace) {
         StringSourceLoader loader = StringSourceLoader.getInstance();
-        DefDescriptor<T> descriptor = loader.addSource(defClass, contents, namePrefix).getDescriptor();
+        DefDescriptor<T> descriptor = loader.addSource(defClass, contents, namePrefix, isPrivilegedNamespace).getDescriptor();
         markForCleanup(descriptor);
         return descriptor;
     }
@@ -134,8 +164,19 @@ public class AuraTestingUtil {
      * @return the {@link DefDescriptor} for the created definition
      */
     public <T extends Definition> DefDescriptor<T> addSourceAutoCleanup(DefDescriptor<T> descriptor, String contents) {
+    	return addSourceAutoCleanup(descriptor, contents, true);
+    }
+
+    /**
+     * Convenience method to create a description and load a source in one shot.
+     * 
+     * @param descriptor descriptor for the source to be created
+     * @param contents source contents
+     * @return the {@link DefDescriptor} for the created definition
+     */
+    public <T extends Definition> DefDescriptor<T> addSourceAutoCleanup(DefDescriptor<T> descriptor, String contents, boolean isPrivilegedNamespace) {
         StringSourceLoader loader = StringSourceLoader.getInstance();
-        loader.putSource(descriptor, contents, false);
+        loader.putSource(descriptor, contents, false, isPrivilegedNamespace);
         markForCleanup(descriptor);
         return descriptor;
     }
@@ -182,7 +223,7 @@ public class AuraTestingUtil {
             private Set<DefDescriptor<?>> descriptors = Sets.newHashSet(cached);
 
             @Override
-            public void onSourceChanged(DefDescriptor<?> source, SourceMonitorEvent event) {
+            public void onSourceChanged(DefDescriptor<?> source, SourceMonitorEvent event, String filePath) {
                 if (descriptors.remove(source)) {
                     latch.countDown();
                 }
@@ -193,7 +234,7 @@ public class AuraTestingUtil {
         };
         definitionService.subscribeToChangeNotification(listener);
         for (DefDescriptor<?> desc : cached) {
-            definitionService.onSourceChanged(desc, SourceMonitorEvent.changed);
+            definitionService.onSourceChanged(desc, SourceMonitorEvent.changed, null);
         }
         if (!latch.await(CACHE_CLEARING_TIMEOUT_SECS, TimeUnit.SECONDS)) {
             throw new AuraRuntimeException(String.format(
@@ -207,5 +248,103 @@ public class AuraTestingUtil {
             cleanUpDds = Sets.newHashSet();
         }
         cleanUpDds.add(desc);
+    }
+
+    /**
+     * Start a context and set up default values.
+     */
+    protected AuraContext setupContext(Mode mode, Format format, DefDescriptor<? extends BaseComponentDef> desc) 
+            throws QuickFixException {
+        AuraContext ctxt = Aura.getContextService().startContext(mode, format, Authentication.AUTHENTICATED, desc);
+        ctxt.setFrameworkUID(Aura.getConfigAdapter().getAuraFrameworkNonce());
+        String uid = ctxt.getDefRegistry().getUid(null, desc);
+        ctxt.addLoaded(desc, uid);
+        return ctxt;
+    }
+
+    /**
+     * Get a context for use with a get/post.
+     *
+     * @param mode the Aura mode to use.
+     * @param format the format (HTML vs JSON) to use
+     * @param desc the descriptor name to set as the primary object.
+     * @param type the type of descriptor.
+     * @param modified break the context uid.
+     */
+    public String getContext(Mode mode, Format format, String desc, Class<? extends BaseComponentDef> type,
+            boolean modified) throws QuickFixException {
+        return getContext(mode, format, Aura.getDefinitionService().getDefDescriptor(desc, type), modified);
+    }
+
+    /**
+     * Get a context as a string.
+     *
+     * @param mode the Aura mode to use.
+     * @param format the format (HTML vs JSON) to use
+     * @param desc the descriptor to set as the primary object.
+     * @param modified break the context uid.
+     */
+    public String getContext(Mode mode, Format format, DefDescriptor<? extends BaseComponentDef> desc,
+            boolean modified) throws QuickFixException {
+        AuraContext ctxt = setupContext(mode, format, desc);
+        String ctxtString;
+        if (modified) {
+            String uid = modifyUID(ctxt.getLoaded().get(desc));
+            ctxt.addLoaded(desc, uid);
+        }
+        ctxtString = getSerializedAuraContext(ctxt);
+        Aura.getContextService().endContext();
+        return ctxtString;
+    }
+
+    /**
+     * Get a serialized context with a possibly modified UID.
+     *
+     * FIXME: this should be cleaned out.
+     */
+    public String getSerializedAuraContextWithModifiedUID(AuraContext ctx, boolean modify) throws QuickFixException {
+        String uid = ctx.getDefRegistry().getUid(null, ctx.getApplicationDescriptor());
+        if (modify) {
+            uid = modifyUID(uid);
+        }
+        ctx.addLoaded(ctx.getApplicationDescriptor(), uid);
+        return getSerializedAuraContext(ctx);
+    }
+
+    /**
+     * Serialize a context.
+     *
+     * This simply runs the serialization and handles exceptions.
+     *
+     * @param ctx the context to serialize.
+     * @return the serialized context as a string
+     * @throws QuickFixException if the serialization service does (unlikely).
+     */
+    public String getSerializedAuraContext(AuraContext ctx) throws QuickFixException {
+        StringBuilder sb = new StringBuilder();
+        try {
+            Aura.getSerializationService().write(ctx, null, AuraContext.class, sb, "HTML");
+        } catch (IOException e) {
+            // This should never happen, stringbuilders don't throw IOException.
+            throw new AuraRuntimeException(e);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Make a UID be incorrect.
+     */
+    protected String modifyUID(String old) {
+        StringBuilder sb = new StringBuilder(old);
+        char flip = sb.charAt(3);
+
+        // change the character.
+        if (flip == 'a') {
+            flip = 'b';
+        } else {
+            flip = 'a';
+        }
+        sb.setCharAt(3, flip);
+        return sb.toString();
     }
 }

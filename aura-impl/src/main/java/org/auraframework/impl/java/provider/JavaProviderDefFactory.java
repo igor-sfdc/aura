@@ -17,22 +17,15 @@ package org.auraframework.impl.java.provider;
 
 import java.util.List;
 
-import org.auraframework.builder.DefBuilder;
-import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.ProviderDef;
-import org.auraframework.impl.java.BaseJavaDefFactory;
-import org.auraframework.system.Annotations.Provider;
-import org.auraframework.system.Location;
+import org.auraframework.impl.java.provider.AbstractJavaProviderDef.Builder;
 import org.auraframework.system.SourceLoader;
-import org.auraframework.throwable.quickfix.InvalidDefinitionException;
-import org.auraframework.throwable.quickfix.QuickFixException;
 
 /**
  */
-public class JavaProviderDefFactory extends BaseJavaDefFactory<ProviderDef> {
-
+public class JavaProviderDefFactory extends AbstractJavaProviderDefFactory<ProviderDef> {
     public JavaProviderDefFactory() {
-        this(null);
+        super();
     }
 
     public JavaProviderDefFactory(List<SourceLoader> sourceLoaders) {
@@ -40,24 +33,7 @@ public class JavaProviderDefFactory extends BaseJavaDefFactory<ProviderDef> {
     }
 
     @Override
-    protected DefBuilder<?, ? extends ProviderDef> getBuilder(DefDescriptor<ProviderDef> descriptor)
-            throws QuickFixException {
-        JavaProviderDef.Builder builder;
-        Class<?> providerClass = getClazz(descriptor);
-
-        if (providerClass == null) {
-            return null;
-        }
-        if (!providerClass.isAnnotationPresent(Provider.class)) {
-            throw new InvalidDefinitionException(String.format(
-                    "@Provider annotation is required on all Providers.  Not found on %s", descriptor), new Location(
-                    providerClass.getCanonicalName(), 0));
-        }
-
-        builder = new JavaProviderDef.Builder();
-        builder.setDescriptor(descriptor);
-        builder.setLocation(providerClass.getCanonicalName(), 0);
-        builder.setProviderClass(providerClass);
-        return builder;
+    protected Builder<ProviderDef> newBuilder() {
+        return new JavaProviderDef.Builder();
     }
 }

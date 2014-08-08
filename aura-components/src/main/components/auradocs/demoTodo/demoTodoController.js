@@ -13,36 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-{
+({
 	clearDone : function(cmp){
-		var items = cmp.getValue("m.items");
-		for(var i = items.getLength()-1; i >= 0; i--){
-			if(items.get(i).selected===true){
-				items.remove(i);
+		var items = cmp.get("m.items");
+		for(var i = items.length-1; i >= 0; i--){
+			if(items[i].selected===true){
+				items.splice(i, 1);
 			};
 		};
+		cmp.set("m.items", items);
 	},
-	
+
 	createNewTodo : function(cmp, event){
 		var keyCodeValue =  event.getParam("keyCode");
 		if(keyCodeValue===13){
-			var items = cmp.getValue("m.items");
-			var input = cmp.get("newTodo");
-			var text = input.getValue("v.value").value;
+			var items = cmp.get("m.items");
+			var input = cmp.find("newTodo");
+			var text = input.get("v.value");
 			var newTodo = {
-					label: text, 
-					name: text, 
-					selected: false, 
-					value: text, 
+					label: text,
+					name: text,
+					selected: false,
+					value: text,
 					disabled: false
 			};
 			items.push(newTodo);
-			input.getValue("v.value").setValue("");
+			input.set("v.value", "");
+			cmp.set("m.items", items);
 		};
 	},
-	
+
 	crossout : function(cmp, event){
 		var elem = event.getSource().getElement();
 		$A.util.toggleClass(elem, "done");
 	}
-}
+})

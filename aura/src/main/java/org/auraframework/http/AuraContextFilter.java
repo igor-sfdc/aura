@@ -30,14 +30,18 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpHeaders;
 import org.auraframework.Aura;
+import org.auraframework.adapter.ConfigAdapter;
 import org.auraframework.def.ApplicationDef;
 import org.auraframework.def.BaseComponentDef;
 import org.auraframework.def.ComponentDef;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.DefDescriptor.DefType;
 import org.auraframework.def.Definition;
+import org.auraframework.def.ThemeDef;
 import org.auraframework.http.RequestParam.BooleanParam;
 import org.auraframework.http.RequestParam.EnumParam;
 import org.auraframework.http.RequestParam.InvalidParamException;
@@ -45,13 +49,16 @@ import org.auraframework.http.RequestParam.StringParam;
 import org.auraframework.service.DefinitionService;
 import org.auraframework.service.LoggingService;
 import org.auraframework.system.AuraContext;
-import org.auraframework.system.AuraContext.Access;
+import org.auraframework.system.AuraContext.Authentication;
 import org.auraframework.system.AuraContext.Format;
 import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.system.Client;
 import org.auraframework.system.MasterDefRegistry;
+import org.auraframework.test.Resettable;
 import org.auraframework.test.TestContext;
 import org.auraframework.test.TestContextAdapter;
+import org.auraframework.throwable.AuraRuntimeException;
+import org.auraframework.throwable.quickfix.QuickFixException;
 import org.auraframework.util.AuraTextUtil;
 import org.auraframework.util.json.JsonReader;
 
@@ -62,26 +69,37 @@ public class AuraContextFilter implements Filter {
 
     public static final EnumParam<AuraContext.Mode> mode = new EnumParam<AuraContext.Mode>(AuraServlet.AURA_PREFIX
             + "mode", false, AuraContext.Mode.class);
-    
+
     public static final BooleanParam isDebugToolEnabled = new BooleanParam(AuraServlet.AURA_PREFIX
             + "debugtool", false);
-    
+
     private static final EnumParam<Format> format = new EnumParam<Format>(AuraServlet.AURA_PREFIX + "format", false,
             Format.class);
 
-    private static final EnumParam<Access> access = new EnumParam<Access>(AuraServlet.AURA_PREFIX + "access", false,
-            Access.class);
+    private static final EnumParam<Authentication> access = new EnumParam<Authentication>(AuraServlet.AURA_PREFIX
+            + "access", false,
+            Authentication.class);
 
     private static final StringParam app = new StringParam(AuraServlet.AURA_PREFIX + "app", 0, false);
     private static final StringParam num = new StringParam(AuraServlet.AURA_PREFIX + "num", 0, false);
     private static final StringParam test = new StringParam(AuraServlet.AURA_PREFIX + "test", 0, false);
+    private static final BooleanParam testReset = new BooleanParam(AuraServlet.AURA_PREFIX + "testReset", false);
     private static final StringParam contextConfig = new StringParam(AuraServlet.AURA_PREFIX + "context", 0, false);
 
     private String componentDir = null;
 
+    private static final Log LOG = LogFactory.getLog(AuraContextFilter.class);
+
     @Override
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws ServletException,
             IOException {
+
+        if (Aura.getContextService().isEstablished()) {
+            LOG.error("Aura context was not released correctly! New context will NOT be created.");
+            chain.doFilter(req, res);
+            return;
+        }
+
         LoggingService loggingService = Aura.getLoggingService();
         try {
             startContext(req, res, chain);
@@ -105,14 +123,7 @@ public class AuraContextFilter implements Filter {
                     } catch (Throwable t) {
                         // ignore.
                     }
-                    loggingService.doLog(); // flush out logging values
-                }
-                else {
-                	HttpServletRequest request = (HttpServletRequest) req;
-                	HttpServletResponse response = (HttpServletResponse) res;
-                	System.out.println("loggingService is null when we try to log request:"
-                			+request.getMethod()+request.getRequestURI()+request.getQueryString()
-                			+" and response:"+response.getStatus());
+                    loggingService.flush(); // flush out logging values
                 }
             } finally {
                 endContext();
@@ -120,22 +131,32 @@ public class AuraContextFilter implements Filter {
         }
     }
 
-    @SuppressWarnings("unchecked")
     protected AuraContext startContext(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException,
             ServletException {
         HttpServletRequest request = (HttpServletRequest) req;
 
-        Format f = format.get(request, Format.JSON);
-        Access a = access.get(request, Access.AUTHENTICATED);
+        Format f = format.get(request);
+        Authentication a = access.get(request, Authentication.AUTHENTICATED);
 
         Map<String, Object> configMap = getConfigMap(request);
         Mode m = getMode(request, configMap);
         boolean d = getDebugToolParam(request);
-        
+
         DefDescriptor<? extends BaseComponentDef> appDesc = getAppParam(request, configMap);
 
         if (componentDir != null) {
             System.setProperty("aura.componentDir", componentDir);
+        }
+        //
+        // FIXME: our usage of format should be revisited. Most URLs have
+        // a fixed format, so we should have a way of getting that.
+        //
+        if (f == null) {
+            if ("GET".equals(request.getMethod())) {
+                f = Format.HTML;
+            } else {
+                f = Format.JSON;
+            }
         }
         AuraContext context = Aura.getContextService().startContext(m, f, a, appDesc, d);
 
@@ -148,20 +169,33 @@ public class AuraContextFilter implements Filter {
         context.setNum(num.get(request));
         context.setRequestedLocales(Collections.list(request.getLocales()));
         context.setClient(new Client(request.getHeader(HttpHeaders.USER_AGENT)));
-
         if (configMap != null) {
             String lastMod = (String) configMap.get("lastmod");
             if (lastMod != null && !lastMod.isEmpty()) {
                 context.setLastMod(lastMod);
             }
-            List<Object> preloads = (List<Object>) configMap.get("preloads");
-            if (preloads != null) {
-                for (Object preload : preloads) {
-                    context.addPreload((String) preload);
+            getLoaded(context, configMap.get("loaded"));
+            @SuppressWarnings("unchecked")
+            List<Object> dns = (List<Object>) configMap.get("dn");
+            if (dns != null) {
+                for (Object dn : dns) {
+                    context.addDynamicNamespace((String) dn);
                 }
             }
-            getLoaded(context, configMap.get("loaded"));
             context.setFrameworkUID((String) configMap.get("fwuid"));
+
+            @SuppressWarnings("unchecked")
+            List<String> themes = (List<String>) configMap.get("themes");
+            if (themes != null) {
+                try {
+                    DefinitionService ds = Aura.getDefinitionService();
+                    for (String theme : themes) {
+                        context.appendThemeDescriptor(ds.getDefDescriptor(theme, ThemeDef.class));
+                    }
+                } catch (QuickFixException e) {
+                    throw new AuraRuntimeException(e);
+                }
+            }
         }
 
         if (!isProduction) {
@@ -182,14 +216,17 @@ public class AuraContextFilter implements Filter {
                         MasterDefRegistry registry = context.getDefRegistry();
                         Set<Definition> mocks = testContext.getLocalDefs();
                         if (mocks != null) {
+                            boolean doReset = testReset.get(request);
                             for (Definition def : mocks) {
+                                if (doReset && def instanceof Resettable) {
+                                    ((Resettable) def).reset();
+                                }
                                 registry.addLocalDef(def);
                             }
                         }
                     }
                 } else {
-                    // if this thread was recycled from a prior test (mostly dev mode), clear out the old context
-                    testContextAdapter.release();
+                    testContextAdapter.clear();
                 }
             }
         }
@@ -210,7 +247,7 @@ public class AuraContextFilter implements Filter {
         @SuppressWarnings("unchecked")
         Map<String, String> loaded = (Map<String, String>) loadedEntry;
         DefinitionService definitionService = Aura.getDefinitionService();
-        Map<DefDescriptor<?>,String> clientLoaded = Maps.newHashMap();
+        Map<DefDescriptor<?>, String> clientLoaded = Maps.newHashMap();
 
         for (Map.Entry<String, String> entry : loaded.entrySet()) {
             String uid = entry.getValue();
@@ -269,11 +306,12 @@ public class AuraContextFilter implements Filter {
 
     protected Mode getMode(HttpServletRequest request, Map<String, Object> configMap) {
         Mode m = getModeParam(request, configMap);
-
+        ConfigAdapter configAdapter = Aura.getConfigAdapter();
+        
         if (m == null) {
-            m = Aura.getConfigAdapter().getDefaultMode();
+            m = configAdapter.getDefaultMode();
         }
-        Set<Mode> allowedModes = Aura.getConfigAdapter().getAvailableModes();
+        Set<Mode> allowedModes = configAdapter.getAvailableModes();
         boolean forceProdMode = !allowedModes.contains(m) && allowedModes.contains(Mode.PROD);
         if (forceProdMode) {
             m = Mode.PROD;
@@ -312,10 +350,10 @@ public class AuraContextFilter implements Filter {
     }
 
     protected Boolean getDebugToolParam(HttpServletRequest request) {
-    	// Get Passed in aura.debugtool param
-    	return isDebugToolEnabled.get(request);
+        // Get Passed in aura.debugtool param
+        return isDebugToolEnabled.get(request);
     }
-    
+
     @Override
     public void destroy() {
     }

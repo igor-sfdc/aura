@@ -20,13 +20,17 @@ import java.io.IOException;
 import org.auraframework.Aura;
 import org.auraframework.def.ComponentDef;
 import org.auraframework.def.DefDescriptor;
+import org.auraframework.def.Definition;
 import org.auraframework.def.ModelDef;
 import org.auraframework.def.ValueDef;
 import org.auraframework.impl.AuraImplTestCase;
 import org.auraframework.impl.expression.PropertyReferenceImpl;
 import org.auraframework.impl.system.DefDescriptorImpl;
 import org.auraframework.instance.Model;
+import org.auraframework.service.DefinitionService;
+import org.auraframework.system.Annotations;
 import org.auraframework.system.Location;
+import org.auraframework.test.annotation.UnAdaptableTest;
 import org.auraframework.throwable.AuraExecutionException;
 import org.auraframework.throwable.quickfix.DefinitionNotFoundException;
 import org.auraframework.throwable.quickfix.InvalidDefinitionException;
@@ -101,6 +105,11 @@ public class JavaModelTest extends AuraImplTestCase {
         @Override
         public int compareTo(DefDescriptor<?> other) {
             return DefDescriptorImpl.compare(this, other);
+        }
+
+        @Override
+        public DefDescriptor<? extends Definition> getBundle() {
+            return null;
         }
     };
 
@@ -192,7 +201,8 @@ public class JavaModelTest extends AuraImplTestCase {
             Aura.getInstanceService().getInstance(dd);
             fail("Expected DefinitionNotFoundException");
         } catch (DefinitionNotFoundException e) {
-            assertEquals(String.format("No MODEL named java://goats found : %s", dd.getQualifiedName()), e.getMessage());
+            assertEquals(String.format("No MODEL named java://goats found : [%s]", dd.getQualifiedName()),
+                    e.getMessage());
         }
     }
 
@@ -219,5 +229,79 @@ public class JavaModelTest extends AuraImplTestCase {
             checkExceptionStart(e, AuraExecutionException.class, "TestModel: no such property: firstThi",
                     javaModelDefDesc.getName());
         }
+    }
+
+    private void checkInvalidModel(Class<?> clazz, String message) {
+        DefDescriptor<ModelDef> desc = DefDescriptorImpl.getInstance("java://" + clazz.getName(), ModelDef.class);
+        DefinitionService definitionService = Aura.getDefinitionService();
+        try {
+            definitionService.getDefinition(desc);
+            fail("Expected exception");
+        } catch (Exception e) {
+            checkExceptionStart(e, InvalidDefinitionException.class, message, "java://" + clazz.getCanonicalName());
+        }
+    }
+
+    @Annotations.Model
+    public static class ModelPrivateConstructor {
+        private ModelPrivateConstructor() {
+        }
+    };
+
+    public void testPrivateConstructor() throws Exception {
+        checkInvalidModel(ModelPrivateConstructor.class, "Default constructor is not public");
+    }
+
+    @Annotations.Model
+    public static class ModelProtectedConstructor {
+        protected ModelProtectedConstructor() {
+        }
+    };
+
+    public void testProtectedConstructor() throws Exception {
+        checkInvalidModel(ModelProtectedConstructor.class, "Default constructor is not public");
+    }
+
+    @Annotations.Model
+    public static class ModelBadConstructor {
+        public ModelBadConstructor(String value) {
+        }
+    };
+
+    public void testBadConstructor() throws Exception {
+        checkInvalidModel(ModelBadConstructor.class, "No default constructor found");
+    }
+
+    @Annotations.Model(bean = true)
+    public static class BeanModelPrivateConstructor {
+        private BeanModelPrivateConstructor() {
+        }
+    };
+
+    @UnAdaptableTest("BeanAdapter might be different")
+    public void testBeanPrivateConstructor() throws Exception {
+        checkInvalidModel(BeanModelPrivateConstructor.class, "Default constructor is not public");
+    }
+
+    @Annotations.Model(bean = true)
+    public static class BeanModelProtectedConstructor {
+        protected BeanModelProtectedConstructor() {
+        }
+    };
+
+    @UnAdaptableTest("BeanAdapter might be different")
+    public void testBeanProtectedConstructor() throws Exception {
+        checkInvalidModel(BeanModelProtectedConstructor.class, "Default constructor is not public");
+    }
+
+    @Annotations.Model(bean = true)
+    public static class BeanModelBadConstructor {
+        public BeanModelBadConstructor(String value) {
+        }
+    };
+
+    @UnAdaptableTest("BeanAdapter might be different")
+    public void testBeanBadConstructor() throws Exception {
+        checkInvalidModel(BeanModelBadConstructor.class, "No default constructor found");
     }
 }

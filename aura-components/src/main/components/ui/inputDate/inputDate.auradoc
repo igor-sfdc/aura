@@ -1,0 +1,47 @@
+<!--
+
+    Copyright (C) 2013 salesforce.com, inc.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+-->
+<aura:documentation>
+	<aura:description>
+		<p>
+			A <code>ui:inputDate</code> component represents a date input field, which is rendered as an HTML <code>input</code> tag of type <code>text</code>.
+			The value is displayed in the default format specified language locale of the browser. 
+		</p>
+		<p>This is a basic set up of a date field with a date picker, which displays the field value <code>1/30/2014</code>.</p>
+		<pre>&lt;ui:inputDate aura:id="dateField" label="Birthday" value="2014-01-30" displayDatePicker="true"/></pre>
+		<p>This example results in the following HTML.</p>
+		<pre>&lt;div class="uiInput uiInputDate">
+  &lt;label class="uiLabel-left uiLabel">
+    &lt;span>Birthday&lt;/span>
+  &lt;/label>
+  &lt;input placeholder="M/d/yyyy" type="text" class="uiInput uiInputDate">
+  &lt;a class="datePicker-openIcon" aria-haspopup="true">
+    &lt;span class="assistiveText">Date Picker&lt;/span>
+  &lt;/a>
+  &lt;a class="clearIcon">
+    &lt;span class="assistiveText">Clear Button&lt;/span>
+  &lt;/a>
+  &lt;div class="uiDatePicker">
+    &lt;!--Date picker set to visible when icon is clicked-->
+  &lt;/div>
+&lt;/div></pre>
+	<p>Specifying <code>format="MMMM d, yyyy"</code> renders the field value as <code>January 30, 2014</code>.</p>
+	</aura:description>		
+	<aura:example name="inputExample" ref="uiExamples:inputExample" label="Using ui:inputDate">
+    		This example shows how you can use <code>ui:inputDate</code> to get user input.
+    </aura:example>
+</aura:documentation>

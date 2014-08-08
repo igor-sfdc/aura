@@ -51,20 +51,20 @@
         fullName: "December",
         shortName: "Dec"
     }],
-    
+
     focusDate: function(component) {
         var grid = component.find("grid");
         var e = grid.get("e.focus");
         e.fire();
     },
-    
+
     getOnClickEndFunction : function(component) {
         if ($A.util.isUndefined(component._onClickEndFunc)) {
             var helper = this;
             var f = function(event) {
                 // ignore gestures/swipes; only run the click handler if it's a click or tap
                 var clickEndEvent;
-            
+
                 if (helper.getOnClickEventProp("isTouchDevice")) {
                     var touchIdFound = false;
                     for (var i = 0; i < event.changedTouches.length; i++) {
@@ -74,24 +74,30 @@
                             break;
                         }
                     }
-                
+
                     if (helper.getOnClickEventProp("isTouchDevice") && !touchIdFound) {
                         return;
                     }
                 } else {
                     clickEndEvent = event;
                 }
-            
+
                 var startX = component._onStartX, startY = component._onStartY;
                 var endX = clickEndEvent.clientX, endY = clickEndEvent.clientY;
 
                 if (Math.abs(endX - startX) > 0 || Math.abs(endY - startY) > 0) {
                     return;
                 }
-            
+
                 if (!helper.isElementInComponent(component, event.target)) {
                     // Hide the component
-                    component.setValue("v.visible", false);
+                    component.set("v.visible", false);
+
+                    //Since we are no longer going into the rerender function, updateGlobalEventListeners does not get called and the listeners will never get turned off
+                    var concreteCmp = component.getConcreteComponent();
+                    concreteCmp._clickStart.setEnabled(false);
+                    concreteCmp._clickEnd.setEnabled(false);
+
                     var divCmp = component.find("datePicker");
                     if (divCmp) {
                         var elem = divCmp.getElement();
@@ -103,7 +109,7 @@
         }
         return component._onClickEndFunc;
     },
-    
+
     getOnClickEventProp: function(prop) {
         // create the cache
         if ($A.util.isUndefined(this.getOnClickEventProp.cache)) {
@@ -127,7 +133,7 @@
         }
         return this.getOnClickEventProp.cache[prop];
     },
-    
+
     getOnClickStartFunction: function(component) {
         if ($A.util.isUndefined(component._onClickStartFunc)) {
             var helper = this;
@@ -147,14 +153,32 @@
         }
         return component._onClickStartFunc;
     },
-    
+
+    goToNextYear: function(component) {
+        var grid = component.find("grid");
+        var e = grid.get("e.updateCalendar");
+        if (e) {
+            e.setParams({monthChange: 0, yearChange: 1, setFocus: false});
+            e.fire();
+        }
+    },
+
+    goToPrevYear: function(component) {
+	    var grid = component.find("grid");
+	    var e = grid.get("e.updateCalendar");
+	    if (e) {
+	        e.setParams({monthChange: 0, yearChange: -1, setFocus: false});
+	        e.fire();
+	    }
+	},
+
     handleESCKey: function(component, event) {
         var keyCode = event.keyCode;
         if (keyCode == 27) { // Esc key is pressed
             component.setValue("{!v.visible}", false);
         }
     },
-    
+
     isElementInComponent : function(component, targetElem) {
         var componentElements = [];
 
@@ -179,18 +203,19 @@
 
         return false;
     },
-    
+
     localizeToday: function(component) {
-        var todayElem = component.find("today").getElement();
+        var todayCmp = component.find("today");
+        if (!todayCmp) {
+            return;
+        }
         var todayLabel = component.get("m.labelForToday");
         if (!todayLabel) {
             todayLabel = "Today";
         }
-        if (todayElem) {
-            todayElem.textContent = todayElem.innerText = todayLabel;
-        }
+        todayCmp.set("v.label", todayLabel);
     },
-    
+
     getNormalizedLang: function(component) {
         var ret = 'en';
         var lang = [];
@@ -211,7 +236,7 @@
         } else {
             lang.push("en");
         }
-        
+
         if (lang[0] === "zh") {
             ret = lang[0] + "-" + lang[1];
         } else {
@@ -219,7 +244,76 @@
         }
         return ret;
     },
-    
+
+    handleWinResize: function(component, e) {
+        if (!component || !component.isValid()) {
+            return;
+        }
+        var elem = component.getElement();
+        if (elem) {
+            var origWinHeight = component._windowSize.height;
+            var currWinHeight = $A.util.getWindowSize().height;
+            var elemRect = elem.getBoundingClientRect();
+            if (currWinHeight < origWinHeight - 20) { // soft keyboard up
+                elem.style.top = currWinHeight - origWinHeight + "px";
+            } else {
+                elem.style.top = 0 + "px";
+            }
+        }
+    },
+
+    position: function(component) {
+        var divCmp = component.find("datePicker");
+        var elem = divCmp ? divCmp.getElement() : null;
+        var visible = component.get("v.visible");
+        var viewPort = $A.util.getWindowSize();
+
+        if (elem && visible) {
+            var isPhone = $A.get("$Browser.isPhone");
+
+            if (isPhone === true) {
+                $A.util.attachToDocumentBody(component.getElement());
+                var scrollerDivCmp = component.find("scroller");
+                var scrollerElem = scrollerDivCmp ? scrollerDivCmp.getElement() : null;
+                if (scrollerElem) { // Set scroller div height to make it scrollable.
+                    var isAndroid = $A.get("$Browser.isAndroid");
+                    if (isAndroid == true) {
+                        scrollerElem.style.height = component._windowSize.height + "px";
+                    } else {
+                        scrollerElem.style.height = viewPort.height + "px";
+                    }
+                }
+            } else {
+                var elemRect = elem.getBoundingClientRect();
+
+                if (elemRect.bottom > viewPort.height) { // no enough space below
+                    elem.style.top = 0 - (elemRect.bottom - viewPort.height) + "px"; // Move it up a bit
+                }
+                else {
+                    elem.style.top = "auto";
+                }
+            }
+        }
+    },
+
+    refreshYearSelection: function(component) {
+        var minY = component.get("v.minYear");
+        if (!minY) {
+            minY = (new Date()).getFullYear() - 100;
+        }
+        var maxY = component.get("v.maxYear");
+        if (!maxY) {
+            maxY = (new Date()).getFullYear() + 30;
+        }
+        var yearTitleCmp = component.find("yearTitle");
+        var selectElem = yearTitleCmp ? yearTitleCmp.getElement() : null;
+        if (selectElem) {
+            for (var i = minY; i <= maxY; i++) {
+                selectElem.options[selectElem.options.length] = new Option(i+"", i+"");
+            }
+        }
+    },
+
     setGridInitialValue: function(component) {
         var initialDate = new Date();
         var value = component.get("v.value");
@@ -229,33 +323,44 @@
         }
         var grid = component.find("grid");
         if (grid) {
-            grid.setValue("v.selectedDate", initialDate.getFullYear() + "-" + (initialDate.getMonth() + 1) + "-" + initialDate.getDate());
-            grid.setValue("v.date", initialDate.getDate());
-            grid.setValue("v.month", initialDate.getMonth());
-            grid.setValue("v.year", initialDate.getFullYear());
+            grid.set("v.selectedDate", initialDate.getFullYear() + "-" + (initialDate.getMonth() + 1) + "-" + initialDate.getDate());
+            grid.set("v.date", initialDate.getDate());
+            grid.set("v.month", initialDate.getMonth());
+            grid.set("v.year", initialDate.getFullYear());
         }
-    },
-    
-    updateGlobalEventListeners: function(component) {
-        var concretCmp = component.getConcreteComponent();
-        var visible = concretCmp.get("v.visible");
-        if (visible === true) {
-            $A.util.on(document.body, this.getOnClickEventProp("onClickStartEvent"), this.getOnClickStartFunction(component));
-            $A.util.on(document.body, this.getOnClickEventProp("onClickEndEvent"), this.getOnClickEndFunction(component));
-        } else {
-            if (document.body.removeEventListener) {
-                document.body.removeEventListener(this.getOnClickEventProp("onClickStartEvent"), this.getOnClickStartFunction(component), false);
-                document.body.removeEventListener(this.getOnClickEventProp("onClickEndEvent"), this.getOnClickEndFunction(component), false);
-            } else {
-                if (document.body.detachEvent) {
-                    document.body.detachEvent('on' + this.getOnClickEventProp("onClickStartEvent"), this.getOnClickStartFunction(component));
-                    document.body.detachEvent('on' + this.getOnClickEventProp("onClickEndEvent"), this.getOnClickEndFunction(component));
-                }
+
+        // set initial value to time picker if hasTime is true
+        var hasTime = $A.util.getBooleanValue(component.get("v.hasTime"));
+        if (hasTime) {
+            var timePickerCmp = component.find("time");
+            if (timePickerCmp) {
+                timePickerCmp.set("v.hours", component.get("v.hours"));
+                timePickerCmp.set("v.is24HourFormat", component.get("v.is24HourFormat"));
+                timePickerCmp.set("v.minutes", component.get("v.minutes"));
             }
         }
     },
-    
+
+    updateGlobalEventListeners: function(component) {
+        var concreteCmp = component.getConcreteComponent();
+        var visible = concreteCmp.get("v.visible");
+        if (!concreteCmp._clickStart) {
+            concreteCmp._clickStart = concreteCmp.addDocumentLevelHandler(this.getOnClickEventProp("onClickStartEvent"),
+                this.getOnClickStartFunction(component), visible);
+            concreteCmp._clickEnd = concreteCmp.addDocumentLevelHandler(this.getOnClickEventProp("onClickEndEvent"),
+                this.getOnClickEndFunction(component), visible);
+        } else {
+            concreteCmp._clickStart.setEnabled(visible);
+            concreteCmp._clickEnd.setEnabled(visible);
+        }
+    },
+
     updateMonthYear: function(component, value) {
+        var isDesktop = $A.get("$Browser.formFactor") == "DESKTOP";
+        if (!isDesktop) { // mobile
+            this.updateMobileMonthYear(component, value);
+            return;
+        }
         var grid = component.find("grid");
         if (grid) {
             var titleCmp = component.find("calTitle");
@@ -271,5 +376,37 @@
                 }
             }
         }
-    } 
+    },
+
+    updateMobileMonthYear: function(component, value) {
+        var grid = component.find("grid");
+        if (grid) {
+            var m = grid.get("v.month");
+            var y = grid.get("v.year");
+            var monthTitleCmp = component.find("monthTitle");
+            if (monthTitleCmp) {
+                var monthLabels = component.get("m.monthLabels");
+                monthTitleCmp.set("v.value", monthLabels[m].fullName);
+            }
+            var yearTitleCmp = component.find("yearTitle");
+            var selectElem = yearTitleCmp ? yearTitleCmp.getElement() : null;
+            if (selectElem) {
+                selectElem.value = y + "";
+            }
+        }
+    },
+
+    yearChange: function(component) {
+        var grid = component.find("grid");
+        var yearCmp = component.find("yearTitle");
+        if (grid && yearCmp) {
+            var e = grid.get("e.updateCalendar");
+            if (e) {
+                var y = parseInt(grid.get("v.year"));
+                var selectedYear = parseInt(yearCmp.getElement().value);
+                e.setParams({monthChange: 0, yearChange: selectedYear - y, setFocus: false});
+                e.fire();
+            }
+        }
+    }
 })

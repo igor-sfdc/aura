@@ -55,6 +55,8 @@
     
     handleKeyAction: function(component, event, helper) {
         helper.handleKeyAction(component, event);
+        var domEvent = event.getParam("domEvent");
+        helper.fireEvent(component, domEvent, helper);
     },
     
     handleMatchDone: function(component, event, helper) {
@@ -78,7 +80,7 @@
     matchText: function(component, event, helper) {
         var listCmp = component.find("list");
         if (listCmp) {
-            listCmp.setValue("v.keyword", event.getParam("keyword"));
+            listCmp.set("v.keyword", event.getParam("keyword"));
             listCmp.get("e.matchText").fire();
         }
     },

@@ -15,18 +15,21 @@
  */
 ({
     rangeChange: function(cmp, evt, helper) {
-        // check new ranges, add or destroy components as needed
-        helper.rerenderEverything(cmp);
+        helper.updateRealBody(cmp);
     },
 
     itemsChange: function(cmp, evt, helper) {
         var v = evt.getParam("value");
-        if (v === cmp.getValue("v.items")) {
-            if (v.isDifferentArray()) {
-                helper.rerenderEverything(cmp);
-            } else {
-                helper.rerenderSelective(cmp);
-            }
+        
+        //JBUCH: FIXME: THIS IS A HUGE WRONG: THIS IS FIRING WHEN ATTRIBUTES OTHER THAN ITEMS ARE CHANGED
+        if($A.util.isArray(v)){
+            helper.updateRealBody(cmp);
+        }
+    },
+
+    firstRender: function(cmp, evt, helper) {
+        if (cmp.get("v.realbody").length === 0) {
+            helper.updateRealBody(cmp);
         }
     }
 })

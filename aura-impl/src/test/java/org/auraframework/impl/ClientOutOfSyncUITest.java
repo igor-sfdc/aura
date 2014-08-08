@@ -29,7 +29,7 @@ import org.auraframework.def.NamespaceDef;
 import org.auraframework.def.ProviderDef;
 import org.auraframework.def.RendererDef;
 import org.auraframework.def.StyleDef;
-import org.auraframework.system.Source;
+import org.auraframework.def.ThemeDef;
 import org.auraframework.test.WebDriverTestCase;
 import org.auraframework.test.annotation.ThreadHostileTest;
 import org.openqa.selenium.By;
@@ -55,20 +55,14 @@ public class ClientOutOfSyncUITest extends WebDriverTestCase {
         auraUITestingUtil.setTimeoutInSecs(60);
     }
 
-    private void updateStringSource(DefDescriptor<?> desc, String content) {
-        Source<?> src = getSource(desc);
-        src.addOrUpdate(content);
-    }
-
-    private DefDescriptor<ComponentDef> setupTriggerComponent(String attrs,
-            String body) {
+    private DefDescriptor<ComponentDef> setupTriggerComponent(String attrs, String body) {
         DefDescriptor<ComponentDef> cmpDesc = addSourceAutoCleanup(
                 ComponentDef.class,
                 String.format(
                         baseComponentTag,
                         "controller='java://org.auraframework.impl.java.controller.JavaTestController' "
                                 + attrs,
-                        "<button onclick='{!c.post}'>post</button>" + body));
+                                "<button onclick='{!c.post}'>post</button>" + body));
         DefDescriptor<?> controllerDesc = Aura.getDefinitionService()
                 .getDefDescriptor(cmpDesc, DefDescriptor.JAVASCRIPT_PREFIX,
                         ControllerDef.class);
@@ -86,6 +80,7 @@ public class ClientOutOfSyncUITest extends WebDriverTestCase {
         auraUITestingUtil.getRawEval("document._waitingForReload = true;");
         auraUITestingUtil.findDomElement(By.cssSelector("button")).click();
         waitForCondition("return !document._waitingForReload");
+        auraUITestingUtil.waitForDocumentReady();
         waitForAuraFrameworkReady();
     }
 
@@ -111,9 +106,8 @@ public class ClientOutOfSyncUITest extends WebDriverTestCase {
         addSourceAutoCleanup(styleDesc, String.format(".%s {font-style:italic;}", className));
         addSourceAutoCleanup(
                 Aura.getDefinitionService().getDefDescriptor(
-                        String.format("%s://%s", DefDescriptor.MARKUP_PREFIX, styleDesc.getNamespace(),
-                                DefDescriptor.MARKUP_PREFIX, styleDesc.getNamespace()), NamespaceDef.class),
-                "<aura:namespace/>");
+                        String.format("%s://%s", DefDescriptor.MARKUP_PREFIX, styleDesc.getNamespace()),
+                        NamespaceDef.class), "<aura:namespace/>");
         open(cmpDesc);
         assertEquals("italic",
                 auraUITestingUtil.findDomElement(By.cssSelector("." + className)).getCssValue("font-style"));
@@ -124,21 +118,22 @@ public class ClientOutOfSyncUITest extends WebDriverTestCase {
     }
 
     @ThreadHostileTest("NamespaceDef modification affects namespace")
-    public void testGetClientRenderingAfterNamespaceChange() throws Exception {
+    public void testGetClientRenderingAfterThemeChange() throws Exception {
         DefDescriptor<ComponentDef> cmpDesc = addSourceAutoCleanup(ComponentDef.class,
                 String.format(baseComponentTag, "", "<div id='out'>hi</div>"));
         String className = cmpDesc.getNamespace() + StringUtils.capitalize(cmpDesc.getName());
         DefDescriptor<?> styleDesc = Aura.getDefinitionService().getDefDescriptor(cmpDesc, DefDescriptor.CSS_PREFIX,
                 StyleDef.class);
-        addSourceAutoCleanup(styleDesc, String.format(".%s {font-size:TOKEN;}", className));
-        DefDescriptor<?> namespaceDesc = Aura.getDefinitionService().getDefDescriptor(
-                String.format("%s://%s", DefDescriptor.MARKUP_PREFIX, cmpDesc.getNamespace()), NamespaceDef.class);
-        addSourceAutoCleanup(namespaceDesc,
-                "<aura:namespace><style><tokens><TOKEN>8px</TOKEN></tokens></style></aura:namespace>");
+        addSourceAutoCleanup(styleDesc, String.format(".%s {font-size:t(fsize);}", className));
+        DefDescriptor<?> themeDesc = Aura.getDefinitionService().getDefDescriptor(
+                String.format("%s://%s:%sTheme", DefDescriptor.MARKUP_PREFIX, cmpDesc.getNamespace(),
+                        cmpDesc.getNamespace()), ThemeDef.class);
+        addSourceAutoCleanup(themeDesc,
+                "<aura:theme><aura:var name='fsize' value='8px'/></aura:theme>");
         open(cmpDesc);
         assertEquals("8px", auraUITestingUtil.findDomElement(By.cssSelector("." + className)).getCssValue("font-size"));
-        updateStringSource(namespaceDesc,
-                "<aura:namespace><style><tokens><TOKEN>66px</TOKEN></tokens></style></aura:namespace>");
+        updateStringSource(themeDesc,
+                "<aura:theme><aura:var name='fsize' value='66px'/></aura:theme>");
         open(cmpDesc);
         assertEquals("66px", auraUITestingUtil.findDomElement(By.cssSelector("." + className)).getCssValue("font-size"));
     }
@@ -152,12 +147,22 @@ public class ClientOutOfSyncUITest extends WebDriverTestCase {
         open(cmpDesc);
         assertNull(auraUITestingUtil.getEval("return window.tempVar;"));
         auraUITestingUtil.findDomElement(By.cssSelector("#click")).click();
-        assertEquals("inconsequential", auraUITestingUtil.getEval("return window.tempVar;"));
+        auraUITestingUtil.waitUntil(new ExpectedCondition<Boolean>() {
+            @Override
+            public Boolean apply(WebDriver d) {
+                return "inconsequential".equals(auraUITestingUtil.getEval("return window.tempVar;"));
+            }
+        });
         updateStringSource(controllerDesc, "{clicked:function(){window.tempVar='meaningful'}}");
         open(cmpDesc);
         assertNull(auraUITestingUtil.getEval("return window.tempVar;"));
         auraUITestingUtil.findDomElement(By.cssSelector("#click")).click();
-        assertEquals("meaningful", auraUITestingUtil.getEval("return window.tempVar;"));
+        auraUITestingUtil.waitUntil(new ExpectedCondition<Boolean>() {
+            @Override
+            public Boolean apply(WebDriver d) {
+                return "meaningful".equals(auraUITestingUtil.getEval("return window.tempVar;"));
+            }
+        });
     }
 
     public void testGetClientRenderingAfterJsProviderChange() throws Exception {
@@ -210,13 +215,13 @@ public class ClientOutOfSyncUITest extends WebDriverTestCase {
                         String.format("<aura:registerevent name='end' type='%s'/>", eventDesc.getDescriptorName())));
         open(cmpDesc);
         assertEquals("pow", auraUITestingUtil.getEval(String.format(
-                "return $A.getEvt('%s').getDef().getAttributeDefs().explode.defaultValue.value;",
+                "return $A.getEvt('%s').getDef().getAttributeDefs().explode['default'];",
                 eventDesc.getDescriptorName())));
         updateStringSource(eventDesc,
                 "<aura:event type='APPLICATION'><aura:attribute name='explode' type='String' default='kaboom'/></aura:event>");
         open(cmpDesc);
         assertEquals("kaboom", auraUITestingUtil.getEval(String.format(
-                "return $A.getEvt('%s').getDef().getAttributeDefs().explode.defaultValue.value;",
+                "return $A.getEvt('%s').getDef().getAttributeDefs().explode['default'];",
                 eventDesc.getDescriptorName())));
     }
 
@@ -292,9 +297,8 @@ public class ClientOutOfSyncUITest extends WebDriverTestCase {
         addSourceAutoCleanup(styleDesc, String.format(".%s {font-style:italic;}", className));
         addSourceAutoCleanup(
                 Aura.getDefinitionService().getDefDescriptor(
-                        String.format("%s://%s", DefDescriptor.MARKUP_PREFIX, styleDesc.getNamespace(),
-                                DefDescriptor.MARKUP_PREFIX, styleDesc.getNamespace()), NamespaceDef.class),
-                "<aura:namespace/>");
+                        String.format("%s://%s", DefDescriptor.MARKUP_PREFIX, styleDesc.getNamespace()),
+                        NamespaceDef.class), "<aura:namespace/>");
         open(cmpDesc);
         assertEquals("italic",
                 auraUITestingUtil.findDomElement(By.cssSelector("." + className)).getCssValue("font-style"));
@@ -324,9 +328,8 @@ public class ClientOutOfSyncUITest extends WebDriverTestCase {
         addSourceAutoCleanup(styleDesc, String.format(".%s {font-style:italic;}", className));
         addSourceAutoCleanup(
                 Aura.getDefinitionService().getDefDescriptor(
-                        String.format("%s://%s", DefDescriptor.MARKUP_PREFIX, styleDesc.getNamespace(),
-                                DefDescriptor.MARKUP_PREFIX, styleDesc.getNamespace()), NamespaceDef.class),
-                "<aura:namespace/>");
+                        String.format("%s://%s", DefDescriptor.MARKUP_PREFIX, styleDesc.getNamespace()),
+                        NamespaceDef.class), "<aura:namespace/>");
         open(cmpDesc);
         assertEquals("italic",
                 auraUITestingUtil.findDomElement(By.cssSelector("." + className)).getCssValue("font-style"));
@@ -335,38 +338,39 @@ public class ClientOutOfSyncUITest extends WebDriverTestCase {
             triggerServerAction();
             auraUITestingUtil.waitForElementFunction(By.cssSelector("." + className),
                     new Function<WebElement, Boolean>() {
-                        @Override
-                        public Boolean apply(WebElement element) {
-                            return "normal".equals(element.getCssValue("font-style"));
-                        }
-                    });
+                @Override
+                public Boolean apply(WebElement element) {
+                    return "normal".equals(element.getCssValue("font-style"));
+                }
+            });
             updateStringSource(styleDesc, String.format(".%s {font-style:italic;}", className));
             triggerServerAction();
             auraUITestingUtil.waitForElementFunction(By.cssSelector("." + className),
                     new Function<WebElement, Boolean>() {
-                        @Override
-                        public Boolean apply(WebElement element) {
-                            return "italic".equals(element.getCssValue("font-style"));
-                        }
-                    });
+                @Override
+                public Boolean apply(WebElement element) {
+                    return "italic".equals(element.getCssValue("font-style"));
+                }
+            });
         }
     }
 
     @ThreadHostileTest("NamespaceDef modification affects namespace")
-    public void testPostAfterNamespaceChange() throws Exception {
+    public void testPostAfterThemeChange() throws Exception {
         DefDescriptor<ComponentDef> cmpDesc = setupTriggerComponent("", "<div id='out'>hi</div>");
         String className = cmpDesc.getNamespace() + StringUtils.capitalize(cmpDesc.getName());
         DefDescriptor<?> styleDesc = Aura.getDefinitionService().getDefDescriptor(cmpDesc, DefDescriptor.CSS_PREFIX,
                 StyleDef.class);
-        addSourceAutoCleanup(styleDesc, String.format(".%s {font-size:TOKEN;}", className));
-        DefDescriptor<?> namespaceDesc = Aura.getDefinitionService().getDefDescriptor(
-                String.format("%s://%s", DefDescriptor.MARKUP_PREFIX, cmpDesc.getNamespace()), NamespaceDef.class);
-        addSourceAutoCleanup(namespaceDesc,
-                "<aura:namespace><style><tokens><TOKEN>8px</TOKEN></tokens></style></aura:namespace>");
+        addSourceAutoCleanup(styleDesc, String.format(".%s {font-size:t(fsize);}", className));
+        DefDescriptor<?> themeDesc = Aura.getDefinitionService().getDefDescriptor(
+                String.format("%s://%s:%sTheme", DefDescriptor.MARKUP_PREFIX, cmpDesc.getNamespace(),
+                        cmpDesc.getNamespace()), ThemeDef.class);
+        addSourceAutoCleanup(themeDesc,
+                "<aura:theme><aura:var name='fsize' value='8px'/></aura:theme>");
         open(cmpDesc);
         assertEquals("8px", auraUITestingUtil.findDomElement(By.cssSelector("." + className)).getCssValue("font-size"));
-        updateStringSource(namespaceDesc,
-                "<aura:namespace><style><tokens><TOKEN>66px</TOKEN></tokens></style></aura:namespace>");
+        updateStringSource(themeDesc,
+                "<aura:theme><aura:var name='fsize' value='66px'/></aura:theme>");
         triggerServerAction();
         auraUITestingUtil.waitForElementFunction(By.cssSelector("." + className), new Function<WebElement, Boolean>() {
             @Override
@@ -392,14 +396,17 @@ public class ClientOutOfSyncUITest extends WebDriverTestCase {
         open(cmpDesc);
         assertNull(auraUITestingUtil.getEval("return window.tempVar;"));
         auraUITestingUtil.findDomElement(By.cssSelector("#click")).click();
-        assertEquals("inconsequential",
-                auraUITestingUtil.getEval("return window.tempVar;"));
+        auraUITestingUtil.waitUntil(new ExpectedCondition<Boolean>() {
+            @Override
+            public Boolean apply(WebDriver d) {
+                return "inconsequential".equals(auraUITestingUtil.getEval("return window.tempVar;"));
+            }
+        });
         updateStringSource(
                 controllerDesc,
                 "{post:function(c){var a=c.get('c.getString');a.setParams({param:'dummy'});$A.enqueueAction(a);},clicked:function(){window.tempVar='meaningful'}}");
         triggerServerAction();
-        // wait for page to reload by checking that our tempVar is undefined
-        // again
+        // wait for page to reload by checking that our tempVar is undefined again
         auraUITestingUtil.waitUntil(new ExpectedCondition<Boolean>() {
             @Override
             public Boolean apply(WebDriver input) {
@@ -411,8 +418,7 @@ public class ClientOutOfSyncUITest extends WebDriverTestCase {
         auraUITestingUtil.waitUntil(new ExpectedCondition<Boolean>() {
             @Override
             public Boolean apply(WebDriver input) {
-                return "meaningful".equals(auraUITestingUtil
-                        .getEval("return window.tempVar;"));
+                return "meaningful".equals(auraUITestingUtil.getEval("return window.tempVar;"));
             }
         });
     }
@@ -489,7 +495,7 @@ public class ClientOutOfSyncUITest extends WebDriverTestCase {
                 String.format("<aura:registerevent name='end' type='%s'/>", eventDesc.getDescriptorName()));
         open(cmpDesc);
         assertEquals("pow", auraUITestingUtil.getEval(String.format(
-                "return $A.getEvt('%s').getDef().getAttributeDefs().explode.defaultValue.value;",
+                "return $A.getEvt('%s').getDef().getAttributeDefs().explode['default'];",
                 eventDesc.getDescriptorName())));
         updateStringSource(eventDesc,
                 "<aura:event type='APPLICATION'><aura:attribute name='explode' type='String' default='kaboom'/></aura:event>");
@@ -500,7 +506,7 @@ public class ClientOutOfSyncUITest extends WebDriverTestCase {
                 auraUITestingUtil.waitForDocumentReady();
                 auraUITestingUtil.waitForAuraFrameworkReady(null);
                 String eval = String
-                        .format("return ((window.$A && $A.getEvt('%s')) && (window.$A && $A.getEvt('%s')).getDef().getAttributeDefs().explode.defaultValue.value);",
+                        .format("return ((window.$A && $A.getEvt('%s')) && (window.$A && $A.getEvt('%s')).getDef().getAttributeDefs().explode['default']);",
                                 eventDesc.getDescriptorName(), eventDesc.getDescriptorName());
                 return "kaboom".equals(auraUITestingUtil.getEval(eval));
             }

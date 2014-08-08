@@ -43,7 +43,6 @@
     },
     testStackTracePresent : {
         // A useful stacktrace isn't available on all browsers
-        // Stacktrace only supported in Safari versions >= 6
         browsers : ["-IE7", "-IE8", "-IE9", "-IPAD", "-IPHONE", "-SAFARI"],
         test : function(cmp) {
             var errorMsg = "Verifying stack trace present";
@@ -77,7 +76,8 @@
     testMapAsMessageParam : {
         test : function(cmp) {
             var map = { first: "first error", second: "second error" };
-            var errorMsg = map['first'] + '\n' + map['second'];
+            var errorMsg = "Unknown Error : caught {\"first\":\"" + map['first'] +
+                    '\",\"second\":\"' + map['second'] + "\"}";
             $A.test.expectAuraError(errorMsg);
             $A.error(map);
             this.assertErrorMessage(errorMsg);
@@ -90,27 +90,38 @@
             this.assertErrorMessage("foo : bar");
         }
     },
+    testDuplicateErrorMsgAllExpected : {
+    	test : function(cmp) { 
+    		//on test_priv: we allow duplication with expecting error messages
+    		$A.test.expectAuraError("foo");
+    		$A.test.expectAuraError("foo");
+    		//on browser: error msg comes later will override previous one
+    		$A.error("foo", new Error("bar1"));
+    		$A.error("foo", new Error("bar2"));
+    		this.assertErrorMessage("foo : bar2");
+    	}
+    },
     /**
-     * Verify passing a string in for the Error param of $A.error() gives an unrecognized paremeter error message.
+     * Verify passing a string in for the Error param of $A.error() gives does
+     * something sensible with the non-Error information it has.
      */
     testStringForErrorParam : {
         test : function(cmp) {
             $A.test.expectAuraError("foo");
             $A.error("foo", "bar");
-           this.assertErrorMessage("Internal Error: Unrecognized parameter");
+           this.assertErrorMessage("foo : caught \"bar\"");
         }
     },
     assertErrorMessage : function(expectedMsg) {
-
         var messageDiv = $A.util.getElement("auraErrorMessage");
         $A.test.assertNotNull(messageDiv, "Aura error message box did is not present after $A.error()");
         $A.test.assertEquals(1, messageDiv.childNodes.length);
         $A.test.assertEquals("#text", messageDiv.childNodes[0].nodeName);
         var actualMsg = $A.test.getAuraErrorMessage();
-        // Older IE versions put line breaks as \r\n or \r. Replace with just \n for consistency.
-       
-        actualMsg = actualMsg.replace("\n", "");
-        expectedMsg = expectedMsg.replace("\n", "");
+
+        // Get rid of newlines for browser compatability, specifically IE.
+        actualMsg = actualMsg.replace(/\r\n|\n/g, '');
+        expectedMsg = expectedMsg.replace(/\r\n|\n/g, '');
         $A.test.assertStartsWith(expectedMsg, actualMsg, "$A.error failed to display proper error text. Expecting <"
             + expectedMsg + "> but got <" + actualMsg + ">");
     }

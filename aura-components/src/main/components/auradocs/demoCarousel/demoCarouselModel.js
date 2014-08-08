@@ -14,7 +14,16 @@
  * limitations under the License.
  */
 
-{
-	 "header" : "Page 3",
-	 "str" : "I am a String from a model."
-}
+({
+    "data": [
+     {
+         "header" : "Page 1",
+         "str" : "Data from a model."
+     },
+     {
+         "header" : "Page 2",
+         "str" : "Content from a model."
+     }       
+     ]
+	 
+})

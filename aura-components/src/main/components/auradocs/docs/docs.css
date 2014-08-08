@@ -22,9 +22,14 @@
 }
 
 .THIS li {
-	font-size: 13px;
-	padding-bottom: 4px;
+	font-size: 13px;	
 	line-height: 120%;
+}
+
+.THIS .bordered {
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	padding: 8px;
 }
 
 .THIS.container {
@@ -92,10 +97,6 @@ footer.THIS {
 .THIS .uiTabset {
 	height: 100%;
 	width: 100%;
-}
-
-.THIS .uiTabset>* {
-	height: 100%;
 }
 
 /*tables */

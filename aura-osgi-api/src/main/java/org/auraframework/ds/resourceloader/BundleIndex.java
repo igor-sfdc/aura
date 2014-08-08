@@ -21,25 +21,24 @@ import java.util.Enumeration;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.auraframework.ds.log.AuraDSLog;
 import org.auraframework.ds.util.BundleUtil;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 /**
- * A temporary solution to build package index on the fly (currently Maven build 
- * fails to create a proper .index, which would otherwise make package unusable)  
- * 
+ * A temporary solution to build package index on the fly (currently Maven build
+ * fails to create a proper .index, which would otherwise make package unusable)
+ *
  *
  *
  */
 public class BundleIndex {
     private static final String BUNDLE_PATH_SEPARATOR = "/";
-    private static final int NAMESPACE_GROUP = 1;
-    private static final int ENTRY_NAME_GROUP = 2;
-    private static final String NAMESPACE_SEPARATOR = ":";
+    private static final int FILE_ENTRY_GROUP = 1;
     private static final String ENTRIES_SEPARATOR = ",";
     private final StringBuilder indexBuffer = new StringBuilder();
-    private static final Pattern indexEntryPattern = Pattern.compile(".*/([^/]*)/[^/]*/([^/]+[.][^/]+)");
-            
+    private static final Pattern indexEntryPattern = Pattern.compile("bundleentry[:]//[^/]*/(.*)");
+
     protected BundleIndex(String basePackage, Class<?> clientClass) throws IOException {
         this(basePackage, BundleUtil.getBundleContext(clientClass));
     }
@@ -54,7 +53,7 @@ public class BundleIndex {
     protected BundleIndex(String basePackage, Bundle providerBundle) throws IOException {
         locateEntries(providerBundle, indexBuffer, basePackage);
     }
-    
+
     static String createKey(String packageName, Class<?> clientClass) {
         BundleContext bundleContext = BundleUtil.getBundleContext(clientClass);
         if (bundleContext == null) {
@@ -74,16 +73,18 @@ public class BundleIndex {
             }
         }
     }
-    
+
     private static void addToIndex(StringBuilder indexBuffer, String entry) throws IOException {
         Matcher matcher = indexEntryPattern.matcher(entry);
         if (matcher.matches()) {
             if (indexBuffer.length() > 0) {
                 indexBuffer.append(ENTRIES_SEPARATOR);
             }
-            indexBuffer.append(matcher.group(NAMESPACE_GROUP));
-            indexBuffer.append(NAMESPACE_SEPARATOR);
-            indexBuffer.append(matcher.group(ENTRY_NAME_GROUP));
+            String packageEntry = matcher.group(FILE_ENTRY_GROUP);
+            indexBuffer.append(packageEntry);
+            AuraDSLog.get().warning("Package entry added to index: " + packageEntry);
+        } else {
+            AuraDSLog.get().warning("Invalid bundle entry: " + entry);
         }
     }
 

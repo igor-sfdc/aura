@@ -113,4 +113,13 @@ public class IterationValueProvider<D extends BaseComponentDef, I extends BaseCo
         return attributeValueProvider.getModel();
     }
 
+    @Override
+    public String getPath() {
+        return attributeValueProvider.getPath();
+    }
+
+	@Override
+	public void reinitializeModel() throws QuickFixException {
+		attributeValueProvider.reinitializeModel();
+	}
 }

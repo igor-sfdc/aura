@@ -13,37 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-({  
+({
 	/**
 	 * @Override
 	 */
-	addDomHandler : function(component, event) {		
+	addDomHandler : function(component, event) {
         var el = this.getInputElement(component);
-        $A.util.on(el, event, this.domEventHandler);		   
+        $A.util.on(el, event, this.domEventHandler);
 	},
-	
+
 	/**
      * Adds an event handler for input specific DOM event for which this input has a Aura-equivalent handler
      */
-    addInputDomEvents : function(component) {    	
+    addInputDomEvents : function(component) {
         var events = ["input", "change", "paste", "copy", "cut"];
-        
+
         for (var i=0, len=events.length; i < len; i++) {
             if (component.hasEventHandler(events[i])) {
                 this.addDomHandler(component, events[i]);
-            }    		
+            }
     	}
 
         var updateOn = this.getUpdateOn(component);
         if (updateOn) {
-        	
+
         	var handledEvents = this.getHandledDOMEvents(component);
         	for (var j=0, lenj=updateOn.length; j < lenj; j++) {
 	            if (handledEvents[updateOn[j]] !== true) {
 	                this.addDomHandler(component, updateOn[j]);
 	            }
         	}
-            
+
         }
     },
 
@@ -53,11 +53,11 @@
     getUpdateOn : function(component) {
     	var ret = [];
         var updateOn = component.get("v.updateOn");
-        
+
         if(!updateOn) {
         	return ret;
     	}
-        
+
         updateOn = updateOn.toLowerCase().split(/[\W,]+/); // split on whitespace or commas
 
         var domEvents = this.getDomEvents(component);
@@ -68,16 +68,16 @@
 	            }
             }
         }
-        
+
         // fall back on the default updateOn value if an invalid one is supplied
-        return (ret.length > 0) ? ret : component.getDef().getAttributeDefs().getDef("updateOn").getDefault(); 
+        return (ret.length > 0) ? ret : component.getDef().getAttributeDefs().getDef("updateOn").getDefault();
     },
 
     /**
      * Obtains the current value from the DOM element.  May be overridden by extensions.
      */
-    getDomElementValue : function (element) {    	
-    		return element.value;        
+    getDomElementValue : function (element) {
+    	return element.value;
     },
 
     /**
@@ -86,7 +86,7 @@
      * This hook allows extensions of ui:input to augment or override update behaviour
      */
     doUpdate : function(component, value) {
-        component.setValue("v.value", value);
+        component.set("v.value", value);
     },
 
     /**
@@ -106,14 +106,14 @@
     /**
      * Pre-process the event before we fire it.
      */
-    preEventFiring : function(component, event) {    	
+    preEventFiring : function(component, event) {
         this.handleUpdate(component, event);
     },
-    
+
     /**
      * handle the value update.
      */
-    handleUpdate : function(component, event) {    	
+    handleUpdate : function(component, event) {
         var helper = component.getDef().getHelper();
         var updateOn = helper.getUpdateOn(component);
 
@@ -122,20 +122,20 @@
             helper.doUpdate(component, helper.getDomElementValue(this.getInputElement(component)));
         }
     },
-    
+
     /**
      * Returns the input dom element in the component. If there are multiple input elements, only the first one is return.
      */
     getInputElement : function(component) {
-    	var element;    		
+    	var element;
 
     	if (this.hasLabel(component)) {
     		var el = component.getElement();
-    		element = el.getElementsByTagName('input')[0] ||  el.getElementsByTagName('select')[0] ||  el.getElementsByTagName('textarea')[0] || element;
+    		element = el.getElementsByTagName('input')[0] ||  el.getElementsByTagName('select')[0] ||  el.getElementsByTagName('textarea')[0] || el;
     	} else {
     		element = component.getElement();
     	}
-    	
+
     	return element;
     },
 
@@ -143,51 +143,55 @@
      * Set a default error component.
      */
     setErrorComponent : function(component, value) {
-        var element = component.getElement();
-        var htmlCmp = $A.componentService.getRenderingComponentForElement(element);
-        var valueProvider = htmlCmp.getAttributes().getComponentValueProvider();
         if (value.isValid()) {
-            this.validate(component, valueProvider);
+            this.validate(component);
         } else {
-            this.invalidate(component, valueProvider, value);
+            this.invalidate(component, value);
         }
     },
 
     /**
      * Dismiss the error messages and restore the component to the normal state.
      */
-    validate : function(component, valueProvider) {
-        var inputEl = this.getInputElement(component);
+    validate : function(component) {
         var errorCmp = component.get("v.errorComponent")[0];
-        
-        $A.util.removeClass(inputEl, "inputError");
-        
-        if (errorCmp && errorCmp.getValue("v.value.length").getValue() > 0) {
-            errorCmp.setValue("v.value", []);
+
+        // Mark as not invalid
+        component._invalidValue = false;
+
+        // Remove errors
+        if (errorCmp && errorCmp.get("v.value.length") > 0) {
+            errorCmp.set("v.value", []);
         }
     },
 
     /**
      * Show up the the error messages and put the component in the error state.
      */
-    invalidate : function(component, valueProvider, value) {
-        var inputEl = this.getInputElement(component);
+    invalidate : function(component, value) {
         var m = [];
         var valueErr = value.getErrors();
-        
-        $A.util.addClass(inputEl, "inputError");
-        
+
+        // Mark as invalid
+        component._invalidValue = true;
+
         for (var i = 0; i < valueErr.length; i++) {
             m.push(valueErr[i].message);
         }
+        // Update error component
         var errorCmp = component.get("v.errorComponent")[0];
-        if (errorCmp && !errorCmp.getValue("v.value").compare(m)) {
-            errorCmp.setValue("v.value", m);
+        if (errorCmp) {
+            errorCmp.set("v.value", m);
         } else {
+            component._creatingAsyncErrorCmp = true;
             $A.componentService.newComponentAsync(
                 this,
                 function(errorCmp) {
-                    component.setValue("v.errorComponent", errorCmp);
+                	var ariaDesc = component.get("v.ariaDescribedby");
+                    ariaDesc = this.addTokenToString(ariaDesc, errorCmp.getGlobalId());
+                	component.set("v.errorComponent", errorCmp);
+                	this.setAttribute(component, {key: "ariaDescribedby", value: ariaDesc});
+                	component._creatingAsyncErrorCmp = false;
                 },
                 {
                 "componentDef": "markup://ui:inputDefaultError",
@@ -199,6 +203,13 @@
             	}
             );
         }
+    },
+    
+    updateErrorElement : function(component) {
+    	var inputEl = this.getInputElement(component);
+    	var classFunc = component._invalidValue ? $A.util.addClass : $A.util.removeClass;
+    	
+    	classFunc.apply($A.util, [inputEl, "inputError"]);
     },
 
     /**
@@ -223,7 +234,7 @@
         test.setAttribute("type", type);
         return (this.isHTML5Input.cache[type] = (test.type === type));
     },
-    
+
     isEventSupported: function(eventName) {
         // create the cache
         if ($A.util.isUndefined(this.isEventSupported.cache)) {
@@ -235,7 +246,7 @@
         if (!$A.util.isUndefined(cached)) {
             return cached;
         }
-        
+
         var el = document.createElement('input');
         var _eventName = 'on' + eventName;
         var isSupported = (_eventName in el);
@@ -243,32 +254,45 @@
             el.setAttribute(_eventName, 'return;');
             isSupported = typeof el[_eventName] == 'function';
         }
-        $A.util.removeElement(el); 
+        $A.util.removeElement(el);
         return (this.isEventSupported.cache[eventName] = isSupported);
     },
-    
+
     setAttribute: function(cmp, attr) {
-        var attrs = cmp.getAttributes(),			
         concreteCmp = cmp.getConcreteComponent(),
         parentCmp = concreteCmp.getSuper();
-        
-        concreteCmp.getAttributes().setValue(attr.key, attr.value);
+
+        concreteCmp.set("v." + attr.key, attr.value);
         //need to traverse up the hierarchy and set the attributes, since attribute lookup is not hierarchical once initialized
         while(parentCmp) {
-        	parentCmp.getAttributes().setValue(attr.key, attr.value);
+        	parentCmp.set("v." + attr.key, attr.value);
         	parentCmp = parentCmp.getSuper();
-        } 
+        }
     },
-    
-    addInputClass: function(cmp) {    	
+
+    // Can str ever be null/undef?
+    addTokenToString: function(str, token) {
+    	token = $A.util.trim(token);
+    	str = $A.util.trim(str);
+    	if (str) {
+    		if ((' ' + str + ' ').indexOf(' ' + token + ' ') == -1) {
+    			str += ' ' + token;
+    		}
+    	} else {
+    		str = token;
+    	}
+    	return str
+    },
+
+    addInputClass: function(cmp) {
     	if (this.hasLabel(cmp)) {
     		var inputEl = this.getInputElement(cmp);
     		$A.util.addClass(inputEl, cmp.getConcreteComponent().getDef().getStyleClassName());
     	}
     },
-    
+
     hasLabel: function(cmp) {
-    	var label = cmp.get('v.label');    	
+    	var label = cmp.get('v.label');
     	return !!(label && label.length > 0);
     },
 

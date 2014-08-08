@@ -15,55 +15,63 @@
  */
 ({
     afterRender: function(component, helper) {
-        var visible = component.get("v.visible");
+        var visible = component.get("v.visible"),
+            managed = component.get('v.managed');
+
         if (visible === true) {
+            if (component.get("v._yearListInitialized") === false) {
+                helper.refreshYearSelection(component);
+                component.set("v._yearListInitialized", true);
+            }
+
             helper.setGridInitialValue(component);
             helper.updateMonthYear(component, component.get("v.value"));
             helper.updateGlobalEventListeners(component);
         }
-        var ret = this.superAfterRender();
-        if (visible === true) {
-            helper.localizeToday(component);
+
+        // If this picker is not 'managed' (consumed by ui:dataPickerManager),
+        // then positioning should be taken into account.
+        if (visible === true && !managed) {
+            helper.position(component);
         }
-        return ret;
+
+        this.superAfterRender();
     },
 
     rerender: function(component, helper) {
-        var visible = component.get("v.visible");
+        var visible = component.get("v.visible"),
+            managed = component.get('v.managed');
+
         if (visible === true) {
+            if (component.get("v._yearListInitialized") === false) {
+                helper.refreshYearSelection(component);
+                component.set("v._yearListInitialized", true);
+            }
+
             helper.setGridInitialValue(component);
             helper.updateMonthYear(component, component.get("v.value"));
             helper.updateGlobalEventListeners(component);
         }
+
         this.superRerender();
-        if (visible === true) {
-            helper.localizeToday(component);
+
+        // If this picker is not 'managed' (consumed by ui:dataPickerManager),
+        // then positioning should be taken into account.
+        if (visible === true && !managed) {
+            helper.position(component);
         }
-    },
-    
-    unrender: function(component, helper) {
-        if (helper.getOnClickEventProp.cache && 
-            helper.getOnClickEventProp.cache.onClickStartEvent && 
-            component._onClickStartFunc) {
-            if (document.body.removeEventListener) {
-                document.body.removeEventListener(helper.getOnClickEventProp.cache.onClickStartEvent, component._onClickStartFunc, false);
+
+        var isAndroid = $A.get("$Browser.isAndroid");
+
+        if (isAndroid == true) {
+            var f = function(e) {
+                helper.handleWinResize(component, e);
+            };
+            if (visible === true) {
+                $A.util.on(window, "resize", f);
             } else {
-                if (document.body.detachEvent) {
-                    document.body.detachEvent('on' + helper.getOnClickEventProp.cache.onClickStartEvent, component._onClickStartFunc);
-                }
+                $A.util.removeOn(window, "resize", f);
             }
         }
-        if (helper.getOnClickEventProp.cache &&
-            helper.getOnClickEventProp.cache.onClickEndEvent && 
-            component._onClickEndFunc) {
-            if (document.body.removeEventListener) {
-                document.body.removeEventListener(helper.getOnClickEventProp.cache.onClickEndEvent, component._onClickEndFunc, false);
-            } else {
-                if (document.body.detachEvent) {
-                    document.body.detachEvent('on' + helper.getOnClickEventProp.cache.onClickEndEvent, component._onClickEndFunc);
-                }
-            }
-        }
-        this.superUnrender();
     }
 })

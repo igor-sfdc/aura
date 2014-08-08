@@ -41,7 +41,6 @@ public class ApiContentsModel {
     private static final Log log = LogFactory.getLog(ApiContentsModel.class);
 
     private static Map<String, Map<String, Object>> symbols;
-    private static final ResourceLoader resourceLoader = Aura.getConfigAdapter().getResourceLoader();
 
     private static final Comparator<Map<String, Object>> SYMBOL_COMPARATOR = new Comparator<Map<String, Object>>() {
         @Override
@@ -73,6 +72,7 @@ public class ApiContentsModel {
         Reader reader = null;
         try {
             try {
+                final ResourceLoader resourceLoader = Aura.getConfigAdapter().getResourceLoader();
                 reader = new InputStreamReader(resourceLoader.getResourceAsStream("jsdoc/symbolSet.json"));
                 JsonStreamReader jsonReader = new JsonStreamReader(reader);
                 jsonReader.disableLengthLimitsBecauseIAmStreamingAndMyMemoryUseIsNotProportionalToTheStreamLength();

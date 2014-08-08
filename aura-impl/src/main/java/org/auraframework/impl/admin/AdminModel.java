@@ -18,7 +18,7 @@
 package org.auraframework.impl.admin;
 
 import java.lang.management.ManagementFactory;
-import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,7 +27,6 @@ import javax.management.JMException;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
-import org.auraframework.def.Definition;
 import org.auraframework.impl.AuraImpl;
 import org.auraframework.impl.system.MasterDefRegistryImpl;
 import org.auraframework.system.Annotations.AuraEnabled;
@@ -36,9 +35,6 @@ import org.auraframework.system.AuraContext;
 import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.system.DefRegistry;
 
-import com.google.common.base.Optional;
-
-import com.google.common.cache.CacheStats;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -56,37 +52,46 @@ public class AdminModel {
     private final Map<String,Object> stringsData;
     private final Map<String,Object> descriptorFilterData;
 
-    private Map<String,Object> getStats(CacheStats stats) {
-        Map<String, Object> data = Maps.newHashMap();
+// TODO - W-2105858 - re-enable with either the private implementation of the Cache used, or
+//        a least-common-denominator implementation
+    
+//    private Map<String,Object> getStats(CacheStats stats) {
+//        Map<String, Object> data = Maps.newHashMap();
+//
+//        data.put("evictionCount", String.valueOf(stats.evictionCount()));
+//        data.put("hitCount", String.valueOf(stats.hitCount()));
+//        data.put("hitRate", String.valueOf(stats.hitRate()));
+//        data.put("missCount", String.valueOf(stats.missCount()));
+//        data.put("missRate", String.valueOf(stats.missRate()));
+//        data.put("requestCount", String.valueOf(stats.requestCount()));
+//        return data;
+//    }
 
-        data.put("evictionCount", String.valueOf(stats.evictionCount()));
-        data.put("hitCount", String.valueOf(stats.hitCount()));
-        data.put("hitRate", String.valueOf(stats.hitRate()));
-        data.put("missCount", String.valueOf(stats.missCount()));
-        data.put("missRate", String.valueOf(stats.missRate()));
-        data.put("requestCount", String.valueOf(stats.requestCount()));
-        return data;
-    }
-
-    private void addDefsStats(Map<String, Object> data, Collection<Optional<? extends Definition>> defs) {
-        List<Map<String, Object>> defsData = Lists.newArrayListWithCapacity(defs.size());
-        int nulls = 0;
-
-        data.put("defs", defsData);
-        for (Optional<? extends Definition> odef : defs) {
-            Definition def = odef.orNull();
-            if (def != null) {
-                Map<String, Object> defData = Maps.newHashMap();
-                defData.put("class", def.getClass().getName());
-                defData.put("descriptor", def.getDescriptor().getQualifiedName());
-                defData.put("type", def.getDescriptor().getDefType());
-                defData.put("location", def.getLocation());
-                defsData.add(defData);
-            } else {
-                nulls += 1;
-            }
-        }
-        data.put("nulls", nulls);
+//    private void addDefsStats(Map<String, Object> data, Collection<Optional<? extends Definition>> defs) {
+//        List<Map<String, Object>> defsData = Lists.newArrayListWithCapacity(defs.size());
+//        int nulls = 0;
+//
+//        data.put("defs", defsData);
+//        for (Optional<? extends Definition> odef : defs) {
+//            Definition def = odef.orNull();
+//            if (def != null) {
+//                Map<String, Object> defData = Maps.newHashMap();
+//                defData.put("class", def.getClass().getName());
+//                defData.put("descriptor", def.getDescriptor().getQualifiedName());
+//                defData.put("type", def.getDescriptor().getDefType());
+//                defData.put("location", def.getLocation());
+//                defsData.add(defData);
+//            } else {
+//                nulls += 1;
+//            }
+//        }
+//        data.put("nulls", nulls);
+//    }
+    
+    public Map<String,Object> getMockMap() {
+    	HashMap<String,Object> map = new HashMap<String,Object>();
+    	map.put("not available", "not available");
+    	return map;
     }
 
     public AdminModel() throws JMException {
@@ -95,11 +100,11 @@ public class AdminModel {
         MasterDefRegistryImpl mdr = (MasterDefRegistryImpl) c.getDefRegistry();
         DefRegistry<?>[] regs = mdr.getAllRegistries();
 
-        defsData = getStats(MasterDefRegistryImpl.getDefsCacheStats());
-        addDefsStats(defsData, MasterDefRegistryImpl.getCachedDefs());
-        existsData = getStats(MasterDefRegistryImpl.getExistsCacheStats());
-        stringsData = getStats(MasterDefRegistryImpl.getStringsCacheStats());
-        descriptorFilterData = getStats(MasterDefRegistryImpl.getDescriptorFilterCacheStats());
+        defsData = getMockMap(); //getStats(MasterDefRegistryImpl.getDefsCacheStats());
+        //addDefsStats(defsData, MasterDefRegistryImpl.getCachedDefs());
+        existsData = getMockMap(); //getStats(MasterDefRegistryImpl.getExistsCacheStats());
+        stringsData = getMockMap(); // getStats(MasterDefRegistryImpl.getStringsCacheStats());
+        descriptorFilterData = getMockMap(); //getStats(MasterDefRegistryImpl.getDescriptorFilterCacheStats());
 
         registryData = Lists.newArrayListWithCapacity(regs.length);
         for (DefRegistry<?> dr : regs) {

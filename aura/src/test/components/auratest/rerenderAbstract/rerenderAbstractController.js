@@ -13,19 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-{
+({
     toggleAbstract : function(cmp, event) {
-        var val = cmp.getValue("v.toggleAbstract");
-        val.setValue(!val.unwrap());
+        var val = $A.util.getBooleanValue(cmp.get("v.toggleAbstract"));
+        cmp.set("v.toggleAbstract", !val);
     },
 
     toggleAbstractModel : function(cmp, event) {
-        var val = cmp.getValue("m.booleanFalse");
-        val.setValue(!val.unwrap());
+        var val = $A.util.getBooleanValue(cmp.get("m.booleanFalse"));
+        cmp.set("m.booleanFalse", !val);
     },
 
     toggleInterface : function(cmp, event) {
-        var val = cmp.getValue("v.toggleInterface");
-        val.setValue(!val.unwrap());
+        var val = $A.util.getBooleanValue(cmp.get("v.toggleInterface"));
+        cmp.set("v.toggleInterface", !val);
     }
-}
+})

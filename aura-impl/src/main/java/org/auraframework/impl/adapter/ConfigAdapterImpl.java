@@ -15,11 +15,22 @@
  */
 package org.auraframework.impl.adapter;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileFilter;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Properties;
+import java.util.Set;
+import java.util.TimeZone;
 
 import org.apache.log4j.Logger;
 import org.auraframework.Aura;
@@ -27,22 +38,32 @@ import org.auraframework.adapter.ConfigAdapter;
 import org.auraframework.ds.resourceloader.BundleResourceAccessor;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.impl.javascript.AuraJavascriptGroup;
-import org.auraframework.impl.javascript.AuraJavascriptResourceGroup;
+import org.auraframework.impl.source.AuraResourcesHashingGroup;
+import org.auraframework.impl.source.file.AuraFileMonitor;
 import org.auraframework.impl.util.AuraImplFiles;
 import org.auraframework.impl.util.BrowserInfo;
 import org.auraframework.system.AuraContext;
 import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.throwable.AuraError;
 import org.auraframework.throwable.AuraRuntimeException;
-import org.auraframework.util.*;
+import org.auraframework.util.AuraLocale;
+import org.auraframework.util.AuraTextUtil;
+import org.auraframework.util.IOUtil;
 import org.auraframework.util.javascript.JavascriptGroup;
+import org.auraframework.util.resource.CompiledGroup;
+import org.auraframework.util.resource.FileGroup;
 import org.auraframework.util.resource.ResourceLoader;
+import org.auraframework.util.text.Hash;
 
 import aQute.bnd.annotation.component.Activate;
 import aQute.bnd.annotation.component.Component;
 import aQute.bnd.annotation.component.Reference;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
+
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 @Component (provide=AuraServiceProvider.class)
 public class ConfigAdapterImpl implements ConfigAdapter {
@@ -52,14 +73,26 @@ public class ConfigAdapterImpl implements ConfigAdapter {
     private static final String VERSION_PROPERTY = "aura.build.version";
     private static final String VALIDATE_CSS_CONFIG = "aura.css.validate";
 
+    private static final Set<String> SYSTEM_NAMESPACES = Sets.newHashSet();
+
+    private static final Set<String> UNSECURED_PREFIXES = new ImmutableSortedSet.Builder<String>(String.CASE_INSENSITIVE_ORDER).add("aura", "layout").build();
+
+    private static final Set<String> UNDOCUMENTED_NAMESPACES = new ImmutableSortedSet.Builder<String>(String.CASE_INSENSITIVE_ORDER).add("auradocs").build();
+
+    private static final Set<String> CACHEABLE_PREFIXES = ImmutableSet.of("aura", "java");
+
     protected final Set<Mode> allModes = EnumSet.allOf(Mode.class);
     private JavascriptGroup jsGroup;
     private ResourceLoader resourceLoader;
     private Long buildTimestamp;
+    private FileGroup resourcesGroup;
+    private String jsUid = "";
+    private String resourcesUid = "";
+    private String fwUid = "";
     private String auraVersionString;
     private boolean lastGenerationHadCompilationErrors = false;
     private boolean validateCss;
-	private String resourceCacheDir;
+    private final String resourceCacheDir;
 
     public ConfigAdapterImpl() {
         this(getDefaultCacheDir());
@@ -71,15 +104,15 @@ public class ConfigAdapterImpl implements ConfigAdapter {
     }
 
     protected ConfigAdapterImpl(String resourceCacheDir) {
-    	this.resourceCacheDir = resourceCacheDir;
+        this.resourceCacheDir = resourceCacheDir;
     }
-    
+
     private BundleResourceAccessor staticResourceAccessor;
     @Reference
     protected void setStaticResourceAccessor(BundleResourceAccessor staticResourceAccessor) {
-    	this.staticResourceAccessor = staticResourceAccessor;
+        this.staticResourceAccessor = staticResourceAccessor;
     }
-    
+
     @Activate
     protected void activate() {
         // can this initialization move to some sort of common initialization dealy?
@@ -88,7 +121,8 @@ public class ConfigAdapterImpl implements ConfigAdapter {
         } catch (MalformedURLException e) {
             throw new AuraRuntimeException(e);
         }
-        
+
+        // Framework JS
         JavascriptGroup tempGroup = null;
         try {
             tempGroup = newAuraJavascriptGroup();
@@ -104,9 +138,21 @@ public class ConfigAdapterImpl implements ConfigAdapter {
              * do want a hash. Question: hypothetically, could we have a hybrid with a subset of files as files, and the
              * rest in jars? This wouldn't be accounted for here.
              */
-            tempGroup = new AuraJavascriptResourceGroup();
+            tempGroup = new CompiledGroup(AuraJavascriptGroup.GROUP_NAME, AuraJavascriptGroup.FILE_NAME);
         }
         jsGroup = tempGroup;
+
+        // Aura Resources
+        FileGroup tempResourcesGroup;
+        try {
+            tempResourcesGroup = newAuraResourcesHashingGroup();
+            tempResourcesGroup.getGroupHash();
+        } catch (IOException e) {
+            tempResourcesGroup = new CompiledGroup(AuraResourcesHashingGroup.GROUP_NAME,
+                    AuraResourcesHashingGroup.FILE_NAME);
+        }
+        resourcesGroup = tempResourcesGroup;
+
         Properties props = (jsGroup == null) ? loadProperties() : null;
         if (props == null) {
             // If we don't get the framework version from properties, the default is a development build:
@@ -126,6 +172,15 @@ public class ConfigAdapterImpl implements ConfigAdapter {
         String validateCssString = config.getProperty(VALIDATE_CSS_CONFIG);
         validateCss = AuraTextUtil.isNullEmptyOrWhitespace(validateCssString)
                 || Boolean.parseBoolean(validateCssString.trim());
+
+        if (!isProduction()) {
+            AuraFileMonitor.start();
+        }
+
+    }
+
+    protected FileGroup newAuraResourcesHashingGroup() throws IOException {
+        return new AuraResourcesHashingGroup(true);
     }
 
     @Override
@@ -139,21 +194,24 @@ public class ConfigAdapterImpl implements ConfigAdapter {
     }
 
     @Override
-    public String getJiffyCSSURL() {
-        String contextPath = Aura.getContextService().getCurrentContext().getContextPath();
-        return String.format("%s/auraFW/resources/jiffy/Jiffy.css", contextPath);
+    public boolean isPrivilegedNamespace(String namespace) {
+        return namespace != null && SYSTEM_NAMESPACES.contains(namespace.toLowerCase());
     }
 
     @Override
-    public String getJiffyJSURL() {
-        String contextPath = Aura.getContextService().getCurrentContext().getContextPath();
-        return String.format("%s/auraFW/resources/jiffy/Jiffy.js", contextPath);
+    public String getDefaultNamespace() {
+        return null;
     }
 
     @Override
-    public String getJiffyUIJSURL() {
-        String contextPath = Aura.getContextService().getCurrentContext().getContextPath();
-        return String.format("%s/auraFW/resources/jiffy/JiffyUi.js", contextPath);
+    public boolean isUnsecuredPrefix(String prefix) {
+        return UNSECURED_PREFIXES.contains(prefix);
+    }
+
+    @Override
+    public boolean isUnsecuredNamespace(String namespace) {
+        // Deprecated stub will be removed once we remove the sfdc core usage
+        return false;
     }
 
     @Override
@@ -192,14 +250,14 @@ public class ConfigAdapterImpl implements ConfigAdapter {
             }
         }
     }
-    
+
     @Override
     public String getMomentJSURL() {
-    	String nonce = Aura.getContextService().getCurrentContext().getFrameworkUID();
+        String nonce = Aura.getContextService().getCurrentContext().getFrameworkUID();
         String contextPath = Aura.getContextService().getCurrentContext().getContextPath();
-        return String.format("%s/auraFW/resources/%s/moment/moment.js?aura.fwuid=%s", contextPath, nonce, nonce);
+        return String.format("%s/auraFW/resources/%s/moment/moment.js", contextPath, nonce);
     }
-    
+
     @Override
     public List<String> getWalltimeJSURLs() {
         AuraLocale al = Aura.getLocalizationAdapter().getAuraLocale();
@@ -207,25 +265,26 @@ public class ConfigAdapterImpl implements ConfigAdapter {
         String contextPath = Aura.getContextService().getCurrentContext().getContextPath();
 
         List<String> urls = Lists.newLinkedList();
-    	String nonce = Aura.getContextService().getCurrentContext().getFrameworkUID();
+        String nonce = Aura.getContextService().getCurrentContext().getFrameworkUID();
         if (!"GMT".equals(locale)) {
-            urls.add(String.format("%s/auraFW/resources/%s/walltime-js/olson/walltime-data_%s.js?aura.fwuid=%s", contextPath, nonce, locale, nonce));
+            urls.add(String.format("%s/auraFW/resources/%s/walltime-js/olson/walltime-data_%s.js", contextPath,
+                    nonce, locale));
         }
-        
-        urls.add(String.format("%s/auraFW/resources/%s/walltime-js/walltime.js?aura.fwuid=%s", contextPath, nonce, nonce));
+
+        urls.add(String.format("%s/auraFW/resources/%s/walltime-js/walltime.js", contextPath, nonce));
         return urls;
     }
 
     @Override
     public String getHTML5ShivURL() {
-    	String ret = null;
-    	AuraContext context = Aura.getContextService().getCurrentContext();
-    	String ua = context != null ? context.getClient().getUserAgent() : null;
+        String ret = null;
+        AuraContext context = Aura.getContextService().getCurrentContext();
+        String ua = context != null ? context.getClient().getUserAgent() : null;
         BrowserInfo b = new BrowserInfo(ua);
         if (b.isIE7() || b.isIE8()) {
             String nonce = context.getFrameworkUID();
             String contextPath = context.getContextPath();
-            ret = String.format("%s/auraFW/resources/%s/html5shiv/html5shiv.js?aura.fwuid=%s", contextPath, nonce, nonce);
+            ret = String.format("%s/auraFW/resources/%s/html5shiv/html5shiv.js", contextPath, nonce);
         }
 
         return ret;
@@ -235,8 +294,8 @@ public class ConfigAdapterImpl implements ConfigAdapter {
     public String getAuraJSURL() {
         String contextPath = Aura.getContextService().getCurrentContext().getContextPath();
         String suffix = Aura.getContextService().getCurrentContext().getMode().getJavascriptMode().getSuffix();
-    	String nonce = Aura.getContextService().getCurrentContext().getFrameworkUID();
-        return String.format("%s/auraFW/javascript/%s/aura_%s.js?aura.fwuid=%s", contextPath, nonce, suffix, nonce);
+        String nonce = Aura.getContextService().getCurrentContext().getFrameworkUID();
+        return String.format("%s/auraFW/javascript/%s/aura_%s.js", contextPath, nonce, suffix);
     }
 
     @Override
@@ -353,7 +412,7 @@ public class ConfigAdapterImpl implements ConfigAdapter {
      * AuraJavascriptGroup that experiences synthetic errors.
      */
     protected AuraJavascriptGroup newAuraJavascriptGroup() throws IOException {
-        return new AuraJavascriptGroup();
+        return new AuraJavascriptGroup(true);
     }
 
     @Override
@@ -365,9 +424,70 @@ public class ConfigAdapterImpl implements ConfigAdapter {
     public final String getAuraFrameworkNonce() {
         regenerateAuraJS();
         try {
-            return jsGroup.getGroupHash().toString();
+            // framework nonce now consists of Aura JS and resources files (CSS and JS)
+            String jsHash = jsGroup.getGroupHash().toString();
+            String resourcesHash = getAuraResourcesNonce();
+
+            /*
+             * don't want to makeHash every time so store results and return appropriately
+             *
+             * Be VERY careful here.
+             *
+             * because fwUid is set along with jsUid and resourcesUid, there is a race condition
+             * whereby the condition can fail (i.e. both js & resources match), but fwUid is not
+             * yet set. This is very bad, as it causes an empty fwUid, which breaks everyone with
+             * a COOS
+             */
+            synchronized (this) {
+                if (!jsHash.equals(this.jsUid) || !resourcesHash.equals(this.resourcesUid)) {
+                    this.jsUid = jsHash;
+                    this.resourcesUid = resourcesHash;
+                    this.fwUid = makeHash(this.jsUid, this.resourcesUid);
+                }
+            }
+
+            return this.fwUid;
+
         } catch (IOException e) {
             throw new AuraRuntimeException("Can't read framework files", e);
         }
+    }
+
+    protected String makeHash(String one, String two) throws IOException {
+        StringReader reader = new StringReader(one + two);
+        return new Hash(reader).toString();
+    }
+
+    private String getAuraResourcesNonce() {
+        try {
+            if (!isProduction() && resourcesGroup != null && resourcesGroup.isStale()) {
+                resourcesGroup.reset();
+            }
+            return resourcesGroup.getGroupHash().toString();
+        } catch (IOException e) {
+            throw new AuraRuntimeException("Can't read Aura resources files", e);
+        }
+    }
+
+    @Override
+    public void addPrivilegedNamespace(String namespace) {
+        if(namespace != null && !namespace.isEmpty()){
+            SYSTEM_NAMESPACES.add(namespace.toLowerCase());
+        }
+    }
+
+    @Override
+    public void removePrivilegedNamespace(String namespace) {
+        SYSTEM_NAMESPACES.remove(namespace.toLowerCase());
+    }
+
+    @Override
+    public boolean isDocumentedNamespace(String namespace) {
+        return !UNDOCUMENTED_NAMESPACES.contains(namespace) && !namespace.toLowerCase().endsWith("test");
+    }
+
+    @Override
+    public boolean isCacheablePrefix(String prefix) {
+        return CACHEABLE_PREFIXES.contains(prefix);
     }
 }

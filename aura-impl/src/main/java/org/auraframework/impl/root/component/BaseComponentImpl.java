@@ -33,19 +33,24 @@ import org.auraframework.def.InterfaceDef;
 import org.auraframework.def.ModelDef;
 import org.auraframework.def.RendererDef;
 import org.auraframework.def.RootDefinition;
+import org.auraframework.def.TypeDef;
 import org.auraframework.expression.PropertyReference;
 import org.auraframework.impl.java.model.JavaModel;
+import org.auraframework.impl.root.AttributeDefImpl;
 import org.auraframework.impl.root.AttributeSetImpl;
 import org.auraframework.impl.system.DefDescriptorImpl;
 import org.auraframework.instance.Action;
 import org.auraframework.instance.AttributeSet;
 import org.auraframework.instance.BaseComponent;
 import org.auraframework.instance.Component;
+import org.auraframework.instance.Instance;
+import org.auraframework.instance.InstanceStack;
 import org.auraframework.instance.Model;
 import org.auraframework.instance.ValueProvider;
 import org.auraframework.instance.ValueProviderType;
 import org.auraframework.service.LoggingService;
 import org.auraframework.system.AuraContext;
+import org.auraframework.system.MasterDefRegistry;
 import org.auraframework.throwable.AuraRuntimeException;
 import org.auraframework.throwable.quickfix.DefinitionNotFoundException;
 import org.auraframework.throwable.quickfix.MissingRequiredAttributeException;
@@ -76,6 +81,7 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
         } finally {
             loggingService.stopTimer(LoggingService.TIMER_COMPONENT_CREATION);
         }
+        Aura.getContextService().getCurrentContext().getInstanceStack().popInstance(this);
     }
 
     @SuppressWarnings("unchecked")
@@ -89,6 +95,7 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
         } finally {
             loggingService.stopTimer(LoggingService.TIMER_COMPONENT_CREATION);
         }
+        Aura.getContextService().getCurrentContext().getInstanceStack().popInstance(this);
     }
 
     /**
@@ -101,6 +108,11 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
      */
     public BaseComponentImpl(DefDescriptor<D> descriptor, Collection<AttributeDefRef> attributeDefRefs,
             BaseComponent<?, ?> attributeValueProvider, String localId) throws QuickFixException {
+        //
+        // DANGER WILL ROBINSON!!!! DANGER WILL ROBINSON!!!
+        // Thit does not call finishComponent because it actually uses the version
+        // of the constructor immediately below, which has already called finishComponent.
+        //
         this(descriptor, attributeDefRefs, attributeValueProvider, null, null);
         this.localId = localId;
     }
@@ -121,6 +133,7 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
         } finally {
             loggingService.stopTimer(LoggingService.TIMER_COMPONENT_CREATION);
         }
+        Aura.getContextService().getCurrentContext().getInstanceStack().popInstance(this);
     }
 
     /**
@@ -140,6 +153,7 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
         } finally {
             loggingService.stopTimer(LoggingService.TIMER_COMPONENT_CREATION);
         }
+        Aura.getContextService().getCurrentContext().getInstanceStack().popInstance(this);
     }
 
     /**
@@ -153,21 +167,30 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
      */
     private BaseComponentImpl(DefDescriptor<D> descriptor, BaseComponent<?, ?> attributeValueProvider,
             Map<String, Object> valueProviders, I extender, D def) throws QuickFixException {
-
+        AuraContext context = Aura.getContextService().getCurrentContext();
         DefDescriptor<? extends RootDefinition> desc = null;
-        this.descriptor = descriptor;
 
+        InstanceStack instanceStack = context.getInstanceStack();
+        Instance<?> parent = instanceStack.peek();
+		
+        this.descriptor = descriptor;
+        this.originalDescriptor = descriptor;
+        this.path = instanceStack.getPath();
+        instanceStack.pushInstance(this, descriptor);
+        
         if (def == null) {
             try {
                 def = descriptor.getDef();
                 if (extender == null && (def.isAbstract() || def.getLocalProviderDef() != null)) {
                     this.intfDescriptor = def.getDescriptor();
                 }
+                
                 desc = descriptor;
             } catch (DefinitionNotFoundException e) {
                 if (!e.getDescriptor().equals(descriptor)) {
                     throw e;
                 }
+                
                 DefDescriptor<InterfaceDef> intfDescriptor = DefDescriptorImpl.getInstance(
                         descriptor.getQualifiedName(), InterfaceDef.class);
                 InterfaceDef intfDef = intfDescriptor.getDef();
@@ -183,25 +206,32 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
             desc = descriptor;
         }
 
+        MasterDefRegistry defRegistry = Aura.getDefinitionService().getDefRegistry();
+		if (parent != null) {
+	        // Insure that the parent is allowed to create an instance of this component
+        	defRegistry.assertAccess(parent.getDescriptor(), desc.getDef());
+        }
+        
         LoggingService loggingService = Aura.getLoggingService();
         loggingService.startTimer(LoggingService.TIMER_COMPONENT_CREATION);
         try {
             this.globalId = getNextGlobalId();
 
-            this.attributeSet = new AttributeSetImpl(desc, attributeValueProvider);
+            this.attributeSet = new AttributeSetImpl(desc, attributeValueProvider, this);
 
             if (valueProviders != null) {
                 this.valueProviders.putAll(valueProviders);
             }
+            
             this.valueProviders.put(ValueProviderType.VIEW.getPrefix(), attributeSet);
             
-            //
-            // def can be null if a definition not found exception was thrown for that
-            // definition. Odd.
-            //
+            // def can be null if a definition not found exception was thrown for that definition. Odd.
             if (def != null) {
                 ControllerDef cd = def.getControllerDef();
                 if (cd != null) {
+                    // Insure that this def is allowed to create an instance of the controller
+            		defRegistry.assertAccess(descriptor, cd);
+                	
                     this.valueProviders.put(ValueProviderType.CONTROLLER.getPrefix(), cd);
                 }
             }
@@ -213,18 +243,25 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
     }
 
     protected void finishInit() throws QuickFixException {
-        injectComponent();
-        createModel();
-        createSuper();
-        validateAttributes();
-        getComponentDef().retrieveLabels();
         AuraContext context = Aura.getContextService().getCurrentContext();
 
-        DefDescriptor<RendererDef> rendererDesc = getComponentDef().getRendererDescriptor();
+        injectComponent();
+        createModel();
+
+        context.getInstanceStack().setAttributeName("$");
+        createSuper();
+        context.getInstanceStack().clearAttributeName("$");
+
+        validateAttributes();
+
+        BaseComponentDef def = getComponentDef();
+
+        def.retrieveLabels();
+
+        DefDescriptor<RendererDef> rendererDesc = def.getRendererDescriptor();
         if ((rendererDesc != null && rendererDesc.getDef().isLocal()) || !context.isPreloaded(getDescriptor())) {
             hasLocalDependencies = true;
         }
-
         context.registerComponent(this);
     }
 
@@ -249,6 +286,7 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
                     if (attributeSet.getValueProvider() != null) {
                         desc = attributeSet.getValueProvider().getDescriptor();
                     }
+                    
                     throw new MissingRequiredAttributeException(desc, attr.getName(), attr.getLocation());
                 }
             }
@@ -294,24 +332,33 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
     public void serialize(Json json) throws IOException {
         AuraContext context = Aura.getContextService().getCurrentContext();
         BaseComponent<?, ?> oldComponent = context.setCurrentComponent(this);
+
         try {
+            BaseComponentDef def = getComponentDef();
+
             json.writeMapBegin();
-            json.writeMapEntry("componentDef", getComponentDef());
-            json.writeMapEntry("globalId", getGlobalId());
+            //
+            // Be very careful here. descriptor != def.getDescriptor().
+            // This is 'case normalizing', as the client is actually case
+            // sensitive for descriptors (ugh!).
+            //
+            json.writeMapEntry("componentDef", def.getDescriptor());
+            if (!descriptor.equals(originalDescriptor)) {
+                json.writeMapEntry("original", originalDescriptor);
+            }
+            json.writeMapEntry("creationPath", getPath());
 
             if ((attributeSet.getValueProvider() == null || hasProvidedAttributes) && !attributeSet.isEmpty()) {
                 json.writeMapEntry("attributes", attributeSet);
             }
 
-            if (getComponentDef().getRendererDescriptor() != null) {
-                RendererDef rendererDef = getComponentDef().getRendererDescriptor().getDef();
+            if (def.getRendererDescriptor() != null) {
+                RendererDef rendererDef = def.getRendererDescriptor().getDef();
                 if (rendererDef.isLocal()) {
                     StringWriter sw = new StringWriter();
                     rendererDef.render(this, sw);
-                    // Not writing directly to json.appendable because then it
-                    // wouldn't get escaped.
-                    // ideally Json would have a FilterWriter that escapes that
-                    // we could use here.
+                    // Not writing directly to json.appendable because then it wouldn't get escaped.
+                    // ideally Json would have a FilterWriter that escapes that we could use here.
                     json.writeMapEntry("rendering", sw.toString());
                 }
             }
@@ -343,11 +390,13 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
      */
     private void createModel() throws QuickFixException {
         AuraContext context = Aura.getContextService().getCurrentContext();
-        context.setCurrentNamespace(descriptor.getNamespace());
+        context.pushCallingDescriptor(descriptor);
         BaseComponent<?, ?> oldComponent = context.setCurrentComponent(this);
         try {
             ModelDef modelDef = getComponentDef().getModelDef();
             if (modelDef != null) {
+            	Aura.getDefinitionService().getDefRegistry().assertAccess(descriptor, modelDef);
+            	
                 model = modelDef.newInstance();
                 if (modelDef.hasMembers()) {
                     hasLocalDependencies = true;
@@ -356,6 +405,7 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
             }
         } finally {
             context.setCurrentComponent(oldComponent);
+            context.popCallingDescriptor();
         }
     }
 
@@ -370,7 +420,7 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
         int id;
         String suffix;
         if (action != null) {
-            id = action.getNextId();
+            id = action.getInstanceStack().getNextId();
             suffix = action.getId();
         } else {
             id = context.getNextId();
@@ -458,9 +508,60 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
         return model;
     }
 
+    @Override
+    public String getPath() {
+        return path;
+    }
+
+    static private DefDescriptor<TypeDef> componentArrType;
+
+    @Override
+    public void reinitializeModel() throws QuickFixException {
+        //
+        // This is a visitor pattern, implemented here with a hardwire.
+        //
+        BaseComponentDef def = descriptor.getDef();
+        if (componentArrType == null) {
+            componentArrType = Aura.getDefinitionService().getDefDescriptor("aura://Aura.Component[]", TypeDef.class);
+        }
+
+        createModel();
+
+        I zuper = getSuper();
+        if (zuper != null) {
+            zuper.reinitializeModel();
+        }
+        //
+        // Walk all attributes, pushing the reinitialize model in to those as well.
+        //
+        for (Map.Entry<DefDescriptor<AttributeDef>, AttributeDef> foo : def.getAttributeDefs().entrySet()) {
+            AttributeDef attr = foo.getValue();
+            DefDescriptor<?> typeDesc;
+            if (attr instanceof AttributeDefImpl) {
+                AttributeDefImpl attri = (AttributeDefImpl)attr;
+                typeDesc = attri.getTypeDesc();
+            } else {
+                // bad.
+                typeDesc = attr.getTypeDef().getDescriptor();
+            }
+            if (componentArrType.equals(typeDesc)) {
+                Object val = getAttributes().getValue(foo.getKey().getName());
+                if (val instanceof List) {
+                    @SuppressWarnings("unchecked")
+                    List<BaseComponent<?, ?>> facet = (List<BaseComponent<?, ?>>)val;
+                    for (BaseComponent<?, ?> c : facet) {
+                        c.reinitializeModel();
+                    }
+                }
+            }
+        }
+    }
+
+    protected final DefDescriptor<D> originalDescriptor;
     protected DefDescriptor<D> descriptor;
     protected DefDescriptor<? extends RootDefinition> intfDescriptor;
     private final String globalId;
+    private final String path;
     protected String localId;
     protected final AttributeSet attributeSet;
     private Model model;
@@ -469,7 +570,7 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
     protected I concreteComponent;
     protected boolean remoteProvider = false;
     private final Map<String, List<String>> index = Maps.newLinkedHashMap();
-    // FIXME - the keys should be ValueProviders, but first we need to wrap non-m/v/c providers.
+    // FIXME - the values should be ValueProviders, but first we need to wrap non-m/v/c providers.
     protected final Map<String, Object> valueProviders = new LinkedHashMap<String, Object>();
     protected boolean hasLocalDependencies = false;
     protected boolean hasProvidedAttributes;

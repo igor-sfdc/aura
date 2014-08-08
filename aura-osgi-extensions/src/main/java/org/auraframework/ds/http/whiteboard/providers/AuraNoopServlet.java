@@ -15,6 +15,7 @@
  */
 package org.auraframework.ds.http.whiteboard.providers;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -35,16 +36,22 @@ public class AuraNoopServlet extends HttpServlet {
             throws ServletException, IOException {
         String resource = req.getRequestURI();
         InputStream resourceStream = BundleResourceAccessorFactory.get().getResource(resource);
+        long numBytesCopied = 0;
+
         if (resourceStream != null) {
             try {
-                ByteStreams.copy(resourceStream, resp.getOutputStream());
+                numBytesCopied = ByteStreams.copy(resourceStream, resp.getOutputStream());
             } finally {
                 resourceStream.close();
             }
-        } else {
-            resp.getWriter().write("<script>");
-            resp.getWriter().write("window.location = '/auradocs/docs.app';");
-            resp.getWriter().write("</script>");
         }
-    }    
+
+        if (numBytesCopied == 0 && !"/favicon.ico".equals(resource)) {
+            StringBuilder buffer = new StringBuilder();
+            buffer.append("<script>");
+            buffer.append("window.location = '/auradocs/docs.app';");
+            buffer.append("</script>");
+            ByteStreams.copy(new ByteArrayInputStream(buffer.toString().getBytes("UTF-8")), resp.getOutputStream());
+        }
+    }
 }

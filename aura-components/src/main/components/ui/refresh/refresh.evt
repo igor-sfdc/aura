@@ -15,4 +15,5 @@
     limitations under the License.
 
 -->
-<aura:event type="COMPONENT" support="BETA" description="Refreshes."/>
+<aura:event type="COMPONENT" extends="ui:command" description="Command event instructing a component to refresh itself.">
+</aura:event>

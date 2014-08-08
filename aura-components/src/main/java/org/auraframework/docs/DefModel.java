@@ -24,7 +24,7 @@ import org.auraframework.util.json.JsonSerializable;
 
 public class DefModel implements JsonSerializable, Comparable<DefModel> {
 
-    private final DefDescriptor<?> descriptor;
+    protected final DefDescriptor<?> descriptor;
 
     DefModel(DefDescriptor<?> descriptor) {
         this.descriptor = descriptor;
@@ -37,7 +37,7 @@ public class DefModel implements JsonSerializable, Comparable<DefModel> {
     public String getDefType() {
         return descriptor.getDefType().name().toLowerCase();
     }
-
+    
     public String getFullName() {
         if (descriptor.getPrefix().equals("markup")) {
             return String.format("%s:%s", descriptor.getNamespace(), descriptor.getName());

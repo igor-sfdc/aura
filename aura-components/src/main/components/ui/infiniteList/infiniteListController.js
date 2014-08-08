@@ -15,13 +15,26 @@
  */
 ({
 	showMore: function(component, event, helper) {
-		var currentPageValue = component.get("v.currentPage"); 
-	
-    	var currentPage = parseInt(currentPageValue, 10);
-		var targetPage = currentPage + 1;
+        $A.mark("infiniteList showMore " + component.getGlobalId());
+		
+		var params = event.getParams(),
+			currentPageValue = component.get("v.currentPage"),
+			currentPage = parseInt(currentPageValue, 10),
+			targetPage = currentPage + 1;
+
+        component.set("v.currentPage", targetPage, true);
         
-        component.getValue("v.currentPage").setValue(targetPage, true);
+        if (params.parameters && params.parameters.callback) {
+        	component._callback = params.parameters.callback;
+        }
         
         helper.triggerDataProvider(component.getSuper());
+	},
+
+	rerenderComplete: function(component, event, helper) {
+        $A.endMark("infiniteList showMore " + component.getGlobalId());
+		
+		helper.showLoading(component, false);
+        component.getEvent("rerenderComplete").fire();
 	}
 })

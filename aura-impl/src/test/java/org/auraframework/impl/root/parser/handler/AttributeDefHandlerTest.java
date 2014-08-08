@@ -18,7 +18,6 @@ package org.auraframework.impl.root.parser.handler;
 import java.util.List;
 
 import javax.xml.stream.FactoryConfigurationError;
-import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
@@ -33,6 +32,7 @@ import org.auraframework.def.Definition.Visibility;
 import org.auraframework.expression.PropertyReference;
 import org.auraframework.impl.AuraImplTestCase;
 import org.auraframework.impl.root.AttributeDefImpl;
+import org.auraframework.impl.root.parser.XMLParser;
 import org.auraframework.impl.root.parser.handler.XMLHandler.InvalidSystemAttributeException;
 import org.auraframework.impl.source.StringSource;
 import org.auraframework.system.Parser.Format;
@@ -103,29 +103,19 @@ public class AttributeDefHandlerTest extends AuraImplTestCase {
     }
 
     public void testInvalidSystemAttributeName() throws Exception {
-        StringSource<AttributeDef> attributeSource = new StringSource<AttributeDef>(desc,
-                "<aura:attribute foo='bar' name='mystring' type='java://String' default='{!blah.some.expression}'/>",
-                "myID", Format.XML);
-        XMLStreamReader attributeXmlReader = getXmlReader(attributeSource);
-
         try {
-            new AttributeDefHandler<ComponentDef>(cdh, attributeXmlReader, attributeSource);
+            getElement("<aura:attribute foo='bar' name='mystring' type='java://String' default='{!blah.some.expression}'/>");
             fail("Expected InvalidSystemAttributeException to be thrown");
-        } catch (Throwable t) {
+        } catch (Exception t) {
             assertExceptionMessageEndsWith(t, InvalidSystemAttributeException.class, "Invalid attribute \"foo\"");
         }
     }
 
     public void testInvalidSystemAttributePrefix() throws Exception {
-        StringSource<AttributeDef> attributeSource = new StringSource<AttributeDef>(desc,
-                "<aura:attribute name='mystring' type='java://String' other:default='{!blah.some.expression}'/>",
-                "myID", Format.XML);
-        XMLStreamReader attributeXmlReader = getXmlReader(attributeSource);
-
         try {
-            new AttributeDefHandler<ComponentDef>(cdh, attributeXmlReader, attributeSource);
+            getElement("<aura:attribute name='mystring' type='java://String' other:default='{!blah.some.expression}'/>");
             fail("Expected InvalidSystemAttributeException to be thrown");
-        } catch (Throwable t) {
+        } catch (Exception t) {
             assertExceptionMessageEndsWith(t, InvalidSystemAttributeException.class,
                     "Invalid attribute \"other:default\"");
         }
@@ -177,7 +167,7 @@ public class AttributeDefHandlerTest extends AuraImplTestCase {
             ad.getTypeDef();
             fail("Expected Exception to be thrown when attribute is a non-existent java type");
         } catch (Throwable t) {
-            assertExceptionMessage(t, AuraRuntimeException.class, "java.lang.ClassNotFoundException: invalid");
+            assertExceptionMessage(t, DefinitionNotFoundException.class, "No TYPE named java://invalid found");
         }
     }
 
@@ -238,11 +228,7 @@ public class AttributeDefHandlerTest extends AuraImplTestCase {
 
     private XMLStreamReader getXmlReader(StringSource<AttributeDef> attributeSource) throws FactoryConfigurationError,
             XMLStreamException {
-        XMLStreamReader xmlReader = null;
-        XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance();
-        xmlInputFactory.setProperty(XMLInputFactory.IS_NAMESPACE_AWARE, false);
-        xmlReader = xmlInputFactory.createXMLStreamReader(attributeSource.getSystemId(),
-                attributeSource.getHashingReader());
+        XMLStreamReader xmlReader = XMLParser.getInstance().createXMLStreamReader(attributeSource.getHashingReader());
         xmlReader.next();
         return xmlReader;
     }

@@ -25,6 +25,7 @@ import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.impl.context.AuraContextImpl;
 import org.auraframework.impl.java.controller.JavaAction;
 import org.auraframework.instance.Action;
+import org.auraframework.instance.ActionWithKeyOverride;
 import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.system.Location;
 import org.auraframework.throwable.AuraExceptionUtil;
@@ -51,6 +52,7 @@ public class JsonSerializerAdapterImpl implements JsonSerializerAdapter {
         m.putAll(JsonSerializers.MAPPY_FASTY);
         m.put(AuraContextImpl.class.getName(), AuraContextImpl.FULL_SERIALIZER);
         m.put(JavaAction.class.getName(), Action.SERIALIZER);
+        m.put(ActionWithKeyOverride.class.getName(), Action.SERIALIZER);
         m.put(BigDecimal.class.getName(), JsonSerializers.BIGDECIMAL);
         return m;
     }
@@ -75,9 +77,11 @@ public class JsonSerializerAdapterImpl implements JsonSerializerAdapter {
             } else {
                 json.writeMapBegin();
                 json.writeMapEntry("message", value.getMessage());
-                if (Aura.getContextService().isEstablished()
-                        && Aura.getContextService().getCurrentContext().getMode() != Mode.PROD) {
-                    json.writeMapEntry("stack", AuraExceptionUtil.getStackTrace(value));
+                if (Aura.getContextService().isEstablished()) {
+                    Mode mode = Aura.getContextService().getCurrentContext().getMode();
+                    if (mode != Mode.PROD && mode != Mode.PRODDEBUG) {
+                        json.writeMapEntry("stack", AuraExceptionUtil.getStackTrace(value));
+                    }
                 }
                 json.writeMapEnd();
             }

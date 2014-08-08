@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-{
+({
     open : function(cmp, event){
 
         event.preventDefault();
-        var defModel = cmp.getAttributes().getValue("defModel");
+        var defModel = cmp.get("v.defModel");
 
         var evt = $A.get("e.auraide:openDef");
         evt.setParams({
-            descriptor : defModel.getRawValue("descriptor"),
-            defType : defModel.getRawValue("defType")
+            descriptor : defModel["descriptor"],
+            defType : defModel["defType"]
         });
         evt.fire();
     }
-}
+})

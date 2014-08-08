@@ -29,7 +29,7 @@ import org.auraframework.integration.IntegrationServiceObserver;
 import org.auraframework.integration.UnsupportedUserAgentException;
 import org.auraframework.service.IntegrationService;
 import org.auraframework.system.AuraContext;
-import org.auraframework.system.AuraContext.Access;
+import org.auraframework.system.AuraContext.Authentication;
 import org.auraframework.system.AuraContext.Format;
 import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.throwable.AuraRuntimeException;
@@ -57,9 +57,6 @@ public class IntegrationServiceImplTest extends AuraImplTestCase {
 
     private IntegrationService service;
     private final String simpleComponentTag = "ui:button";
-
-    // private final String laxSecurityProviderDesc =
-    // "java://org.auraframework.components.security.SecurityProviderAlwaysAllows";
 
     @Override
     public void setUp() throws Exception {
@@ -173,7 +170,7 @@ public class IntegrationServiceImplTest extends AuraImplTestCase {
         }
         // Verify that the boot strap was written only once
         assertNotNull(out);
-        Pattern frameworkJS = Pattern.compile("<script src=\"/auraFW/javascript/[^/]+/aura_.{4}.js\\?aura.fwuid=[-0-9A-Za-z_]*\" ></script>");
+        Pattern frameworkJS = Pattern.compile("<script src=\"/auraFW/javascript/[^/]+/aura_.{4}.js\" ></script>");
         Matcher m = frameworkJS.matcher(out.toString());
         int counter = 0;
         while (m.find()) {
@@ -292,25 +289,6 @@ public class IntegrationServiceImplTest extends AuraImplTestCase {
     }
 
     /**
-     * Verify exceptions when components are restricted by SecurityProvider.
-     */
-    @Ignore("W-1495914")
-    public void testExceptionsDueToSecurityProvider() {
-        // Integration integration =
-        // service.createIntegration("java://org.auraframework.components.security.SecurityProviderAlwaysDenies",
-        // "" , Mode.UTEST);
-        // try{
-        // injectSimpleComponent(integration);
-        // fail("Failed to respect security provider restrictions.");
-        // }catch(NoAccessException expected){
-        // //Assert expected error message
-        // //TODO: But NoAccessException is a clientside exception. What would
-        // happen in the case of component injection?
-        // }catch(Exception
-        // allOthers){fail("Failed to respect security provider restrictions.");}
-    }
-
-    /**
      * Verify that injecting non existing exceptions is flagged with an
      * exception.
      * 
@@ -372,7 +350,7 @@ public class IntegrationServiceImplTest extends AuraImplTestCase {
      * trim the preloads size by skipping the default preloads. 
      */
     public void testNoDefaultsPreloadInterfaceIsInGoodState(){
-        Aura.getContextService().startContext(Mode.UTEST, Format.JSON, Access.AUTHENTICATED);
+        Aura.getContextService().startContext(Mode.UTEST, Format.JSON, Authentication.AUTHENTICATED);
         DefDescriptor<InterfaceDef> noDefaultPreloadsInterfaceDef = definitionService.getDefDescriptor(IntegrationService.NO_DEFAULT_PRELOADS_INTERFACE, 
                 InterfaceDef.class);
         try{
@@ -389,7 +367,7 @@ public class IntegrationServiceImplTest extends AuraImplTestCase {
      */
     public void testObserverInvoked() throws Exception {
         IntegrationServiceObserver mockObserver = Mockito.mock(IntegrationServiceObserver.class);
-        AuraContext cntx = Aura.getContextService().startContext(Mode.UTEST, Format.JSON, Access.AUTHENTICATED);
+        AuraContext cntx = Aura.getContextService().startContext(Mode.UTEST, Format.JSON, Authentication.AUTHENTICATED);
         Integration integration = service.createIntegration("", Mode.UTEST, true, null, getNoDefaultPreloadsApp().getQualifiedName(), mockObserver);
         injectSimpleComponent(integration);
         Mockito.verify(mockObserver, Mockito.times(2)).contextEstablished(integration, cntx);

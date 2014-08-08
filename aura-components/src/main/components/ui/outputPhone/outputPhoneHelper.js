@@ -15,25 +15,23 @@
  */
 ({
     updateHref: function(cmp){
-        if (cmp.getAttributes().getValue("value")) {
-            var value = cmp.getAttributes().getValue("value").getValue();
+    	var value = cmp.get("v.value");
 
-            if (value) {
-                var link = cmp.find("link");
-                if (link) {
-                    var element = link.getElement();
-                    if (value.search("#") != -1 || value.search("\\*") != -1) {
-                        element.removeAttribute("href");
-                    } else {
-                        var tel = this.removeSpaces(value);
-                        element.setAttribute("href", "tel:" + tel);
-                    }
+        if (value) {
+            var link = cmp.find("link");
+            if (link) {
+                var element = link.getElement();
+                if (value.search("#") != -1 || value.search("\\*") != -1) {
+                    element.removeAttribute("href");
+                } else {
+                    var tel = this.removeSpaces(value);
+                    element.setAttribute("href", "tel:" + tel);
                 }
             }
         }
     },
     /*
-     ** Remove spaces (if there is any) in value and return the no-space result. 
+     ** Remove spaces (if there is any) in value and return the no-space result.
      */
     removeSpaces: function(value) {
         return (value || "").replace(/\s/g, "");

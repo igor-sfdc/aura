@@ -15,12 +15,13 @@
  */
 /*jslint sub: true */
 /**
- * @namespace A registry for ComponentDefs.
+ * @namespace A registry for ComponentDef objects.
  * @constructor
  * @protected
  */
 function ComponentDefRegistry(){
     this.componentDefs = {};
+    this.dynamicNamespaces = [];
 }
 
 ComponentDefRegistry.prototype.auraType = "ComponentDefRegistry";
@@ -34,7 +35,7 @@ ComponentDefRegistry.prototype.isLocalStorageAvailable= (function() {
             window.localStorage.setItem("test", "test");
             window.localStorage.removeItem("test");
             return true;
-        } catch(e) {
+        } catch(ignore) {
         }
     }
 
@@ -45,15 +46,22 @@ ComponentDefRegistry.prototype.isLocalStorageAvailable= (function() {
  * Returns a ComponentDef instance from registry, or config after adding to the registry.
  * Throws an error if config is not provided.
  * @param {Object} config Passes in a config, a ComponentDef, or the name of a ComponentDef.
- * @param {Object} noInit If set to false, try loading from cache first before
+ * @param {Boolean} noInit If set to false, try loading from cache first before
  * trying to write through of local storage cacheable componentDefs.
- * @returns a ComponentDef instance from registry, or config after adding to registry.
+ * @returns {ComponentDef} a ComponentDef instance from registry, or config after adding to registry.
  */
 ComponentDefRegistry.prototype.getDef = function(config, noInit) {
+	
     $A.assert(config, "ComponentDef Config required for registration");
 
     // We don't re-register (or modify in any way) once we've registered
-    var descriptor = config["descriptor"] || config;
+    var descriptor;
+    if (config["descriptor"]) {
+        descriptor = config["descriptor"];
+    } else {
+        descriptor = config;
+        config = undefined;
+    }
     if ($A.util.isString(descriptor) && (descriptor.indexOf("://") < 0)) {
         descriptor = "markup://" + descriptor; // support shorthand
     }
@@ -61,9 +69,9 @@ ComponentDefRegistry.prototype.getDef = function(config, noInit) {
     if ((!noInit) && !ret) {
         var useLocalStorage = this.useLocalCache(descriptor);
         if (useLocalStorage) {
-            $A.mark("ComponentDefRegistry.localStorageCache");
-            $A.mark("Cleared localStorage (out of space) ");
-            $A.mark("Wrote " + descriptor);
+            $A.Perf.mark("ComponentDefRegistry.localStorageCache");
+            $A.Perf.mark("Cleared localStorage (out of space) ");
+            $A.Perf.mark("Wrote " + descriptor);
 
             // Try to load from cache
             var cachedConfig = this.getConfigFromLocalCache(descriptor);
@@ -72,11 +80,17 @@ ComponentDefRegistry.prototype.getDef = function(config, noInit) {
                 useLocalStorage = false;
             }
 
-            $A.endMark("ComponentDefRegistry.localStorageCache");
+            $A.Perf.endMark("ComponentDefRegistry.localStorageCache");
         }
 
+        $A.assert(config !== undefined, "Unknown component "+descriptor);
+
         ret = new $A.ns.ComponentDef(config);
-        this.componentDefs[ret.getDescriptor().toString()] = ret;
+        var descString = ret.getDescriptor().toString();
+        this.componentDefs[descString] = ret;
+        if (descString.indexOf("layout://") === 0) {
+            this.dynamicNamespaces.push(ret.getDescriptor().getNamespace());
+        }
 
         if (useLocalStorage) {
             // Write through of local storage cacheable componentDefs
@@ -85,11 +99,11 @@ ComponentDefRegistry.prototype.getDef = function(config, noInit) {
             } catch (e) {
                 // Clear localStorage and try one more time to write through
                 localStorage.clear();
-                $A.endMark("Cleared localStorage (out of space) ");
+                $A.Perf.endMark("Cleared localStorage (out of space) ");
 
                 try {
                     this.writeToCache(descriptor, config);
-                } catch(e2) {
+                } catch(ignore) {
                     // Nothing we can do at this point - give up.
                 }
             }
@@ -148,6 +162,6 @@ ComponentDefRegistry.prototype.writeToCache = function(descriptor, config) {
         // Write out the componentDef
         localStorage.setItem(this.cacheName + "." + descriptor, $A.util.json.encode(config));
 
-        $A.endMark("Wrote " + descriptor);
+        $A.Perf.endMark("Wrote " + descriptor);
     }
 };

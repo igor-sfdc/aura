@@ -15,16 +15,16 @@
  */
 ({
     getMenuItem: function(component, index) {
-        var menuItems = component.getValue("v.childMenuItems");
+        var menuItems = component.get("v.childMenuItems");
         if (menuItems) {
-            return menuItems.getValue(index);
+            return menuItems[index];
         }
     },
 
     handleGlobalClick: function(component, visible) {
-        var parent = component.getValue("v.parent");
-        if (parent && !parent.isEmpty()) {
-            p = parent.getValue(0);
+        var parent = component.get("v.parent");
+        if (parent && !$A.util.isEmpty(parent)) {
+            p = parent[0];
             if (visible === true) {
                 var action = p.get("c.handleMenuExpand");
                 if (action) {
@@ -45,33 +45,78 @@
         var elem = component.getElement();
         if (visible === true) {
             $A.util.addClass(elem, "visible");
-            if (currentlyVisible !== true) { // If menu changes from invisible to visible, let's set the initial focus
-                var index = concreteCmp.get("v.focusItemIndex");
-                if (index < 0) {
-                    index = component.getValue("v.childMenuItems").getLength() - 1;
-                }
-                this.setMenuItemFocus(component, index);
-            }
         } else {
             $A.util.removeClass(elem, "visible");
-            concreteCmp.setValue("v.focusItemIndex", 0);
         }
         this.handleGlobalClick(concreteCmp, visible);
     },
     
     position: function(component) {
-        var divCmp = component.find("menu");
+    	var attachToBody = component.getConcreteComponent().get("v.attachToBody");
+    	if (attachToBody === true) {
+    		this.positionAsBodyChild(component);
+    		return;
+    	}
+    	var divCmp = component.find("menu");
         var elem = divCmp ? divCmp.getElement() : null;
         if (elem) {
             elem.style.top = "auto";
-            var visible = component.get("v.visible");
+            var visible = component.getConcreteComponent().get("v.visible");
             if (visible) {
+            	var autoPosition = component.get('v.autoPosition');
                 var elemRect = elem.getBoundingClientRect();
                 var viewPort = $A.util.getWindowSize();
-                if (elemRect.bottom > viewPort.height) { // no enough space below
-                    elem.style.top = 0 - elemRect.height + "px"; 
+                if (autoPosition && elemRect.bottom > viewPort.height) { // no enough space below
+                	//getBoundingClientRect method does not return height and width in IE7 and Ie8
+                	var height = typeof elemRect.height != 'undefined' ? elemRect.height : elemRect.bottom - elemRect.top;
+                	elem.style.top = 0 - height + "px";
                 } else {
                     elem.style.top = "auto";
+                }
+            }
+        }
+    },
+    
+    positionAsBodyChild: function(component) {
+        var divCmp = component.find("menu");
+        var elem = divCmp ? divCmp.getElement() : null;
+        var referenceElem = component.getConcreteComponent().get("v.referenceElement");
+        if (elem && referenceElem) {
+            var visible = component.getConcreteComponent().get("v.visible");
+            if (visible) {
+            	$A.util.attachToDocumentBody(component.getElement());
+            	var referenceElemRect = referenceElem.getBoundingClientRect();
+                var elemRect = elem.getBoundingClientRect();
+                var viewPort = $A.util.getWindowSize();
+                
+                // Vertical alignment
+                // getBoundingClientRect method does not return height and width in IE7 and Ie8
+                var height = typeof elemRect.height != 'undefined' ? elemRect.height : elemRect.bottom - elemRect.top;
+                if ((viewPort.height - referenceElemRect.bottom) < height) { // no enough space below
+                	if (referenceElemRect.top < height) { // no enough space above either. Put it in the middle then
+                		elem.style.top = window.scrollY + "px";
+                	} else { // put it above
+                		elem.style.top = (referenceElemRect.top - height) + window.scrollY + "px";
+                	}
+                } else { // put it below
+                    elem.style.top = referenceElemRect.bottom + window.scrollY + "px";
+                }
+                
+                // Horizontal alignment
+                // getBoundingClientRect method does not return height and width in IE7 and Ie8
+                var width = typeof elemRect.width != 'undefined' ? elemRect.width : elemRect.right - elemRect.left;
+                if (referenceElemRect.left < 0) {
+                	elem.style.left = window.scrollX + "px";
+                } else {
+                    if ((viewPort.width - referenceElemRect.left) < width) { // no enough space to the right
+                	    if (referenceElemRect.right < width) { // no enough space to the left either. Put it in the middle then.
+                		    elem.style.left = (viewPort.width - width) + window.scrollX + "px";
+                	    } else { // align at the right
+                		    elem.style.left = referenceElemRect.right - width + window.scrollX + "px";
+                	    }
+                    } else { // align at the left
+                        elem.style.left = referenceElemRect.left + window.scrollX + "px";
+                    }
                 }
             }
         }
@@ -80,9 +125,9 @@
     setAriaAttributes: function(component) {
         var concrete = component.getConcreteComponent();
         var elem = concrete.getElement();
-        var parent = concrete.getValue("v.parent");
-        if (parent && !parent.isEmpty()) {
-            var p = parent.getValue(0);
+        var parent = concrete.get("v.parent");
+        if (parent && !$A.util.isEmpty(parent)) {
+            var p = parent[0];
             var pHelper = p.getDef().getHelper();
             if (pHelper.getTriggerComponent) {
                 var triggerCmp = pHelper.getTriggerComponent(p);
@@ -103,6 +148,22 @@
             if (action) {
                 action.runDeprecated();
             }
+        }
+    },
+    
+    setFocus: function(component, currentlyVisible) {
+    	var concreteCmp = component.getConcreteComponent();
+        var visible = concreteCmp.get("v.visible");
+        if (visible === true) {
+            if (currentlyVisible !== true) { // If menu changes from invisible to visible, let's set the initial focus
+                var index = concreteCmp.get("v.focusItemIndex");
+                if (index < 0) {
+                    index = component.get("v.childMenuItems").length - 1;
+                }
+                this.setMenuItemFocus(component, index);
+            }
+        } else {
+            concreteCmp.set("v.focusItemIndex", 0);
         }
     },
     

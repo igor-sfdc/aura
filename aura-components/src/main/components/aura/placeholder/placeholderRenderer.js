@@ -15,59 +15,57 @@
  */
 ({
     afterRender : function(cmp){
-        if (cmp.getValue("v.loaded").getBooleanValue()){
+        if ($A.util.getBooleanValue(cmp.get("v.loaded"))){
             return this.superAfterRender();
         }
 
         var action = $A.get("c.aura://ComponentController.getComponent");
         var attributes = cmp.getValue("v.attributes");
         var atts = {};
-        var avp = cmp.getAttributes().getValueProvider();
+        var avp = cmp.getAttributeValueProvider();
 
         if(attributes.each){
             attributes.each(function(key, value){
                 atts[key] = $A.componentService.computeValue(value, avp, true);
             });
         }
-        
-        action.setCallback(this, function(a){
 
+        action.setCallback(this, function(a){
             var newBody;
             if (a.getState() === "SUCCESS"){
-                newBody = $A.newCmpDeprecated(a.getReturnValue(), avp);
-                newBody.getAttributes().merge(attributes, true);
+                newBody = $A.newCmpDeprecated(a.getReturnValue(), avp, false, false);
+                newBody.mergeAttributes(attributes, true);
             } else {
                 var errors = a.getError();
-                newBody = $A.newCmpDeprecated("markup://aura:text");
+                newBody = $A.newCmpDeprecated("markup://aura:text", null, false, false);
                 if (errors) {
-                    newBody.getValue("v.value").setValue(errors[0].message);
+                    newBody.set("v.value", errors[0].message);
                 } else {
-                    newBody.getValue("v.value").setValue('unknown error');
+                    newBody.set("v.value", 'unknown error');
                 }
             }
-            var body = cmp.getValue("v.body");
-
-            body.destroy();
-            body.setValue(newBody);
+            
+            cmp.set("v.body", newBody);
 
             $A.rerender(cmp);
 
             //reindex
             var localId = cmp.getLocalId();
             if(localId){
-                var cvp = cmp.getAttributes().getComponentValueProvider();
+                var cvp = cmp.getComponentValueProvider();
                 cvp.deIndex(localId, cmp.getGlobalId());
                 cvp.index(localId, newBody.getGlobalId());
             }
         });
+        
         var desc = cmp.get("v.refDescriptor");
         action.setParams({
             "name" : desc,
             "attributes" : atts
         });
 
-        action.setExclusive(cmp.getValue("v.exclusive").getBooleanValue());
-        cmp.getValue("v.loaded").setValue(true);
+        action.setExclusive($A.util.getBooleanValue(cmp.get("v.exclusive")));
+        cmp.set("v.loaded", true);
         $A.enqueueAction(action);
 
         this.superAfterRender();

@@ -36,6 +36,7 @@ import org.auraframework.impl.system.DefDescriptorImpl;
 import org.auraframework.impl.system.SubDefDescriptorImpl;
 import org.auraframework.system.Annotations.AuraEnabled;
 import org.auraframework.system.Annotations.BackgroundAction;
+import org.auraframework.system.Annotations.CabooseAction;
 import org.auraframework.system.Annotations.Controller;
 import org.auraframework.system.Annotations.Key;
 import org.auraframework.system.DefFactory;
@@ -63,7 +64,7 @@ public class JavaControllerDefFactory extends BaseJavaDefFactory<ControllerDef> 
     @Override
     protected DefBuilder<?, ? extends ControllerDef> getBuilder(DefDescriptor<ControllerDef> descriptor)
             throws QuickFixException {
-        JavaControllerDef.Builder builder = new JavaControllerDef.Builder();
+        JavaControllerDefImpl.Builder builder = new JavaControllerDefImpl.Builder();
         builder.setDescriptor(descriptor);
 
         Class<?> c = getClazz(descriptor);
@@ -73,18 +74,30 @@ public class JavaControllerDefFactory extends BaseJavaDefFactory<ControllerDef> 
         builder.setControllerClass(c);
         // FIXME = "we need an md5";
         builder.setLocation(c.getCanonicalName(), -1);
-        if (!c.isAnnotationPresent(Controller.class)) {
+        Controller ann = c.getAnnotation(Controller.class);
+        if (ann == null) {
             throw new InvalidDefinitionException(String.format(
                     "@Controller annotation is required on all Controllers.  Not found on %s", descriptor),
                     builder.getLocation());
         }
-
-        builder.setActionMap(createActions(c, builder.getDescriptor()));
+        builder.setBean(ann.bean());
+        try {
+            builder.setActionMap(createActions(c, builder.getDescriptor(), ann.bean()));
+        } catch (QuickFixException qfe) {
+            builder.setParseError(qfe);
+        }
         return builder;
     }
 
     private static String formatType(Type t) {
-        String result = JavaTypeDef.getClass(t).getName();
+        Class<?> clazz = JavaTypeDef.getClass(t);
+        String result;
+       
+        if (clazz != null) {
+            result = clazz.getName();
+        } else {
+            result = "Object";
+        }
 
         if (t instanceof ParameterizedType) {
             ParameterizedType pt = (ParameterizedType) t;
@@ -96,7 +109,11 @@ public class JavaControllerDefFactory extends BaseJavaDefFactory<ControllerDef> 
                         result += ",";
                     }
                     first = false;
-                    result += formatType(tp); // recurse if nested parameterized
+                    if (tp == null) {
+                        result += "Object";
+                    } else {
+                        result += formatType(tp); // recurse if nested parameterized
+                    }
                 }
                 result += ">";
             }
@@ -114,19 +131,12 @@ public class JavaControllerDefFactory extends BaseJavaDefFactory<ControllerDef> 
             DefDescriptor<ControllerDef> controllerDesc) throws QuickFixException {
 
         JavaActionDef.Builder actionBuilder = new JavaActionDef.Builder();
-        int modifiers = method.getModifiers();
         String name = method.getName();
         Class<?>[] paramTypes = method.getParameterTypes();
         List<ValueDef> params = Lists.newArrayList();
+        List<String> loggableParams = Lists.newArrayList();
         Annotation[][] paramAnnotations = method.getParameterAnnotations();
 
-        if (!Modifier.isPublic(modifiers) || !Modifier.isStatic(modifiers)) {
-            // We used to just ignore this, but it is really bad, as someone
-            // marked an invalid routine
-            // as AuraEnabled
-            throw new InvalidDefinitionException("Actions must be public static methods", new Location(
-                    controllerClass.getName() + "." + name, 0));
-        }
         actionBuilder.setDescriptor(SubDefDescriptorImpl.getInstance(name, controllerDesc, ActionDef.class));
         actionBuilder.setMethod(method);
         actionBuilder.setReturnTypeDescriptor(DefDescriptorImpl.getInstance("java://"
@@ -143,9 +153,14 @@ public class JavaControllerDefFactory extends BaseJavaDefFactory<ControllerDef> 
                     DefDescriptor<TypeDef> typeDefDesc = DefDescriptorImpl.getInstance(qn, TypeDef.class);
 
                     // FIXME = "we need an md5";
-                    ValueDef valueDef = new JavaValueDef(((Key) annotation).value(), typeDefDesc, new Location(
+                    String paramName = ((Key) annotation).value();
+                    ValueDef valueDef = new JavaValueDef(paramName, typeDefDesc, new Location(
                             controllerClass.getName() + "." + name, 0));
                     params.add(valueDef);
+                    
+                    if (((Key)annotation).loggable()) {
+                        loggableParams.add(paramName);
+                    }
                 }
             }
             if (!found) {
@@ -154,10 +169,17 @@ public class JavaControllerDefFactory extends BaseJavaDefFactory<ControllerDef> 
             }
         }
         actionBuilder.setParams(params);
+        actionBuilder.setLoggableParams(loggableParams);
         
     	actionBuilder.setBackground(method.isAnnotationPresent(BackgroundAction.class));
+    	actionBuilder.setCaboose(method.isAnnotationPresent(CabooseAction.class));
         
         return actionBuilder.build();
+    }
+
+    private static void throwControllerError(String message, Class<?> clazz, Method method) throws QuickFixException {
+        throw new InvalidDefinitionException(message + method.getName(),
+                new Location("java://"+clazz.getCanonicalName(), 0));
     }
 
     /**
@@ -172,10 +194,24 @@ public class JavaControllerDefFactory extends BaseJavaDefFactory<ControllerDef> 
      * @param controllerDesc a descriptor for the class.
      */
     public static Map<String, JavaActionDef> createActions(Class<?> controllerClass,
-            DefDescriptor<ControllerDef> controllerDesc) throws QuickFixException {
+            DefDescriptor<ControllerDef> controllerDesc, boolean bean) throws QuickFixException {
         Map<String, JavaActionDef> actions = Maps.newTreeMap();
         for (Method method : controllerClass.getMethods()) {
             if (method.isAnnotationPresent(AuraEnabled.class)) {
+                int modifiers = method.getModifiers();
+
+                if (!Modifier.isPublic(modifiers)) {
+                    throwControllerError("Invalid non-public action: ", controllerClass, method);
+                }
+                if (bean) {
+                    if (Modifier.isStatic(modifiers)) {
+                        throwControllerError("Invalid static action in a bean: ", controllerClass, method);
+                    }
+                } else {
+                    if (!Modifier.isStatic(modifiers)) {
+                        throwControllerError("Invalid non-static action in a controller: ", controllerClass, method);
+                    }
+                }
                 JavaActionDef action = makeActionDef(method, controllerClass, controllerDesc);
 
                 if (action != null) {

@@ -16,11 +16,13 @@
 package org.auraframework.impl;
 
 import org.auraframework.builder.ApplicationDefBuilder;
+import org.auraframework.builder.CacheBuilder;
 import org.auraframework.builder.ComponentDefBuilder;
 import org.auraframework.builder.ComponentDefRefBuilder;
 import org.auraframework.builder.StyleDefBuilder;
 import org.auraframework.builder.ThemeDefBuilder;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
+import org.auraframework.impl.cache.CacheImpl;
 import org.auraframework.impl.css.style.StyleDefImpl;
 import org.auraframework.impl.root.application.ApplicationDefImpl;
 import org.auraframework.impl.root.component.ComponentDefImpl;
@@ -65,4 +67,8 @@ public class BuilderServiceImpl implements BuilderService {
         return new ThemeDefImpl.Builder();
     }
 
+    @Override
+	public <K, V> CacheBuilder<K, V> getCacheBuilder() throws QuickFixException {
+		return new CacheImpl.Builder<K, V>();
+	}
 }

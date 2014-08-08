@@ -21,6 +21,5 @@ exp(p,
     "pop", p.pop,
     "clearHistory", p.clearHistory,
     "layout", p.layout,
-    "changeLocation", p.changeLocation,
     "setCurrentLayoutTitle", p.setCurrentLayoutTitle
 );

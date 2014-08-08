@@ -15,14 +15,12 @@
  */
 package org.auraframework.adapter;
 
-import java.util.Map;
-
-import org.auraframework.css.parser.ThemeOverrideMap;
-import org.auraframework.css.parser.ThemeValueProvider;
-import org.auraframework.def.ApplicationDef;
-import org.auraframework.def.ComponentDef;
+import org.auraframework.css.ThemeList;
+import org.auraframework.css.ThemeValueProvider;
 import org.auraframework.def.DefDescriptor;
+import org.auraframework.def.StyleDef;
 import org.auraframework.def.ThemeDef;
+import org.auraframework.system.AuraContext;
 import org.auraframework.throwable.quickfix.QuickFixException;
 
 /**
@@ -30,28 +28,30 @@ import org.auraframework.throwable.quickfix.QuickFixException;
  */
 public interface StyleAdapter extends AuraAdapter {
     /**
-     * Gets a {@link ThemeValueProvider}, used for resolving {@link ThemeDef} variables.
+     * Gets a {@link ThemeValueProvider} using whatever theme overrides are set on the current {@link AuraContext}. This
+     * is usually the method you want.
+     * 
+     * @param descriptor The {@link StyleDef} descriptor of the CSS file being parsed. This is used to determine which
+     *            namespace-default {@link ThemeDef} to use, as well as which component-bundle {@link ThemeDef} to use.
      */
-    ThemeValueProvider getThemeValueProvider();
+    ThemeValueProvider getThemeValueProvider(DefDescriptor<StyleDef> descriptor) throws QuickFixException;
 
     /**
-     * Gets a {@link ThemeValueProvider}, used for resolving {@link ThemeDef} variables.
+     * Gets a {@link ThemeValueProvider} using the given overrides.
      * 
-     * @param overrides Overridden {@link ThemeDef}s.
-     * @param aliases Named aliases to {@link ThemeDef} descriptors.
+     * @param descriptor The {@link StyleDef} descriptor of the CSS file being parsed. This is used to determine which
+     *            namespace-default {@link ThemeDef} to use, as well as which component-bundle {@link ThemeDef} to use.
+     * @param overrideThemes The {@link ThemeList} containing the override themes.
      */
-    ThemeValueProvider getThemeValueProvider(ThemeOverrideMap overrides, Map<String, DefDescriptor<ThemeDef>> aliases);
+    ThemeValueProvider getThemeValueProvider(DefDescriptor<StyleDef> descriptor, ThemeList overrideThemes)
+            throws QuickFixException;
 
     /**
-     * Gets a {@link ThemeValueProvider}, used for resolving {@link ThemeDef} variables.
+     * Gets a {@link ThemeValueProvider} that doesn't use any override theme (even if one is set on the current
+     * {@link AuraContext}).
      * 
-     * <p>
-     * This will assume overrides from the current context's application (if present), and aliases from the
-     * {@link ComponentDef} or {@link ApplicationDef} associated with the given descriptorName.
-     * 
-     * @param descriptorName Descriptor name of the application or component, e.g., namespace:name.
-     * 
-     * @throws QuickFixException
+     * @param descriptor The {@link StyleDef} descriptor of the CSS file being parsed. This is used to determine which
+     *            namespace-default {@link ThemeDef} to use, as well as which component-bundle {@link ThemeDef} to use.
      */
-    ThemeValueProvider getThemeValueProvider(String descriptorName) throws QuickFixException;
+    ThemeValueProvider getThemeValueProviderNoOverrides(DefDescriptor<StyleDef> descriptor) throws QuickFixException;
 }

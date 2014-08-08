@@ -21,11 +21,9 @@
      * associates the buttons with their parent dialog.
      */
     doInit : function(cmp, evt, hlp) {
-
-        var atts        = cmp.getAttributes(),
-            buttonFacet = atts.get("buttons"),
-            role        = atts.get("ariaRole"),
-            width       = atts.get("width"),
+        var buttonFacet = cmp.get("v.buttons"),
+            role        = cmp.get("v.ariaRole"),
+            width       = cmp.get("v.width"),
             length      = 0;
 
         // validate the aria role is one of the allowed values
@@ -41,7 +39,7 @@
             length = buttonFacet.length;
             for (var i=0; i<length; i++) {
                 if (buttonFacet[i].isInstanceOf("ui:dialogButtons")) {
-                    buttonFacet[i].getAttributes().setValue("_parentDialog", cmp);
+                    buttonFacet[i].set("v._parentDialog", cmp);
                 } else {
                     $A.error("The 'buttons' attribute of a ui:dialog component" +
                              "must be of type ui:dialogButtons");

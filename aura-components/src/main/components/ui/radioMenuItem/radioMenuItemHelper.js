@@ -14,35 +14,42 @@
  * limitations under the License.
  */
 ({
+	handleClick : function(component) {
+		var current = component.get("v.selected");
+        if (current === false) {
+        	component.set("v.selected", !current);
+        }
+	},
+
     setSelected : function(component) {
         var concreteCmp = component.getConcreteComponent();
         var selected = concreteCmp.get("v.selected");
-        var linkCmp = concreteCmp.find("link");
+        var linkCmp = component.find("link");
         if (linkCmp) {
             var elem = linkCmp.getElement();
             if (selected === true) {
                 $A.util.addClass(elem, "selected");
                 elem.setAttribute("aria-checked", "true");
                 // make sure the sibling radioMenuItems are not checked.
-                this.uncheckSiblings(concreteCmp); 
+                this.uncheckSiblings(concreteCmp);
             } else {
                 $A.util.removeClass(elem, "selected");
                 elem.setAttribute("aria-checked", "false");
             }
         }
     },
-    
+
     uncheckSiblings : function(component) {
-        var parent = component.getValue("v.parent");
-        if (parent && !parent.isEmpty()) {
-            p = parent.getValue(0);
-            var body = p.getValue("v.childMenuItems");
-            for (var i = 0; i < body.getLength(); i++) {
-                var c = body.getValue(i);
-                if (c.isInstanceOf("ui:radioMenuItem") && 
-                    c.getValue("v.selected").getBooleanValue() && 
+    	var parent = component.get("v.parent");
+        if (parent && parent.length > 0) {
+            p = parent[0];
+            var body = p.get("v.childMenuItems");
+            for (var i = 0; i < body.length; i++) {
+                var c = body[i];
+                if (c.isInstanceOf("ui:radioMenuItem") &&
+                    $A.util.getBooleanValue(c.get("v.selected")) &&
                     c.getGlobalId() != component.getGlobalId()) {
-                    c.setValue("v.selected", false);     
+                    c.set("v.selected", false);
                     break;
                 }
             }

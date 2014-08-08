@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 ({
-    activate : function(cmp){
-        cmp.get("e.activated")
-            .setParams({component : cmp})
-            .fire();
+	setActive : function(cmp, evt) {
+	    var concrete = cmp.getConcreteComponent(), helper = concrete.getDef().getHelper(), active = evt.getParam("active");
+        helper.setActive(cmp, evt.getParam("active"));
+        if (active) {
+            cmp.get("e.onActivated").setParams({"tab": cmp}).fire();
+        }
     }
 })

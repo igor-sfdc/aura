@@ -28,8 +28,12 @@ function Event(config) {
     this.fired = false;
 }
 
+Event.prototype.auraType = "Event";
+
 /**
- * Gets the source component associated with this Event.
+ * Gets the source component that fired this component event.
+ * This method doesn't work for application events.
+ * 
  * @returns {Object}
  */
 Event.prototype.getSource = function() {
@@ -66,10 +70,10 @@ Event.prototype.setParams = function(config) {
         var attributeDefs = this.eventDef.getAttributeDefs();
 
         for (var key in config){
-            $A.assert(attributeDefs[key], "Invalid event attribute : " + key);
-
-            var value = config[key];
-            this.params[key] = value;
+            if (attributeDefs[key]) {
+                var value = config[key];
+                this.params[key] = value;
+            }
         }
     }
 
@@ -91,6 +95,10 @@ Event.prototype.getParams = function(){
     return this.params;
 };
 
+//#if {"modes" : ["STATS"]}
+Event.prototype.statsIndex = [];
+//#end
+
 /**
  * Fires the Event. Checks if the Event has already been fired before firing.
  * Returns null if a handler has destroyed the component.
@@ -101,6 +109,11 @@ Event.prototype.fire = function() {
         // could pass around a different object instead
         aura.assert(false, "event has already been fired, silly");
     }
+
+    //#if {"modes" : ["STATS"]}
+    var startTime = (new Date()).getTime();
+    //#end
+
     var stackname = this.eventDef.getDescriptor().getQualifiedName();
     var that = this;
 
@@ -155,8 +168,8 @@ Event.prototype.fire = function() {
                 }
             }
         }, stackname);
-    
-    //#if {"excludeModes" : ["PRODUCTION"]}
+
+    //#if {"excludeModes" : ["PRODUCTION", "PRODUCTIONDEBUG"]}
     // if we have a debug component send event info to the tool
     var auraDebugCmp = $A.util.getDebugToolComponent();
     if(!$A.util.isUndefinedOrNull(auraDebugCmp)) {
@@ -196,6 +209,10 @@ Event.prototype.fire = function() {
             }
     	}
     }
+    //#end
+
+    //#if {"modes" : ["STATS"]}
+    Event.prototype.statsIndex.push({'event': this, 'startTime': startTime, 'endTime': (new Date()).getTime()});
     //#end
 };
 

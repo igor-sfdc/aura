@@ -44,4 +44,60 @@ PassthroughValue.prototype.getValue = function(key) {
     return this.cmp.getValue(key);
 };
 
+/**
+ * Returns the primary providers associated with the given key or the Component.
+ * @param {String} key The data key to look up on the primary providers.
+ */
+PassthroughValue.prototype.get = function(key) {
+    var v = this.getValue(key);
+    return v && v.unwrap ? v.unwrap() : v;
+};
+
+/**
+ * Sets the value of the primary providers associated value.
+ * @param {String} key The data key to look up on the primary providers.
+ * @param {Object} v The value to be set.
+ */
+PassthroughValue.prototype.set = function(key, value) {
+    this.getValue(key).setValue(value);
+};
+
+/** 
+ * Delegates indexing logic to the wrapped value provider. 
+ * Likely delegating to a wrapped component. 
+ */ 
+PassthroughValue.prototype.index = function () {
+    var valueProvider = this.getComponent();
+
+    // Potentially nested PassthroughValue objects.
+    while (valueProvider && !valueProvider.index) {
+        valueProvider = valueProvider.getComponent();
+    }
+
+    if (!valueProvider) {
+        return;
+    }
+
+    valueProvider.index.apply(valueProvider, arguments); 
+};
+
+/**
+ * Delegates de-indexing logic to the wrapped value provider. 
+ * Likely delegating to a wrapped component. 
+ */ 
+PassthroughValue.prototype.deIndex = function () {
+    var valueProvider = this.getComponent();
+
+    // Potentially nested PassthroughValue objects.
+    while (valueProvider && !valueProvider.deIndex) {
+        valueProvider = valueProvider.getComponent();
+    }
+
+    if (!valueProvider) {
+        return;
+    }
+
+    valueProvider.deIndex.apply(valueProvider, arguments);
+};
+
 //#include aura.value.PassthroughValue_export

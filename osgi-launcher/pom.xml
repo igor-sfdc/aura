@@ -5,13 +5,14 @@
     <parent>
         <groupId>org.auraframework</groupId>
         <artifactId>aura-framework</artifactId>
-        <version>0.367-SNAPSHOT</version>
+        <version>0.1318-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <packaging>jar</packaging>
     <properties>
         <!-- Default HTTP port -->
         <httpPort>9090</httpPort>
+        <suspendFlag>n</suspendFlag>
     </properties>
     <dependencies>
         <dependency>
@@ -140,6 +141,7 @@
                             <skip>${skipStartLauncher}</skip>
                             <executable>java</executable>
                             <arguments>
+                                <argument>-agentlib:jdwp=transport=dt_socket,server=y,suspend=${suspendFlag},address=1044</argument>
                                 <argument>-jar</argument>
                                 <argument>${basedir}/launcherHome/osgi-launcher-start.jar</argument>
                                 <argument>httpPort=${httpPort}</argument>

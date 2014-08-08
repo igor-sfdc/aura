@@ -40,9 +40,13 @@
      * Automation for W-1308292 - Passing localId in config for newCmp will invoke the fix
      */
     testPassThroughValueAsValueProvider:{
-        test:function(cmp){
+        test:[ function(cmp){
+            var avp;
+
             $A.run(function(){
-                cmp.get('c.createCmpWithPassthroughValue').runDeprecated();
+                var a = cmp.get('c.createCmpWithPassthroughValue');
+                a.runDeprecated();
+                avp = a.getReturnValue();
             });
 
             //Verify that local ID can be used to find the component
@@ -50,9 +54,16 @@
             $A.test.assertTruthy(newTextCmp, "Failed to find new Component with its localId")
 
             $A.test.assertEquals("markup://aura:text", newTextCmp.getDef().getDescriptor().getQualifiedName());
-            $A.test.assertEquals("Washington", newTextCmp.getAttributes().getValue('value').getValue());
+            $A.test.assertEquals("Washington", newTextCmp.get('v.value'));
             $A.test.assertEquals("Washington", $A.test.getText(newTextCmp.getElement()));
-        }
+            cmp._avp = avp;
+        },
+        function(cmp) {
+            var newTextCmp = cmp.find("txt_Id");
+            // this should test the valueprovider fix.
+            cmp._avp.deIndex(newTextCmp);
+            newTextCmp.destroy();
+        }]
     },
 
     /**
@@ -81,7 +92,7 @@
     },
 
     /**
-     * Verify component with PropertyReferenceValue in MapValue attributes has correct values
+     * Verify component with PropertyChain in MapValue attributes has correct values
      */
     testMapValueProviderForDefFetchedFromServer:{
         test: function(cmp){
@@ -96,7 +107,7 @@
                     "Failed to create new component: markup://loadLevelTest:displayMap");
                 $A.test.assertEquals("barFoo", mapCmp.get('v.map.propRef'), "Wrong value for v.map.propRef");
                 $A.test.assertEquals("barFoo", mapCmp.get('v.map.map2.propRef'), "Wrong value for v.map.map2.propRef");
-                mapCmp.setValue("v.stringAttribute", "fooBar");
+                mapCmp.set("v.stringAttribute", "fooBar");
                 $A.test.assertEquals("fooBar", mapCmp.get('v.map.propRef'), "Wrong value for v.map.propRef. Should be updated");
                 $A.test.assertEquals("fooBar", mapCmp.get('v.map.map2.propRef'), "Wrong value for v.map.map2.propRef. Should be updated");
 
@@ -117,7 +128,7 @@
                 $A.run(function(){
                     cmp.get('c.createCmpWithEmptyValueProvider').runDeprecated();
                 });
-                
+
                 //Look at the c.createCmpWithEmptyValueProvider, it is providing {} as attribute value provider
                 $A.test.fail("Should have failed to resolve value provider for new component.");
             }catch(e){
@@ -133,7 +144,7 @@
     // TODO(W-1320706): Specifying bad attribute value providers should give a more informative message to user
     _testUndefinedAsValueProvider:{
         test:function(cmp){
-            
+
             try{
                 $A.run(function(){
                     cmp.get('c.createCmpWithUndefinedValueProvider').runDeprecated();

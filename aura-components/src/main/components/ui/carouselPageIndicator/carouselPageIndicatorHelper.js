@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-{
+({
 	onPageSelected: function (cmp, evt) {
-		
+
         var currentPage = cmp.get("v.currentPage"),
         	pages = cmp.get("v.pageComponents"),
         	//page index starts at 1
@@ -29,24 +29,21 @@
         	e = pageItems.get("e.pageSelected");
 			e.setParams(evt.getParams())
 			e.fire();
-			cmp.getValue('v.currentPage').setValue(targetPage); 
+			cmp.set('v.currentPage', targetPage);
         }
-        else if (pages && pages.length > 1 && targetPage < pages.length && targetPage >= 0) {        	        	
+        else if (pages && pages.length > 1 && targetPage < pages.length && targetPage >= 0) {
     		if (typeof currentPage != 'undefined') {
     			//fire event to previous selected indicator item
     			e = pageItems[currentPage].get("e.pageSelected");
     			e.setParams(evt.getParams())
     			e.fire();
     		}
-    		        	   	
-        	pageItems[targetPage].getElement().focus();
-        	         	
         	//fire event to target indicator item
         	e = pageItems[targetPage].get("e.pageSelected");
 			e.setParams(evt.getParams())
 			e.fire();
-             
-        	cmp.getValue('v.currentPage').setValue(targetPage);        	
-        }       
-    } 
-}
+
+        	cmp.set('v.currentPage', targetPage);
+        }
+    }
+})

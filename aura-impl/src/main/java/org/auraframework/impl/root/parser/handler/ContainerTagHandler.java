@@ -19,16 +19,20 @@ import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
+import org.auraframework.Aura;
 import org.auraframework.def.BaseComponentDef;
 import org.auraframework.def.BaseComponentDef.WhitespaceBehavior;
 import org.auraframework.def.ComponentDefRef;
 import org.auraframework.def.ComponentDefRef.Load;
 import org.auraframework.def.Definition;
+import org.auraframework.def.DefinitionAccess;
 import org.auraframework.def.HtmlTag;
 import org.auraframework.def.RootDefinition;
 import org.auraframework.system.Location;
 import org.auraframework.system.Source;
 import org.auraframework.throwable.AuraRuntimeException;
+import org.auraframework.throwable.quickfix.DefinitionNotFoundException;
+import org.auraframework.throwable.quickfix.InvalidAccessValueException;
 import org.auraframework.throwable.quickfix.QuickFixException;
 
 /**
@@ -38,6 +42,7 @@ public abstract class ContainerTagHandler<T extends Definition> extends XMLHandl
     protected Location startLocation;
     protected WhitespaceBehavior whitespaceBehavior = BaseComponentDef.DefaultWhitespaceBehavior;
     public static final String SCRIPT_TAG = "script";
+    public static final String ATTRIBUTE_ACCESS = "access";
 
     public ContainerTagHandler() {
         super();
@@ -47,46 +52,54 @@ public abstract class ContainerTagHandler<T extends Definition> extends XMLHandl
         super(xmlReader, source);
     }
 
+    protected void readElement() throws XMLStreamException, QuickFixException {
+        validateAttributes();
+        this.startLocation = getLocation();
+        String startTag = getTagName();
+        if (!handlesTag(startTag)) {
+            error("Expected start tag <%s> but found %s", getHandledTag(), getTagName());
+        }
+        readAttributes();
+        readSystemAttributes();
+        loop: while (xmlReader.hasNext()) {
+            int next = xmlReader.next();
+            switch (next) {
+            case XMLStreamConstants.START_ELEMENT:
+                handleChildTag();
+                break;
+            case XMLStreamConstants.CDATA:
+            case XMLStreamConstants.CHARACTERS:
+            case XMLStreamConstants.SPACE:
+                handleChildText();
+                break;
+            case XMLStreamConstants.END_ELEMENT:
+                if (!startTag.equalsIgnoreCase(getTagName())) {
+                    error("Expected end tag <%s> but found %s", startTag, getTagName());
+                }
+                // we hit our own end tag, so stop handling
+                break loop;
+            case XMLStreamConstants.ENTITY_REFERENCE:
+            case XMLStreamConstants.COMMENT:
+                break;
+            default:
+                error("found something of type: %s", next);
+            }
+        }
+        if (xmlReader.getEventType() != XMLStreamConstants.END_ELEMENT) {
+            // must have hit EOF, barf time!
+            error("Didn't find an end tag");
+        }
+    }
+
     @Override
     public final T getElement() throws XMLStreamException, QuickFixException {
         if (source.exists()) {
-            this.startLocation = getLocation();
-            String startTag = getTagName();
-            if (!handlesTag(startTag)) {
-                error("Expected start tag <%s> but found %s", getHandledTag(), getTagName());
-            }
-            readAttributes();
-            readSystemAttributes();
-            loop: while (xmlReader.hasNext()) {
-                int next = xmlReader.next();
-                switch (next) {
-                case XMLStreamConstants.START_ELEMENT:
-                    handleChildTag();
-                    break;
-                case XMLStreamConstants.CDATA:
-                case XMLStreamConstants.CHARACTERS:
-                case XMLStreamConstants.SPACE:
-                    handleChildText();
-                    break;
-                case XMLStreamConstants.END_ELEMENT:
-                    if (!startTag.equalsIgnoreCase(getTagName())) {
-                        error("Expected end tag <%s> but found %s", startTag, getTagName());
-                    }
-                    // we hit our own end tag, so stop handling
-                    break loop;
-                case XMLStreamConstants.ENTITY_REFERENCE:
-                case XMLStreamConstants.COMMENT:
-                    break;
-                default:
-                    error("found something of type: %s", next);
-                }
-            }
-            if (xmlReader.getEventType() != XMLStreamConstants.END_ELEMENT) {
-                // must have hit EOF, barf time!
-                error("Didn't find an end tag");
-            }
+            readElement();
         }
+        return createDefinition();
+    }
 
+    public final T getErrorElement() throws QuickFixException {
         return createDefinition();
     }
 
@@ -100,7 +113,7 @@ public abstract class ContainerTagHandler<T extends Definition> extends XMLHandl
 
     /**
      * called for every child tag that is encountered
-     * 
+     *
      * @throws QuickFixException
      */
     protected abstract void handleChildTag() throws XMLStreamException, QuickFixException;
@@ -113,7 +126,7 @@ public abstract class ContainerTagHandler<T extends Definition> extends XMLHandl
     /**
      * Override this to read in the attributes for the main tag this handler
      * handles
-     * 
+     *
      * @throws QuickFixException
      */
     protected void readAttributes() throws QuickFixException {
@@ -124,7 +137,34 @@ public abstract class ContainerTagHandler<T extends Definition> extends XMLHandl
         // do nothing
     }
 
-    /**
+    protected DefinitionAccess readAccessAttribute() throws InvalidAccessValueException {
+        String access = getAttributeValue(ATTRIBUTE_ACCESS);
+        if (access != null) {
+        	DefinitionAccess a;
+			try {
+	        	String namespace = source.getDescriptor().getNamespace();
+				a = Aura.getDefinitionParserAdapter().parseAccess(namespace, access);
+	        	a.validate(namespace, allowAuthenticationAttribute(), allowPrivateAttribute());
+			} catch (InvalidAccessValueException e) {
+				// re-throw with location
+				throw new InvalidAccessValueException(e.getMessage(), getLocation());
+			}
+        	return a;
+        }
+        else {
+        	return null;
+        }
+    }
+
+	protected  boolean allowAuthenticationAttribute() {
+		return false;
+	}
+
+	protected boolean allowPrivateAttribute() {
+		return false;
+	}
+
+	/**
      * @return this container's tag. May return a more generic term for the
      *         class of tag expected if more than one is handled. Not safe for
      *         tag comparisons, only for messaging. For comparisons, use
@@ -142,21 +182,19 @@ public abstract class ContainerTagHandler<T extends Definition> extends XMLHandl
 
     /**
      * Create and return the definition
-     * 
+     *
      * @throws QuickFixException
      */
     protected abstract T createDefinition() throws QuickFixException;
 
     protected <P extends RootDefinition> ParentedTagHandler<? extends ComponentDefRef, ?> getDefRefHandler(
-            RootTagHandler<P> parentHandler) {
+            RootTagHandler<P> parentHandler) throws DefinitionNotFoundException {
         String tag = getTagName();
         if (HtmlTag.allowed(tag)) {
             if (!parentHandler.getAllowsScript() && SCRIPT_TAG.equals(tag.toLowerCase())) {
                 throw new AuraRuntimeException("script tags only allowed in templates", getLocation());
             }
             return new HTMLComponentDefRefHandler<P>(parentHandler, tag, xmlReader, source);
-        } else if (ForEachDefHandler.TAG.equalsIgnoreCase(tag)) {
-            return new ForEachDefHandler<P>(parentHandler, xmlReader, source);
         } else {
             String loadString = getSystemAttributeValue("load");
             if (loadString != null) {

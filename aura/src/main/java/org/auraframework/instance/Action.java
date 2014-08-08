@@ -20,27 +20,44 @@ import java.util.List;
 import java.util.Map;
 
 import org.auraframework.def.ActionDef;
+import org.auraframework.system.LoggingContext.KeyValueLogger;
 import org.auraframework.throwable.AuraExecutionException;
 import org.auraframework.util.javascript.Literal;
 import org.auraframework.util.json.Json;
 import org.auraframework.util.json.JsonSerializer.NoneSerializer;
 
 /**
+ * An interface for the server side implementation of an action.
  */
 public interface Action extends Instance<ActionDef> {
 
     public enum State {
-        ABORTED, ERROR, NEW, RUNNING, SUCCESS
+        ERROR, NEW, RUNNING, SUCCESS
     }
 
+    /**
+     * Get the ID for the action.
+     */
     public String getId();
 
+    /**
+     * Set the ID for the action.
+     */
     public void setId(String id);
 
+    /**
+     * run the action.
+     */
     public void run() throws AuraExecutionException;
 
+    /**
+     * Add actions to run after this one.
+     */
     public void add(List<Action> actions);
 
+    /**
+     * get the current list of actions run after this one.
+     */
     public List<Action> getActions();
 
     public Object getReturnValue();
@@ -79,41 +96,37 @@ public interface Action extends Instance<ActionDef> {
             json.writeMapEntry("returnValue", returnValue);
             json.writeMapEntry("error", action.getErrors());
 
-            if (action instanceof StorableAction) {
-            	StorableAction storableAction = (StorableAction) action;
-                if (storableAction.isStorable()) {
-                    json.writeMapEntry("storable", true);
-    
-                    json.writeMapEntry("action", action.getDescriptor().getQualifiedName());
-    
-                    // Include params for storable server actions
-                    Map<String, Object> params = storableAction.getParams();
-                    if (params != null && !params.isEmpty()) {
-                        json.writeMapEntry("params", params);
-                    }
+            if (action.isStorable()) {
+                json.writeMapEntry("storable", true);
+
+                json.writeMapEntry("action", action.getDescriptor().getQualifiedName());
+
+                // Include params for storable server actions
+                Map<String, Object> params = action.getParams();
+                if (params != null && !params.isEmpty()) {
+                    json.writeMapEntry("params", params);
                 }
             }
 
-            Map<String, BaseComponent<?, ?>> components = action.getComponents();
-            if (!components.isEmpty()) {
-                json.writeMapKey("components");
-                json.writeMapBegin();
-
-                for (BaseComponent<?, ?> component : components.values()) {
-                    if (component.hasLocalDependencies()) {
-                        json.writeMapEntry(component.getGlobalId(), component);
-                    }
-                }
-                json.writeMapEnd();
-            }
+            action.getInstanceStack().serializeAsPart(json);
             json.writeMapEnd();
         }
-
     }
 
-    public void registerComponent(BaseComponent<?, ?> component);
+    /**
+     * Log any params that are useful and safe to log.
+     * @param paramLogger
+     */
+    public void logParams(KeyValueLogger logger);
 
-    public Map<String, BaseComponent<?, ?>> getComponents();
+    public boolean isStorable();
 
-    public int getNextId();
+    public void setStorable();
+
+    public Map<String, Object> getParams();
+
+    /**
+     * Get the instance stack for this action.
+     */
+    public InstanceStack getInstanceStack();
 }

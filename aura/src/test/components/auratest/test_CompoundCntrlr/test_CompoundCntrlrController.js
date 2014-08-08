@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-{
+({
     similarActionNames: function(cmp, event) {
         var button = event.getSource();
-        button.getAttributes().setValue("label", 'clientAction1'+apexActionReturnValue);
+        button.set("v.label", 'clientAction1'+apexActionReturnValue);
         $A.rerender(button);
         /*Once we have the capability to run Client actions and Server actions which have same name, invoke the server action and
          * change the test to verify that the label on the button is clientActionserverAction
-        var a = $A.expressionService.getValue(cmp, "{!c.similarActionNames}");
+        var a = cmp.get("{!c.similarActionNames}");
         a.setCallback(cmp, function(action) {
             var apexActionReturnValue = action.getReturnValue();
-            button.getAttributes().setValue("label", 'clientAction'+apexActionReturnValue);
+            button.set("v.label", 'clientAction'+apexActionReturnValue);
             $A.rerender(button);
         });
         $A.enqueueAction(a);;*/
@@ -31,10 +31,10 @@
     dissimilarActionNames: function(cmp, event) {
         var button = event.getSource();
         $A.rerender(cmp);
-        var a = $A.expressionService.get(cmp, "c.similarActionNames");
+        var a = cmp.get("c.similarActionNames");
         a.setCallback(cmp, function(action) {
             var apexActionReturnValue = action.getReturnValue();
-            button.getAttributes().setValue("label", 'clientAction2'+apexActionReturnValue);
+            button.set("v.label", 'clientAction2'+apexActionReturnValue);
             $A.rerender(button);
         });
         $A.enqueueAction(a);
@@ -42,12 +42,12 @@
     anotherActionName: function(cmp, event) {
         var button = event.getSource();
         $A.rerender(cmp);
-        var a = $A.expressionService.get(cmp, "c.serverAction");
+        var a = cmp.get("c.serverAction");
         a.setCallback(cmp, function(action) {
             var apexActionReturnValue = action.getReturnValue();
-            button.getAttributes().setValue("label", 'clientAction3'+apexActionReturnValue);
+            button.set("v.label", 'clientAction3'+apexActionReturnValue);
             $A.rerender(button);
         });
         $A.enqueueAction(a);
     }
-}
+})

@@ -32,6 +32,7 @@ import org.auraframework.test.ComponentJSTestSuiteTest.ComponentTestCase;
 import org.auraframework.test.IntegrationTestCase;
 import org.auraframework.test.TestInventory;
 import org.auraframework.test.TestInventory.Type;
+import org.auraframework.test.perf.core.AbstractPerfTestCase;
 import org.auraframework.util.ServiceLocator;
 
 import com.google.common.collect.Maps;
@@ -64,6 +65,10 @@ public class TestSetRunnerState {
     private static class ContainerEnabledSingletonHolder {
         private static TestSetRunnerState HYBRIDCONTAINER_INSTANCE = new TestSetRunnerState(TestInventory.CONTAINER_TYPE_TESTS);
     }
+    
+    private static class PerfSingletonHolder {
+        private static TestSetRunnerState PERF_INSTANCE = new TestSetRunnerState(TestInventory.PERF_TESTS);
+    }
     /**
      * The inventory tracks all test cases available for execution.
      */
@@ -86,6 +91,10 @@ public class TestSetRunnerState {
     
     public static TestSetRunnerState getHybridContainerInstance() {
     	return ContainerEnabledSingletonHolder.HYBRIDCONTAINER_INSTANCE;
+    }
+    
+    public static TestSetRunnerState getPerfInstance() {
+    	return PerfSingletonHolder.PERF_INSTANCE;
     }
 
     private TestSetRunnerState(EnumSet<TestInventory.Type> scope) {
@@ -161,6 +170,7 @@ public class TestSetRunnerState {
                 testWithProps.put("exception", "");
                 testWithProps.put("isHidden", "");
                 testWithProps.put("isInteg", t instanceof IntegrationTestCase);
+                testWithProps.put("isPerf", t instanceof AbstractPerfTestCase);
                 
                 String url = "";
                 if (t instanceof ComponentTestCase) {

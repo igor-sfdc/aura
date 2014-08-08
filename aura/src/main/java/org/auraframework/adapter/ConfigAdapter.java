@@ -36,16 +36,6 @@ public interface ConfigAdapter extends AuraAdapter {
     /** Returns a string to identify this unique version of the Aura framework. */
     String getAuraFrameworkNonce();
 
-    String getJiffyJSURL();
-
-    String getJiffyUIJSURL();
-
-    String getJiffyCSSURL();
-    
-    String getMomentJSURL();
-    
-    List<String> getWalltimeJSURLs();
-
     String getCSRFToken();
 
     void validateCSRFToken(String token);
@@ -67,4 +57,22 @@ public interface ConfigAdapter extends AuraAdapter {
     boolean validateCss();
 
 	String getHTML5ShivURL();
+
+    String getMomentJSURL();
+
+    List<String> getWalltimeJSURLs();
+    
+    boolean isPrivilegedNamespace(String namespace);
+    String getDefaultNamespace();
+	boolean isUnsecuredPrefix(String prefix);
+	
+	@Deprecated
+	boolean isUnsecuredNamespace(String namespace);
+
+	void addPrivilegedNamespace(String namespace);
+	void removePrivilegedNamespace(String namespace);
+
+	boolean isDocumentedNamespace(String namespace);
+	
+	boolean isCacheablePrefix(String prefix);
 }

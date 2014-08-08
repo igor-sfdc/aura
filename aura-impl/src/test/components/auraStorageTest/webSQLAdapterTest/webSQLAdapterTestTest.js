@@ -1,8 +1,8 @@
 ({
-    //WebSQL is supported in only these modern browsers. http://caniuse.com/sql-storage
-    // TODO(W-1766465): Currently we hardcode the size of the websql database. This pops up a box in Safari that we
-    //                  can't accept or override from the test.
-    browsers:["GOOGLECHROME", "IPAD", "IPHONE", "ANDROID_PHONE", "ANDROID_TABLET"],
+    // WebSQL is supported in only these modern browsers. http://caniuse.com/sql-storage
+    // TODO(W-1766465): Currently we hardcode the size of the websql database. This pops up a box in Safari(Desktop, iPhone & iPad) that we
+    //                  can't accept or override from the test. Re-enable for iOS when fixed.
+    browsers:["GOOGLECHROME", "ANDROID_PHONE", "ANDROID_TABLET"],
     setUp : function(cmp) {
 		$A.test.overrideFunction($A.storageService, "selectAdapter", function() {
 			return "websql";});
@@ -58,7 +58,7 @@
 				    storage.clear();
 				    $A.test.addWaitFor(0, function(){return storage.getSize()});
 				});
-		},
+		}
 		]
     },
     
@@ -92,11 +92,11 @@
 		    this.assertAfterGet(cmp, storage, "key2", function(){
 			var item = cmp["key2"];
 			$A.test.assertDefined(item);
-	        //waitFor size to change as an attempt to fix flappiness on autobuilds
-	        $A.test.addWaitForWithFailureMessage(true, function(){
-	            return storage.getSize()>=2 && storage.getSize()<2.002;
-	        }, "Expected value of approx. 2, got: "+storage.getSize());
-		    });
+                        //waitFor size to change as an attempt to fix flappiness on autobuilds
+                        $A.test.addWaitForWithFailureMessage(true, function(){
+                                return storage.getSize()>=2 && storage.getSize()<2.002;
+                            }, "Expected value of approx. 2, got: "+storage.getSize());
+                    });
 		}
 		]
     },
@@ -132,10 +132,10 @@
 		    storage.put("sport", map);
 		    //Assert that item was retrieved from storage
 		    this.assertAfterGet(cmp, storage, "sport", 
-			    		function(){
-						var item = cmp["sport"];
-						$A.test.assertEquals("Basketball", item["NBA"], "Failed to retrieve map value");
-					});
+                            function(){
+                                var item = cmp["sport"];
+                                $A.test.assertEquals("Basketball", item["NBA"], "Failed to retrieve map value");
+                            });
 		},
 		/**
 		 * Insert a literal value
@@ -173,39 +173,40 @@
 		    var storage = $A.storageService.getStorage("browserdb");
 		    var a = $A.get("c.aura://ComponentController.getComponent");
 		    a.setParams({
-	            "name" : 'auraStorageTest:teamFacet'
+                        "name" : 'auraStorageTest:teamFacet'
 		    });
 		    a.setCallback(cmp,function(a){
 	    		//Verify that original action is usable
 	    		$A.test.assertEquals("SUCCESS", a.getState())
 	    		$A.test.assertDefined(a.getReturnValue);
-	            $A.newCmpAsync(
+                        $A.test.clearAndAssertComponentConfigs(a);
+                        $A.newCmpAsync(
 	                    this,
 	                    function(newCmp){
 	                        $A.test.assertEquals("markup://auraStorageTest:teamFacet", newCmp.getDef().getDescriptor().toString());
 	                        storage.put("actionResponse", a);
 	                    },
 	                    a.getReturnValue()
-	            );
+                        );
 		    });
 		    $A.enqueueAction(a);
 		    $A.eventService.finishFiring();
 		    this.assertAfterGet(cmp, storage, "actionResponse", 
-		    		function(){
-					/*TODO: W-1620511 - actions are not flattened correctly, most properties are ommited
-					 * //Verify that action is usable after it was retrieved from cache
-					var item = cmp["actionResponse"];
-					$A.test.assertEquals("SUCCESS", item.getState());
-					$A.test.assertDefined(item.getReturnValue);
-					$A.newCmpAsync(
-	                    this,
-	                    function(newCmp){
-	                        $A.test.assertEquals("markup://auraStorageTest:teamFacet", newCmp.getDef().getDescriptor().toString());
-	                    },
-	                    a.getReturnValue()
-	                );*/
-				});
-		}
+                            function(){
+                                /*TODO: W-1620511 - actions are not flattened correctly, most properties are ommited
+                                 * //Verify that action is usable after it was retrieved from cache
+                                var item = cmp["actionResponse"];
+                                $A.test.assertEquals("SUCCESS", item.getState());
+                                $A.test.assertDefined(item.getReturnValue);
+                                $A.newCmpAsync(
+                                    this,
+                                    function(newCmp){
+                                        $A.test.assertEquals("markup://auraStorageTest:teamFacet", newCmp.getDef().getDescriptor().toString());
+                                    },
+                                    a.getReturnValue()
+                                );*/
+                            });
+                }
 		]
 	
     },
@@ -280,8 +281,9 @@
     },
     
     testExpiry:{
-    	//iOS has a size limit of how much a WebSql Db can take up. We have a fixed size implementation in WebSqlAdapter: W-1766465
-    	browsers:["GOOGLECHROME", "SAFARI", "ANDROID_PHONE", "ANDROID_TABLET"],
+    	// TODO(W-1766465): iOS/Safari has a size limit of how much a WebSql Db can take up. We have a fixed size
+        //                  implementation in WebSqlAdapter: W-1766465
+    	browsers:["GOOGLECHROME", "ANDROID_PHONE", "ANDROID_TABLET"],
 		test:[function(cmp){
 		    $A.test.setTestTimeout(30000);
 		    //defaultExpiration of 5 seconds

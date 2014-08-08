@@ -31,6 +31,7 @@ import org.apache.http.util.EntityUtils;
 import org.auraframework.Aura;
 import org.auraframework.test.AuraHttpTestCase;
 import org.auraframework.test.annotation.ThreadHostileTest;
+import org.auraframework.test.annotation.UnAdaptableTest;
 
 /**
  * Automation to verify the implementation of AuraFrameworkServlet. AuraFrameworkServlet responds to requests of pattern
@@ -43,6 +44,7 @@ public class AuraFrameworkServletHttpTest extends AuraHttpTestCase {
     public final String sampleBinaryResourcePath = "/auraFW/resources/aura/auraIdeLogo.png";
     public final String sampleTextResourcePath = "/auraFW/resources/aura/resetCSS.css";
     public final String sampleJavascriptResourcePath = "/auraFW/javascript/aura_dev.js";
+    public final String sampleJavascriptResourcePathWithNonce = "/auraFW/javascript/%s/aura_dev.js";
     public final String sampleBinaryResourcePathWithNonce = "/auraFW/resources/%s/aura/auraIdeLogo.png";
     public final String sampleTextResourcePathWithNonce = "/auraFW/resources/%s/aura/resetCSS.css";
     private final long timeWindowExpiry = 600000; // ten minute expiration test window
@@ -129,18 +131,6 @@ public class AuraFrameworkServletHttpTest extends AuraHttpTestCase {
         return obtainGetMethod(realPath);
     }
 
-    protected HttpGet obtainUidedGetMethod(String path, boolean fake) throws Exception {
-        String nonce;
-
-        if (fake) {
-            nonce = "thisisnotanonce";
-        } else {
-            nonce = Aura.getConfigAdapter().getAuraFrameworkNonce();
-        }
-        String realPath = path + "?aura.fwuid=" + nonce;
-        return obtainGetMethod(realPath);
-    }
-
     /**
      * Verify that AuraFrameworkServlet can handle bad resource paths. 1. Non existing resource path. 2. Empty resource
      * path. 3. Access to root directory or directory walking.
@@ -166,9 +156,11 @@ public class AuraFrameworkServletHttpTest extends AuraHttpTestCase {
     private void verifyResourceAccess(String resourcePath, int expectedResponseStatus, String failureMsg)
             throws Exception {
         HttpGet get = obtainGetMethod(resourcePath);
-        int statusCode = getStatusCode(perform(get));
+        HttpResponse response = perform(get);
+        int statusCode = getStatusCode(response);
         get.releaseConnection();
         assertEquals(failureMsg, expectedResponseStatus, statusCode);
+        assertAntiClickjacking(response);
     }
 
     /**
@@ -214,6 +206,7 @@ public class AuraFrameworkServletHttpTest extends AuraHttpTestCase {
         assertEquals("Expected server to return a 200 for unexpired cache without fwUid or nonce.", HttpStatus.SC_OK,
                 statusCode);
         assertNotNull(response);
+        assertAntiClickjacking(httpResponse);
     }
 
     /**
@@ -225,7 +218,7 @@ public class AuraFrameworkServletHttpTest extends AuraHttpTestCase {
         Calendar stamp = Calendar.getInstance();
         stamp.add(Calendar.DAY_OF_YEAR, 45);
 
-        HttpGet get = obtainUidedGetMethod(sampleBinaryResourcePath, false);
+        HttpGet get = obtainNoncedGetMethod(sampleBinaryResourcePathWithNonce, false);
         get.setHeader(HttpHeaders.IF_MODIFIED_SINCE,
                 new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz").format(stamp.getTime()));
 
@@ -234,6 +227,22 @@ public class AuraFrameworkServletHttpTest extends AuraHttpTestCase {
         int statusCode = getStatusCode(httpResponse);
         assertEquals("Expected server to return a 304 for unexpired cache.", HttpStatus.SC_NOT_MODIFIED, statusCode);
         assertNull(getResponseBody(httpResponse));
+        assertAntiClickjacking(httpResponse);
+    }
+
+    /**
+     * Verify the Vary header is set to Accept-Encoding. This should be set for cacheable and compressed js/css files.
+     *
+     * UnAdaptableTest because SFDC removes vary header
+     */
+    @UnAdaptableTest
+    public void testHasVaryHeader() throws Exception {
+        HttpGet get = obtainNoncedGetMethod(sampleTextResourcePath, false);
+        HttpResponse response = perform(get);
+        Header varyHeader = response.getFirstHeader(HttpHeaders.VARY);
+        assertNotNull("Vary header is not set.", varyHeader);
+        assertEquals("Vary header set to wrong value.", "Accept-Encoding", varyHeader.getValue());
+        assertAntiClickjacking(response);
     }
 
     /**
@@ -267,6 +276,7 @@ public class AuraFrameworkServletHttpTest extends AuraHttpTestCase {
         response = perform(get);
 
         checkExpired(response, "image/png");
+        assertAntiClickjacking(response);
         get.releaseConnection();
     }
 
@@ -290,6 +300,7 @@ public class AuraFrameworkServletHttpTest extends AuraHttpTestCase {
         long expirationMillis = (df.parse(expires).getTime() - currentDate.getTime());
         assertTrue("AuraFrameworkServlet is not setting the right value for expires header.",
                 ApproximatelyEqual(expirationMillis, AuraBaseServlet.SHORT_EXPIRE, timeWindowExpiry));
+        assertAntiClickjacking(httpResponse);
     }
 
     /**
@@ -312,6 +323,7 @@ public class AuraFrameworkServletHttpTest extends AuraHttpTestCase {
         get = obtainNoncedGetMethod(sampleTextResourcePathWithNonce, true);
         response = perform(get);
         checkExpired(response, "text/css");
+        assertAntiClickjacking(response);
         get.releaseConnection();
     }
 
@@ -339,28 +351,29 @@ public class AuraFrameworkServletHttpTest extends AuraHttpTestCase {
                 - currentDate.getTime());
         assertTrue("AuraFrameworkServlet is not setting the right value for expires header.",
                 ApproximatelyEqual(expirationMillis, AuraBaseServlet.SHORT_EXPIRE, timeWindowExpiry));
+        assertAntiClickjacking(httpResponse);
     }
 
     /**
      * Verify that AuraFrameworkServlet responds successfully to valid request for a javascript resource.
      */
-    public void testRequestJavascriptResourceLongExpire() throws Exception {
+    public void testRequestJavascriptResourceNoExpire() throws Exception {
         HttpGet get = obtainGetMethod(sampleJavascriptResourcePath);
         HttpResponse response = perform(get);
 
         checkExpired(response, "text/javascript");
+        assertAntiClickjacking(response);
         get.releaseConnection();
+    }
 
-        get = obtainUidedGetMethod(sampleJavascriptResourcePath, false);
-        response = perform(get);
-
+    /**
+     * Verify that AuraFrameworkServlet responds successfully to valid request for nonced aura js
+     */
+    public void testRequestJavascriptResourceLongExpire() throws Exception {
+        HttpGet get = obtainNoncedGetMethod(sampleJavascriptResourcePathWithNonce, false);
+        HttpResponse response = perform(get);
         checkLongCache(response, "text/javascript");
-        get.releaseConnection();
-
-        get = obtainUidedGetMethod(sampleJavascriptResourcePath, true);
-        response = perform(get);
-
-        checkExpired(response, "text/javascript");
+        assertAntiClickjacking(response);
         get.releaseConnection();
     }
 
@@ -371,8 +384,8 @@ public class AuraFrameworkServletHttpTest extends AuraHttpTestCase {
         HttpGet get = obtainGetMethod("/auraFW/resources/moment/moment.js");
         HttpResponse httpResponse = perform(get);
         String response = getResponseBody(httpResponse);
-
         checkExpired(httpResponse, "text/javascript");
+        assertAntiClickjacking(httpResponse);
         assertTrue(response.contains("(function(e){"));
 
         get.releaseConnection();
@@ -388,6 +401,7 @@ public class AuraFrameworkServletHttpTest extends AuraHttpTestCase {
 
         checkExpired(httpResponse, "text/javascript");
         assertTrue(response.contains("function setDefaults("));
+        assertAntiClickjacking(httpResponse);
 
         get.releaseConnection();
     }

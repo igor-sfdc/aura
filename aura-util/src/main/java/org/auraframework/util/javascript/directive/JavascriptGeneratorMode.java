@@ -15,6 +15,9 @@
  */
 package org.auraframework.util.javascript.directive;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.auraframework.util.javascript.JavascriptWriter;
 
 /**
@@ -55,7 +58,7 @@ public enum JavascriptGeneratorMode {
      */
     PTEST("ptest", false, JavascriptWriter.CLOSURE_AURA_PROD, true),
 
-    PRODUCTIONDEBUG("proddebug", false, JavascriptWriter.CLOSURE_AURA_PROD, true),
+    PRODUCTIONDEBUG("proddebug", false, JavascriptWriter.CLOSURE_AURA_DEBUG, true),
 
     /**
      * mode used for documentation (jsdoc), but never served in any context
@@ -112,5 +115,17 @@ public enum JavascriptGeneratorMode {
      */
     public boolean allowedInProduction() {
         return prod;
+    }
+    
+    public static Set<String> getSuffixes() {
+        JavascriptGeneratorMode[] enums = JavascriptGeneratorMode.values();
+        
+        Set<String> ret = new HashSet<String>(enums.length);
+        
+        for (JavascriptGeneratorMode mode : enums) {
+            ret.add(mode.getSuffix());
+        }
+        
+        return ret;
     }
 }

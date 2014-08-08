@@ -21,7 +21,6 @@ import org.auraframework.Aura;
 import org.auraframework.def.ComponentDef;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.impl.AuraImplTestCase;
-import org.auraframework.impl.root.component.ComponentImpl;
 import org.auraframework.instance.Component;
 
 /**
@@ -79,9 +78,9 @@ public class AttributesInAbstractComponentsTest extends AuraImplTestCase {
         Object value = component.getSuper().getAttributes().getValue("innerBody");
         assertTrue(value instanceof ArrayList);
         Object innerBodycmp = ((ArrayList<?>) value).get(0);
-        assertTrue(innerBodycmp instanceof ComponentImpl);
+        assertTrue(innerBodycmp instanceof Component);
         assertEquals("Setting inherited attribute in body of <aura:set></aura:set> does not work.",
-                "markup://aura:text", ((ComponentImpl) innerBodycmp).getDescriptor().getQualifiedName());
+                "markup://aura:text", ((Component)innerBodycmp).getDescriptor().getQualifiedName());
 
     }
 }

@@ -15,10 +15,14 @@
  */
 ({
     focus : function(cmp, event, helper) {
-        cmp.getAttributes().setValue("focusEvent", "true");
+        cmp.set("v.focusEvent", "true");
     },
 
     blur : function (cmp) {
-        cmp.getAttributes().setValue("blurEvent", "true");
+        cmp.set("v.blurEvent", "true");
+    },
+    
+    clicked: function(cmp) {
+        cmp.set("v.clickCount", cmp.get("v.clickCount") + 1);
     }
 })

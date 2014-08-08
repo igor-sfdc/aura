@@ -15,10 +15,13 @@
  */
 package org.auraframework.impl;
 
+import java.util.Map;
+
 import org.auraframework.adapter.LoggingAdapter;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.service.LoggingService;
 import org.auraframework.system.LoggingContext;
+import org.auraframework.system.LoggingContext.KeyValueLogger;
 
 import aQute.bnd.annotation.component.Component;
 
@@ -52,6 +55,22 @@ public class LoggingServiceImpl implements LoggingService {
         }
     }
 
+    @Override
+    public void startAction(String actionName) {
+        LoggingContext lc = getLoggingContext();
+        if (lc != null) {
+            lc.startAction(actionName);
+        }
+    }
+    
+    @Override
+    public void stopAction(String actionName) {
+        LoggingContext lc = getLoggingContext();
+        if (lc != null) {
+            lc.stopAction(actionName);
+        }
+    }
+    
     @Override
     public void stopTimer(String name) {
         LoggingContext lc = getLoggingContext();
@@ -131,21 +150,15 @@ public class LoggingServiceImpl implements LoggingService {
         if (lc != null) {
             lc.setValue(key, value);
         }
-        else {
-        	System.out.println("Logging context is null when LoggingService try to setValue [key:"
-        			+key+"--> value:"+value.toString());
-        }
     }
 
     @Override
-    public void doLog() {
+    public void flush() {
         LoggingContext lc = getLoggingContext();
         if (lc != null) {
             stopTimer(LoggingService.TIMER_AURA);
             stopTimer(LoggingService.TIMER_TOTAL);
-            lc.log();
-        } else {
-        	System.out.println("LoggingContext is null when logging service try to doLog");
+            lc.logRequestValues();
         }
     }
 
@@ -158,5 +171,22 @@ public class LoggingServiceImpl implements LoggingService {
             return null;
         }
         return la.getLoggingContext();
+    }
+
+    @Override
+    public KeyValueLogger getKeyValueLogger(StringBuffer log) {
+        LoggingContext lc = getLoggingContext();
+        if (lc != null) {
+            return lc.getKeyValueLogger(log);
+        }
+        return null;
+    }
+
+    @Override
+    public void logCSPReport(Map<String, Object> report) {
+        LoggingContext lc = getLoggingContext();
+        if (lc != null) {
+            lc.logCSPReport(report);
+        }
     }
 }

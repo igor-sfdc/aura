@@ -15,24 +15,13 @@
  */
 package org.auraframework.impl.context;
 
-import java.lang.management.ManagementFactory;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ExecutionException;
-
-import javax.management.MBeanServer;
-import javax.management.MXBean;
-import javax.management.ObjectName;
 
 import org.apache.log4j.Logger;
+import org.auraframework.service.LoggingService;
 import org.auraframework.system.LoggingContext;
-import org.auraframework.throwable.AuraRuntimeException;
 
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
 /**
  * LoggingContext impl.
@@ -41,14 +30,60 @@ import com.google.common.collect.Sets;
 public class LoggingContextImpl implements LoggingContext {
 
     protected static final Logger logger = Logger.getLogger("LoggingContextImpl");
-    private static final LoadingCache<String, Counter> counters = CacheBuilder.newBuilder()
-            .build(new CounterComputer());
-    private static final MBeanServer server = ManagementFactory.getPlatformMBeanServer();
 
     private final Map<String, Object> loggingValues = Maps.newHashMap();
     private final Map<String, Timer> timers = Maps.newHashMap();
-    private final Map<String, Long> nums = Maps.newHashMap();
+    private final Map<String, Counter> counters = Maps.newHashMap();
     private final Map<String, Object> values = Maps.newHashMap();
+    
+    private final Map<String, Map<String, Long>> actionStats = Maps.newHashMap();
+    
+    @Override
+    public void startAction(String actionName) {
+        Map<String, Long> actionStatMap = Maps.newHashMap();
+        actionStats.put(actionName, actionStatMap);
+        for (Map.Entry<String, Timer> timerEntry : timers.entrySet()) {
+            Timer timer = timerEntry.getValue();
+            timer.mark(actionName);
+        }
+        for (Map.Entry<String, Counter> counterEntry : counters.entrySet()) {
+            Counter counter = counterEntry.getValue();
+            counter.mark(actionName);
+        }
+        startActionTimer(actionName);
+    }
+    
+    protected void startActionTimer(String actionName) {
+        startTimer(LoggingService.TIMER_ACTION + actionName);
+    }
+    
+    @Override
+    public void stopAction(String actionName) {
+        stopActionTimer(actionName);
+        Map<String, Long> actionStatsMap = actionStats.get(actionName);
+        if (actionStatsMap != null) {
+            Timer actionTimer = timers.get(LoggingService.TIMER_ACTION + actionName);
+            if (actionTimer != null) {
+                actionStatsMap.put(LoggingService.TIMER_ACTION, actionTimer.getTime());
+            }
+            for (Map.Entry<String, Timer> timerEntry : timers.entrySet()) {
+                Long timeSinceMark = timerEntry.getValue().getTimeSince(actionName);
+                if (timeSinceMark != null && timeSinceMark > 0L) {
+                    actionStatsMap.put(timerEntry.getKey(), timeSinceMark);
+                }
+            }
+            for (Map.Entry<String, Counter> counterEntry : counters.entrySet()) {
+                Long countSinceMark = counterEntry.getValue().getCountSince(actionName);
+                if (countSinceMark != null && countSinceMark > 0L) {
+                    actionStatsMap.put(counterEntry.getKey(), countSinceMark);
+                }
+            }
+        }
+    }
+    
+    protected void stopActionTimer(String actionName) {
+        stopTimer(LoggingService.TIMER_ACTION + actionName);
+    }
 
     @Override
     public void startTimer(String name) {
@@ -87,11 +122,11 @@ public class LoggingContextImpl implements LoggingContext {
 
     @Override
     public long getNum(String key) {
-        Long result = nums.get(key);
+        Counter result = counters.get(key);
         if (result == null) {
             return -1;
         }
-        return result;
+        return result.get();
     }
 
     @Override
@@ -101,17 +136,22 @@ public class LoggingContextImpl implements LoggingContext {
 
     @Override
     public void incrementNumBy(String key, long num) {
-        Long origNum = this.nums.get(key);
+        Counter origNum = this.counters.get(key);
         if (origNum == null) {
-            origNum = 0L;
+            counters.put(key, new Counter(num));
+        } else {
+            origNum.increment(num);
         }
-
-        setNum(key, origNum + num);
     }
 
     @Override
     public void setNum(String key, long num) {
-        nums.put(key, num);
+        Counter counter = counters.get(key);
+        if (counter == null) {
+            counters.put(key, new Counter(num));
+        } else {
+            counter.set(num);
+        }
     }
 
     @Override
@@ -128,52 +168,178 @@ public class LoggingContextImpl implements LoggingContext {
      * do the logging.
      */
     @Override
-    public void log() {
-        Set<String> names = Sets.newHashSet();
-
+    public void logRequestValues() {
         for (Map.Entry<String, Timer> entry : timers.entrySet()) {
-            String key = entry.getKey();
-            // As counters cannot handle ":", we have to replace it with
-            // something else .
-            String counterKey = replaceSpecialChars(key);
-            try {
-                counters.get(counterKey).setValue(entry.getValue().getTime());
-            } catch (ExecutionException e) {
-                throw new AuraRuntimeException(e);
-            }
-            names.add(counterKey);
-            loggingValues.put(key + "Time", entry.getValue().getTime());
+            loggingValues.put(entry.getKey(), entry.getValue().getTime());
         }
-
-        for (Map.Entry<String, Long> entry : nums.entrySet()) {
-            String key = entry.getKey();
-            // As counters cannot handle ":", we have to replace it with
-            // something else .
-            String counterKey = replaceSpecialChars(key);
-            try {
-                counters.get(counterKey).setValue(entry.getValue());
-            } catch (ExecutionException e) {
-                throw new AuraRuntimeException(e);
-            }
-            names.add(counterKey);
-            loggingValues.put(key, entry.getValue());
+        for (Map.Entry<String, Counter> entry : counters.entrySet()) {
+            loggingValues.put(entry.getKey(), entry.getValue().get());
         }
-
-        for (Map.Entry<String, Object> entry : values.entrySet()) {
-            loggingValues.put(entry.getKey(), entry.getValue());
-        }
-
-        for (Map.Entry<String, Counter> entry : counters.asMap().entrySet()) {
-            if (!names.contains(entry.getKey())) {
-                entry.getValue().setValue(0);
-            }
-        }
-        log(loggingValues);
+        loggingValues.putAll(values);
+        logRequestValuesMap(loggingValues);
+        logActions(loggingValues);
     }
 
+    @Override
+    public KeyValueLogger getKeyValueLogger(StringBuffer log) {
+        return new KVLogger(log);
+    }
+    
     /**
      * do the logging.
      */
+    protected void logRequestValuesMap(Map<String, Object> valueMap) {
+        log(valueMap);
+    }
+    
+    protected void logActions(Map<String, Object> valueMap) {
+        for (Map.Entry<String, Map<String, Long>> actionStat : actionStats.entrySet()) {
+            String actionName = actionStat.getKey();
+            Map<String, Long> actionMap = actionStat.getValue();
+            logAction(actionName, actionMap, valueMap);
+        }
+    }
+    
+    protected void logAction(String actionName, Map<String, Long> actionMap, Map<String, Object> valueMap) {
+        StringBuilder buffer = new StringBuilder(actionName);
+
+        for (Map.Entry<String, Long> entry : actionMap.entrySet()) {
+            if (entry.getValue() != null) {
+                buffer.append(";" + entry.getKey() + ": " + String.valueOf(entry.getValue()));
+            }
+        }
+        logger.info(buffer);
+    }
+    
+    private static class KVLogger implements KeyValueLogger {
+        private final StringBuffer logLine;
+        
+        KVLogger(StringBuffer logLine) {
+            this.logLine = logLine;
+        }
+        
+        @Override
+        public void log(String name, String value) {
+            logLine.append("{").append(name).append(",").append(value).append("}");
+        }
+    }
+    
+    /**
+     * A simple counter class.  Used instead of an Long so that it can keep track of a names mark.
+     */
+    private static class Counter {
+        private Map<String, Long> marks = Maps.newHashMap();
+        private long count = 0;
+        
+        public Counter(long num) {
+            set(num);
+        }
+        
+        public void increment(long num) {
+            count += num;
+        }
+
+        public void set(long num) {
+            count = num;
+        }
+        
+        public long get() {
+            return count;
+        }
+        
+        /**
+         * @param markName if the markName already exists it will be replaced
+         */
+        public void mark(String markName) {
+            marks.put(markName, count);
+        }
+        
+        public long getCountSince(String markName) {
+            Long mark = marks.get(markName);
+            return (mark == null) ? 0 : count - mark;
+        }
+    }
+    
+    /**
+     * A simple nestable timer class.  Time is reported in milliseconds.
+     * If the timer start method is nested (called more than once before stop is called
+     * reference counting is employed so that the timer keeps running until the number
+     * of stop calls equals the number of previous start calls.
+     * The timer is restartable.  Addition start/stop calls will add to the previous
+     * total time unless restart is called in between.
+     *
+     */
+    public static class Timer {
+        //totalTime and startTime is are nanoseconds for compatibility with System.getNanoTime();
+        //getTime converts totalTime to ms
+        private long startTime = -1L;
+        private long totalTime = -1L;
+        private final String name;
+        private int startCount = 0;
+        private Map<String, Long> marks = Maps.newHashMap();
+
+        public Timer(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void start() {
+            startCount ++;
+            if (startTime < 0L) {
+                startTime = System.nanoTime();
+            }
+        }
+
+        public void stop() {
+            startCount--;
+            if (startCount == 0L && startTime >= 0L) {
+                long curr = System.nanoTime();
+                totalTime = ((totalTime > 0L) ? totalTime : 0L)  + curr - startTime;
+                startTime = -1;
+            }
+        }
+        
+        /**
+         * Like a stop watch lap time with a name, does not stop the timer.
+         * @param markName if the markName already exists it will be replaced not incremented
+         */
+        private void mark(String markName) {
+            long markTime = 0L;
+            if (totalTime > 0L || startTime > 0L) {// started at least once
+                markTime = ((totalTime > 0L) ? totalTime : 0L)  + ((startTime > 0L) ? (System.nanoTime() - startTime) : 0L);
+            }
+            marks.put(markName, markTime);
+        }
+        
+        private long getTimeSince(String markName) {
+            if (totalTime > 0L || startTime > 0L) {// started at least once
+                long duration = ((totalTime > 0L) ? totalTime : 0L)  + ((startTime > 0L) ? (System.nanoTime() - startTime) : 0L);
+                Long markTime = marks.get(markName);
+                return (markTime == null) ? -1L : ((duration - markTime) / 1000000L);
+            }
+            return -1L;
+        }
+
+        /**
+         * @return The accumulated duration in ms.
+         */
+        public long getTime() {
+            return (totalTime > 0L) ? (totalTime / 1000000L) : totalTime; //convert to ms for public consumption
+        }
+
+        /**
+         * Reset the accumulated total time.  If the timer was
+         * started it is now stopped and the accumulated time is discarded.
+         */
+        public void reset() {
+            startTime = -1L;
+            totalTime = -1L;
+        }
+    }
+
     protected void log(Map<String, Object> valueMap) {
         StringBuilder buffer = new StringBuilder();
 
@@ -185,150 +351,9 @@ public class LoggingContextImpl implements LoggingContext {
         logger.info(buffer);
     }
 
-    /**
-     * Replace special characters of JMX.
-     * 
-     */
-    private String replaceSpecialChars(String str) {
-        String regex = "[\\*\\?\\,\\:\n]";
-        return str.replaceAll(regex, "-");
-    }
-
-    @MXBean
-    public static interface CounterMXBean {
-
-        public long getCount();
-
-        public long getMostRecentValue();
-
-        public double getMeanValue();
-
-        public long getMaxValue();
-
-        public long getMinValue();
-
-        public long getTotalValue();
-
-        public void reset();
-    }
-
-    public static class Counter implements CounterMXBean {
-
-        private long mostRecentValue = 0;
-        private long totalValue = 0;
-        private long count = 0;
-        private long maxValue = 0;
-        private long minValue = 0;
-
-        @Override
-        public long getCount() {
-            return count;
-        }
-
-        @Override
-        public long getMostRecentValue() {
-            return mostRecentValue;
-        }
-
-        @Override
-        public double getMeanValue() {
-            return count == 0 ? 0 : (totalValue / count);
-        }
-
-        @Override
-        public long getMaxValue() {
-            return maxValue;
-        }
-
-        @Override
-        public long getMinValue() {
-            return minValue;
-        }
-
-        @Override
-        public void reset() {
-            count = 0;
-            maxValue = 0;
-            minValue = 0;
-            mostRecentValue = 0;
-            totalValue = 0;
-        }
-
-        @Override
-        public long getTotalValue() {
-            return totalValue;
-        }
-
-        public void setValue(long value) {
-            mostRecentValue = value;
-            totalValue += value;
-            if (count == 0 || value < minValue) {
-                minValue = value;
-            }
-            if (count == 0 || value > maxValue) {
-                maxValue = value;
-            }
-            count++;
-        }
-
-    }
-
-    public static class Timer {
-        private long startTime = -1;
-        private long totalTime = 0;
-        private final String name;
-
-        public Timer(String name) {
-            this.name = name;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void start() {
-            if (startTime < 0) { // if invoke two starts without stop, the
-                                 // second has no effect
-                startTime = System.currentTimeMillis();
-            }
-        }
-
-        public void stop() {
-            if (startTime >= 0) { // if invoke two stops without start, the
-                                  // second stop has no effect
-                long curr = System.currentTimeMillis();
-                totalTime += curr - startTime;
-                startTime = -1;
-            }
-        }
-
-        public long getTime() {
-            return totalTime;
-        }
-
-        public void reset() {
-            startTime = -1;
-            totalTime = 0;
-        }
-    }
-
-    private static final class CounterComputer extends CacheLoader<String, Counter> {
-
-        @Override
-        public Counter load(String name) {
-
-            Counter counter = new Counter();
-
-            ObjectName objectName;
-            try {
-                objectName = new ObjectName("aura", "name", name);
-                server.registerMBean(counter, objectName);
-            } catch (Exception e) {
-                throw new AuraRuntimeException(e);
-            }
-            return counter;
-        }
-
+    @Override
+    public void logCSPReport(Map<String, Object> report) {
+        log(report);
     }
 
 }

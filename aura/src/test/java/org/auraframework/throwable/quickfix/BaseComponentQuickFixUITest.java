@@ -23,7 +23,7 @@ import org.auraframework.def.ComponentDef;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.DefDescriptor.DefType;
 import org.auraframework.def.StyleDef;
-import org.auraframework.system.AuraContext.Access;
+import org.auraframework.system.AuraContext.Authentication;
 import org.auraframework.system.AuraContext.Format;
 import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.test.WebDriverTestCase;
@@ -41,7 +41,7 @@ public abstract class BaseComponentQuickFixUITest extends WebDriverTestCase {
     @Override
     public void setUp() throws Exception {
         super.setUp();
-        Aura.getContextService().startContext(Mode.SELENIUM, Format.JSON, Access.AUTHENTICATED);
+        Aura.getContextService().startContext(Mode.SELENIUM, Format.JSON, Authentication.AUTHENTICATED);
     }
 
     @Override
@@ -61,7 +61,7 @@ public abstract class BaseComponentQuickFixUITest extends WebDriverTestCase {
      */
     public void testCreationQuickFix() throws Exception {
         String namespace = "auratest";
-        String cmpName = String.format("nonExistent%s%s", defType.name(), System.currentTimeMillis());
+        String cmpName = String.format("nonExistent%s", System.currentTimeMillis());
         DefDescriptor<?> defDescriptor = createComponentDefDescriptor(namespace, cmpName);
         DefDescriptor<?> defDescriptorCss = Aura.getDefinitionService().getDefDescriptor(namespace + "." + cmpName,
                 StyleDef.class);
@@ -86,7 +86,7 @@ public abstract class BaseComponentQuickFixUITest extends WebDriverTestCase {
      */
     public void testCreationQuickFixNonexistentNamespace() throws Exception {
         String namespace = String.format("nonExistentNamespace%s", System.currentTimeMillis());
-        String cmpName = String.format("nonExistent%s%s", defType.name(), System.currentTimeMillis());
+        String cmpName = String.format("nonExistent%s", System.currentTimeMillis());
         DefDescriptor<?> defDescriptor = createComponentDefDescriptor(namespace, cmpName);
         BaseComponentQuickFixWidget quickFixUIWidget;
         quickFixUIWidget = new BaseComponentQuickFixWidget(defType, this);
@@ -105,8 +105,8 @@ public abstract class BaseComponentQuickFixUITest extends WebDriverTestCase {
      * Verify error message when incorrectly formatted DefDescriptor is entered.
      */
     public void testBadDescriptorFormat() throws Exception {
-        String namespace = String.format("auratest", System.currentTimeMillis());
-        String cmpName = String.format("nonExistent%s%s", defType.name(), System.currentTimeMillis());
+        String namespace = "auratest";
+        String cmpName = String.format("nonExistent%s", System.currentTimeMillis());
         DefDescriptor<?> defDescriptor = createComponentDefDescriptor(namespace, cmpName);
         BaseComponentQuickFixWidget quickFixUIWidget;
         quickFixUIWidget = new BaseComponentQuickFixWidget(defType, this);
@@ -126,9 +126,9 @@ public abstract class BaseComponentQuickFixUITest extends WebDriverTestCase {
      * Verify that multiple component bundles can be created by entering the DefDescriptors in, comma separated.
      */
     public void testMultipleDescriptors() throws Exception {
-        String namespace = String.format("auratest", System.currentTimeMillis());
-        String cmpName1 = String.format("nonExistent1%s%s", defType.name(), System.currentTimeMillis());
-        String cmpName2 = String.format("nonExistent2%s%s", defType.name(), System.currentTimeMillis());
+        String namespace = "auratest";
+        String cmpName1 = String.format("cmp1%s", System.currentTimeMillis());
+        String cmpName2 = String.format("cmp2%s", System.currentTimeMillis());
         DefDescriptor<?> defDescriptor1 = createComponentDefDescriptor(namespace, cmpName1);
         DefDescriptor<?> defDescriptor2 = createComponentDefDescriptor(namespace, cmpName2);
         BaseComponentQuickFixWidget quickFixUIWidget;

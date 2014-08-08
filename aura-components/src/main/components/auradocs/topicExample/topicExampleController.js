@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-{
+({
     show : function(cmp, evt){
-        var attributes = cmp.getAttributes();
         var evt = $A.get("e.auradocs:focusDef");
         evt.setParams({
-            descriptor : attributes.getRawValue("descriptor"),
-            defType : attributes.getRawValue("defType")
+            descriptor : cmp.get("v.descriptor"),
+            defType : cmp.get("v.defType")
         });
         evt.fire();
     }
-}
+})

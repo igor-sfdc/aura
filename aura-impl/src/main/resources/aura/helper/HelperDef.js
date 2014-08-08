@@ -17,9 +17,9 @@
 /**
  * @namespace Creates a HelperDef instance.
  * @constructor
- * @protected
+ * @private
  */
-function HelperDef(config, zuper){
+function HelperDef(config, zuper, libraries){
     var functions = config["functions"] || {};
     for(var k in functions){
         functions[k] = aura.util.json.decodeString(functions[k]);
@@ -33,13 +33,25 @@ function HelperDef(config, zuper){
             }
         }
     }
-
+    
+    if (libraries) {
+        $A.util.forEach($A.util.keys(libraries), function(importName) {
+            var definition = libraries[importName];
+            functions[importName] = {};
+            
+            $A.util.forEach($A.util.keys(definition || []), function(key) {
+                functions[importName][key] = definition[key];
+            });
+        });
+    }
 }
 
 HelperDef.prototype.auraType = "HelperDef";
 
 /**
  * Returns the functions for HelperDef.
+ *
+ * @public
  */
 HelperDef.prototype.getFunctions = function HelperDef$getFunctions(){
     return this.functions;

@@ -15,22 +15,22 @@
     limitations under the License.
 
 -->
-<aura:application model="java://org.auraframework.components.aurajstest.JSTestModel">
+<aura:application access="GLOBAL" model="java://org.auraframework.components.aurajstest.JSTestModel">
     <aura:if isTrue="{!m.isHybrid}">
-        <script src="/auraFW/resources/hybridcontainer1.5/cordova-2.3.0.js"></script>
+        <script src="/auraFW/resources/mobileSdk2.0/cordova-2.3.0.js"></script>
     </aura:if>
     <aura:attribute name="descriptor" type="String" default="ui:button"/>
     <aura:attribute name="defType" type="String" default="COMPONENT"/>
     <aura:attribute name="index" type="Integer" default="0"/>
     <aura:attribute name="test" type="String"/>
-    <ui:tabset aura:id="tabs">
-        <aura:forEach items="{!m.testCases}" var="case">
+    <ui:tabset aura:id="tabs" class="jstestTabset">
+        <aura:iteration items="{!m.testCases}" var="case">
             <aurajstest:jstestCase aura:id="test" case="{!case}" url="{!m.url}" suite="{!m.testSuite}" done="{!c.testDone}"/>
-        </aura:forEach>
+        </aura:iteration>
     </ui:tabset>
 
     <section class="suiteCode">
         <h1>JS Test Suite <span onclick="{!c.toggleCode}">Display</span></h1>
-        <pre aura:id="test-suite-code">{!m.testSuite.code}</pre>
+        <pre aura:id="test-suite-code" class="hidden">{!m.testSuite.code}</pre>
     </section>
 </aura:application>

@@ -17,6 +17,7 @@
 /**
  * @namespace Creates a ValueDef instance.
  * @constructor
+ * @param config used to create the value definition.  Only config["name"] is used.
  */
 function ValueDef(config){
     this.name = config["name"];

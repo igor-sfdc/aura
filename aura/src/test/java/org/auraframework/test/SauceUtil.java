@@ -15,8 +15,10 @@
  */
 package org.auraframework.test;
 
+import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.UnknownHostException;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -46,13 +48,14 @@ public final class SauceUtil {
 
     private static final boolean TUNNEL_SELENIUM_COMMANDS_THROUGH_SAUCE_CONNECT = false;
     static final String SAUCELABS_SERVER_URL = "saucelabs.com";
-    private static final String SAUCE_USERNAME = System.getProperty("sauce.username", "[saunce.username undefined]");
+    private static final String SAUCE_USERNAME = System.getProperty("sauce.username", "[sauce.username undefined]");
     private static final String SAUCE_ACCESS_KEY = System.getProperty("sauce.access.key",
             "[sauce.access.key undefined]");
     private static final String SAUCE_WEB_DRIVER_URL = "http://" + SAUCE_USERNAME + ':' + SAUCE_ACCESS_KEY
             + "@saucelabs.com:4444/wd/hub";
     private static final String SAUCE_CONNECT_HOST = System.getProperty("sauce.connect.host",
             "[sauce.connect.host undefined]");
+    private static final String SAUCE_PARENT_TUNNEL = System.getProperty("sauce.parent.tunnel");
     private static final String SAUCE_CONNECT_URL = "http://" + SAUCE_USERNAME + ':' + SAUCE_ACCESS_KEY + "@"
             + SAUCE_CONNECT_HOST + "/wd/hub";
     static final String SAUCE_ONDEMAND_HOST = "ondemand.saucelabs.com";
@@ -68,6 +71,7 @@ public final class SauceUtil {
             5 * SAUCE_CMD_TIMEOUT);
 
     public static boolean areTestsRunningOnSauce() {
+        // TODO: when running in SFDC this returns false even if running on SauceLabs
         return "saucelabs.com".equals(System.getProperty(WebDriverProvider.WEBDRIVER_SERVER_PROPERTY));
     }
 
@@ -98,6 +102,17 @@ public final class SauceUtil {
             capabilities.setCapability("build", buildId);
         }
 
+        // request specific platform/version for some browsers
+        switch (browserType) {
+        case GOOGLECHROME:
+            // capabilities.setCapability("platform", "OS X 10.9");
+            capabilities.setCapability("platform", "Windows 8.1");
+            capabilities.setCapability("version", "34");
+            capabilities.setCapability("chromedriver-version", "2.9");
+            break;
+        default: // explicit no-op
+        }
+
         // adding timeouts to prevent jobs to run for too long when problems
         // occur:
         // see http://saucelabs.com/docs/ondemand/additional-config#timeouts
@@ -107,7 +122,27 @@ public final class SauceUtil {
 
         capabilities.setCapability("record-video", System.getProperty("sauce.record.video", "false"));
         capabilities.setCapability("record-screenshots", System.getProperty("sauce.record.screenshots", "false"));
+
+        if (SAUCE_PARENT_TUNNEL != null && SAUCE_PARENT_TUNNEL.length() > 0) {
+            capabilities.setCapability("parent-tunnel", SAUCE_PARENT_TUNNEL);
+        }
+
+        // tag jobs with server name so we know the origin of the tests running in SauceLabs
+        capabilities.setCapability("tags", new String[] { getJettyHost() });
+
         return capabilities;
+    }
+
+    private static String getJettyHost() {
+        String host = System.getProperty("jetty.host");
+        if (host == null) {
+            try {
+                host = InetAddress.getLocalHost().getHostName();
+            } catch (UnknownHostException e) {
+                host = "localhost";
+            }
+        }
+        return host;
     }
 
     private static String getTestName(TestCase test) {

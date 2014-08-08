@@ -18,11 +18,11 @@
 // //#exportSymbols $A.ns.Aura
 $A.ns.Aura.prototype["initAsync"] = $A.ns.Aura.prototype.initAsync;
 $A.ns.Aura.prototype["initConfig"] = $A.ns.Aura.prototype.initConfig;
-$A.ns.Aura.prototype["init"] = $A.ns.Aura.prototype.init;
 $A.ns.Aura.prototype["error"] = $A.ns.Aura.prototype.error;
 $A.ns.Aura.prototype["warning"] = $A.ns.Aura.prototype.warning;
 $A.ns.Aura.prototype["message"] = $A.ns.Aura.prototype.message;
 $A.ns.Aura.prototype["enqueueAction"] = $A.ns.Aura.prototype.enqueueAction;
+$A.ns.Aura.prototype["deferAction"] = $A.ns.Aura.prototype.deferAction;
 $A.ns.Aura.prototype["get"] = $A.ns.Aura.prototype.get;
 $A.ns.Aura.prototype["getRoot"] = $A.ns.Aura.prototype.getRoot;
 $A.ns.Aura.prototype["getContext"] = $A.ns.Aura.prototype.getContext;
@@ -33,28 +33,24 @@ $A.ns.Aura.prototype["userAssert"] = $A.ns.Aura.prototype.userAssert;
 $A.ns.Aura.prototype["log"] = $A.ns.Aura.prototype.log;
 $A.ns.Aura.prototype["logf"] = $A.ns.Aura.prototype.logf;
 $A.ns.Aura.prototype["trace"] = $A.ns.Aura.prototype.trace;
-$A.ns.Aura.prototype["mark"] = $A.ns.Aura.prototype.mark;
-$A.ns.Aura.prototype["getGlobalValueProviders"] = $A.ns.Aura.prototype.getGlobalValueProviders;
-/**
- * @deprecated Use endMark instead
- */
-$A.ns.Aura.prototype["measure"] = $A.ns.Aura.prototype.measure;
-$A.ns.Aura.prototype["endMark"] = $A.ns.Aura.prototype.endMark;
-$A.ns.Aura.prototype["startTransaction"] = $A.ns.Aura.prototype.startTransaction;
-$A.ns.Aura.prototype["endTransaction"] = $A.ns.Aura.prototype.endTransaction;
-$A.ns.Aura.prototype["pageReady"] = $A.ns.Aura.prototype.pageReady;
-$A.ns.Aura.prototype["updateTransaction"] = $A.ns.Aura.prototype.updateTransaction;
-$A.ns.Aura.prototype["toJson"] = $A.ns.Aura.prototype.toJson;
-$A.ns.Aura.prototype["setBeaconData"] = $A.ns.Aura.prototype.setBeaconData;
-$A.ns.Aura.prototype["getBeaconData"] = $A.ns.Aura.prototype.getBeaconData;
-$A.ns.Aura.prototype["clearBeaconData"] = $A.ns.Aura.prototype.clearBeaconData;
-$A.ns.Aura.prototype["removeStats"] = $A.ns.Aura.prototype.removeStats;
-$A.ns.Aura.prototype["onLoadFired"] = $A.ns.Aura.prototype.onLoadFired;
-$A.ns.Aura.prototype["logLevel"] = $A.ns.Aura.prototype.logLevel;
+//$A.ns.Aura.prototype["getGlobalValueProviders"] = $A.ns.Aura.prototype.getGlobalValueProviders;
 $A.ns.Aura.prototype["fitTo"] = $A.ns.Aura.prototype.fitTo;
+// Perf
+$A.ns.Aura.prototype["Perf"] = $A.ns.Aura.prototype.Perf;
+$A.ns.Aura.prototype["mark"] = $A.ns.Aura.prototype.Perf.mark;
+$A.ns.Aura.prototype["endMark"] = $A.ns.Aura.prototype.Perf.endMark;
+$A.ns.Aura.prototype["startTransaction"] = $A.ns.Aura.prototype.Perf.startTransaction;
+$A.ns.Aura.prototype["endTransaction"] = $A.ns.Aura.prototype.Perf.endTransaction;
+$A.ns.Aura.prototype["updateTransaction"] = $A.ns.Aura.prototype.Perf.updateTransaction;
+$A.ns.Aura.prototype["toJson"] = $A.ns.Aura.prototype.Perf.toJson;
+$A.ns.Aura.prototype["setBeaconData"] = $A.ns.Aura.prototype.Perf.setBeaconData;
+$A.ns.Aura.prototype["getBeaconData"] = $A.ns.Aura.prototype.Perf.getBeaconData;
+$A.ns.Aura.prototype["clearBeaconData"] = $A.ns.Aura.prototype.Perf.clearBeaconData;
+$A.ns.Aura.prototype["removeStats"] = $A.ns.Aura.prototype.Perf.removeStats;
+$A.ns.Aura.prototype["isLoadFired"] = $A.ns.Aura.prototype.Perf.isLoadFired;
 // //#end
 
-//#if {"excludeModes" : ["PRODUCTION"]}
+//#if {"excludeModes" : ["PRODUCTION", "PRODUCTIONDEBUG"]}
 $A.ns.Aura.prototype["devToolService"] = $A.ns.Aura.prototype.devToolService;
 $A.ns.Aura.prototype["getQueryStatement"] = $A.ns.Aura.prototype.getQueryStatement;
 $A.ns.Aura.prototype["qhelp"] = $A.ns.Aura.prototype.qhelp;

@@ -21,7 +21,7 @@ import org.auraframework.def.ComponentDef;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.service.BuilderService;
 import org.auraframework.service.DefinitionService;
-import org.auraframework.system.AuraContext.Access;
+import org.auraframework.system.AuraContext.Authentication;
 import org.auraframework.system.AuraContext.Format;
 import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.test.WebDriverTestCase;
@@ -43,7 +43,7 @@ public class CreateAttributeQuickFixUITest extends WebDriverTestCase {
     @Override
     public void setUp() throws Exception {
         super.setUp();
-        Aura.getContextService().startContext(Mode.SELENIUM, Format.JSON, Access.AUTHENTICATED);
+        Aura.getContextService().startContext(Mode.SELENIUM, Format.JSON, Authentication.AUTHENTICATED);
 
         // Build component where the new attribute is created
         BuilderService builderService = Aura.getBuilderService();
@@ -95,7 +95,7 @@ public class CreateAttributeQuickFixUITest extends WebDriverTestCase {
         open("/auratest/createAttributeQuickFix.cmp", Mode.DEV);
         verifyToolbarAndClickCreateButton();
         setAttributeNameType("foo", "myInvalidType");
-        util.clickFix(false, "Invalid attribute type:myInvalidType");
+        util.clickFix(false, "No TYPE named java://myInvalidType");
         AttributeDef fooAttr = defDescriptor.getDef().getAttributeDef("foo");
         assertNull(fooAttr);
     }
@@ -146,5 +146,8 @@ public class CreateAttributeQuickFixUITest extends WebDriverTestCase {
         util.verifyToolbarText("The attribute \"foo\" was "
                 + "not found on the COMPONENT markup://auratest:createAttributeQuickFix_child");
         util.clickCreateButton("Create Attribute");
+        // Wait for next page to appear
+        waitForElementAppear("Clicking quickfix button did not advance to next page.",
+                By.cssSelector("input[name='attName']"));
     }
 }

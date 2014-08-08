@@ -176,22 +176,23 @@ NumberFormat.prototype.parseError = function(s) {
     throw new Error("Invalid pattern: " + this.originalFormat + "\n" + s);
 };
 
-/* 
- * helper method to track special characters
+/**
+ * Helper method to track special characters.
+ * @private
  */
 NumberFormat.prototype.checkForSpecialChar = function(c) {
     var mult;
     switch (c) {
-    case "¤":
+    case "\u00a4":
         this.hasCurrency = true;
         break;
     case "%":
         mult = 2;
         break;
-    case "‰":
+    case "\u2030":
         mult = 3;
         break;
-    case "‱":
+    case "\u2031":
         mult = 4;
         break;
     }
@@ -204,8 +205,9 @@ NumberFormat.prototype.checkForSpecialChar = function(c) {
     }
 };
 
-/* 
- * replace currency markers with the local currency symbol
+/** 
+ * Replaces currency markers with the local currency symbol.
+ * @private
  */
 NumberFormat.prototype.replaceCurrencies = function() {
     if (this.hasCurrency) {
@@ -216,13 +218,19 @@ NumberFormat.prototype.replaceCurrencies = function() {
     }
 };
 
+/**
+ * @private
+ */
 NumberFormat.prototype.replaceCurrency = function(str) {
     if (str) {
-        return str.replace(/¤¤/g, this.symbols["currencyCode"]).replace(/¤/g, this.symbols["currency"]);
+        return str.replace(/\u00a4\u00a4/g, this.symbols["currencyCode"]).replace(/\u00a4/g, this.symbols["currency"]);
     }
     return str;
 };
 
+/**
+ * @private
+ */
 NumberFormat.prototype.translateDigits = function(charArray) {
     if (this.zeroCharCodeOffset) {
         for (var i = 0; i < charArray.length; i++) {
@@ -233,8 +241,9 @@ NumberFormat.prototype.translateDigits = function(charArray) {
 };
 
 /**
- * Format a number into a string. Also can take in a string of the format "#.#" for formatting numbers
+ * Format a number into a string. Accepts a string of the format "#.#" for formatting numbers
  * requiring greater than double precision.
+ * @param {Number|String} number The number to be formatted.
  */
 NumberFormat.prototype.format = function(number) {
     var ns;

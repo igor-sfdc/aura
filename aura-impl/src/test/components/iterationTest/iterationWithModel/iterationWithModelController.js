@@ -15,12 +15,18 @@
  */
 ({
     addRow : function(cmp, event) {
-        var sl = cmp.getValue("m.stringList");
-        sl.push("new!");
+        var sl = cmp.get("m.stringList");
+        
+        var v = sl.concat("new!");
+        
+        cmp.set("m.stringList", v);
     },
 
     removeRow : function(cmp, event) {
-        var sl = cmp.getValue("m.stringList");
-        sl.remove(0);
+        var sl = cmp.get("m.stringList");
+        
+        var v = sl.slice(1);
+
+        cmp.set("m.stringList", v);
     }
 })

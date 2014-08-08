@@ -13,11 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-{
-    press : function(cmp, event){
-        var attributes = cmp.getAttributes();
+({
+    handleKeydown : function(cmp, event){
+        var keydownEvent = cmp.getEvent("keydown");
+        keydownEvent.setParams({"domEvent": event});
+        keydownEvent.fire();
+        return true;
+    },
 
-        if (attributes.getValue("stopPropagation").getBooleanValue()) {
+    press : function(cmp, event){
+        if ($A.util.getBooleanValue(cmp.get("v.stopPropagation"))) {
             //IE9 & Other Browsers
             if (event.stopPropagation) {
               event.stopPropagation();
@@ -28,14 +33,14 @@
             }
         }
 
-        if (attributes.getValue("disabled").getBooleanValue()) {
+        if ($A.util.getBooleanValue(cmp.get("v.disabled"))) {
             event.preventDefault();
             return false;
         }
-        
+
         var pressEvent = cmp.getEvent("press");
         pressEvent.setParams({"domEvent": event});
         pressEvent.fire();
         return true;
     }
-}
+})

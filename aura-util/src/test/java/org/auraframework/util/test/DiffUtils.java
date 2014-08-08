@@ -18,13 +18,30 @@ package org.auraframework.util.test;
 import java.io.IOException;
 import java.net.URL;
 
+import org.auraframework.test.UnitTestCase;
+
 public interface DiffUtils<T> {
 
     public URL getUrl();
 
+    /**
+     * @return the test this DiffUtils is used for
+     */
+    public UnitTestCase getTest();
+
+    /**
+     * @param testResults actual test results
+     * @param sb assertion message to use
+     */
     public void assertDiff(T testResults, StringBuilder sb) throws Exception;
 
+    /**
+     * @param testResults results to write to the gold file
+     */
     public void writeGoldFile(T testResults) throws IOException;
 
+    /**
+     * @return the results in the gold file
+     */
     public T readGoldFile() throws IOException;
 }

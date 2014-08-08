@@ -17,9 +17,26 @@
 /**
  * creates the right value object based on whats passed in
  */
-var valueFactory = {
+var valueFactory = { 
     create: function create(valueConfig, def, component) {
         if (aura.util.isObject(valueConfig)) {
+            var source = undefined;
+        	if (valueConfig.getSourceValue) {
+        		// Object is already wrapped by a MapValue
+                source = valueConfig.getSourceValue();
+            } else if (valueConfig._arrayValueRef) {
+                // Object is already wrapped by an ArrayValue
+                source = valueConfig._arrayValueRef;
+            }
+            // If we have an existing wrapper OWNED BY THE RIGHT COMPONENT,
+            // then this is really a fancy setValue, not a new creation.
+            // But if it's a different component, we do need a new wrapper.
+            if (source && source.owner === component) {
+                source._setValue(valueConfig);
+                return source;
+            }
+
+            // If we get to here, we need a new wrapper of some sort....
             if (valueConfig.auraType) {
                 if (valueConfig.auraType === "ActionDef") {
                     return new ActionReferenceValue(valueConfig, def, component);
@@ -27,7 +44,7 @@ var valueFactory = {
 
                 return valueConfig;
             } else if (valueConfig["exprType"] === "PROPERTY") {
-                return new PropertyReferenceValue(valueConfig["path"]);
+                return new PropertyChain(valueConfig["path"]);
             } else if (valueConfig["exprType"] === "FUNCTION") {
                 return new FunctionCallValue(valueConfig, def, component);
             } else {
@@ -35,6 +52,10 @@ var valueFactory = {
             }
         } else if (aura.util.isArray(valueConfig)) {
             return new ArrayValue(valueConfig, def, component);
+        } else if (valueConfig && valueConfig.indexOf && valueConfig.indexOf("{!") === 0) {
+        	// Property expressions
+        	valueConfig = valueConfig.substring(2, valueConfig.length - 1);
+            return new PropertyChain(valueConfig.split("."));
         } else {
             return new SimpleValue(valueConfig, def, component);
         }
@@ -47,7 +68,7 @@ var valueFactory = {
         }
         
         var path = str.split('.');
-        return new PropertyReferenceValue(path);
+        return new PropertyChain(path);
     }
 
 //#if {"modes" : ["STATS"]}

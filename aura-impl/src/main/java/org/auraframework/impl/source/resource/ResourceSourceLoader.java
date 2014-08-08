@@ -19,11 +19,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
+
+import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.auraframework.Aura;
 import org.auraframework.def.DefDescriptor;
@@ -31,105 +30,101 @@ import org.auraframework.def.DefDescriptor.DefType;
 import org.auraframework.def.Definition;
 import org.auraframework.def.DescriptorFilter;
 import org.auraframework.impl.source.BaseSourceLoader;
-import org.auraframework.impl.system.DefDescriptorImpl;
 import org.auraframework.impl.util.AuraUtil;
-import org.auraframework.system.Parser.Format;
+import org.auraframework.system.PrivilegedNamespaceSourceLoader;
 import org.auraframework.system.Source;
 import org.auraframework.throwable.AuraRuntimeException;
 import org.auraframework.util.AuraTextUtil;
 import org.auraframework.util.IOUtil;
 import org.auraframework.util.resource.ResourceLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 /**
  */
-public class ResourceSourceLoader extends BaseSourceLoader {
+public class ResourceSourceLoader extends BaseSourceLoader implements PrivilegedNamespaceSourceLoader {
+
+    private final static Logger _log = LoggerFactory.getLogger(ResourceSourceLoader.class);
 
     protected final String packagePrefix;
     protected final String resourcePrefix;
     protected final Map<IndexKey, Set<DefDescriptor<?>>> index = Maps.newHashMap();
     protected final Set<String> namespaces = Sets.newHashSet();
-    private final Pattern pattern = Pattern.compile("([^:]*:[^.]*)(.[^,]*),?");
-    private final Pattern testSuitePattern = Pattern.compile("([^:]*:[^.]*)(Test.js),?");
     private final ResourceLoader resourceLoader = Aura.getConfigAdapter().getResourceLoader();
 
     public ResourceSourceLoader(String basePackage) {
-
         this.packagePrefix = "";
         resourcePrefix = basePackage;
+        List<String> files = null;
+        String list = null;
 
-        InputStreamReader reader = null;
-
-        Map<String, DefType> byExtension = Maps.newHashMap();
-
-        for (Entry<DefType, String> entry : extensions.entrySet()) {
-            byExtension.put(entry.getValue(), entry.getKey());
+        // Ugh. this is used by tests.
+        if (basePackage == null) {
+            return;
         }
-
+        InputStreamReader reader = null;
+        InputStream is = null;
         try {
             try {
-                InputStream is = resourceLoader.getResourceAsStream(resourcePrefix + "/.index");
-                String indexStr = null;
+                is = resourceLoader.getResourceAsStream(resourcePrefix + "/.index");
                 if (is != null) {
                     reader = new InputStreamReader(is);
                     StringWriter sw = new StringWriter();
                     IOUtil.copyStream(reader, sw);
-                    indexStr = sw.toString();
-                }  
-                
-                // REVIEWME: osgi Maven has a problem generating .index file on Windows. Adding runtime index generation as a backup
-                // The stream approach either did not work or the index file was empty
-                if (indexStr == null || indexStr.indexOf(":") == -1) {
-                    indexStr = resourceLoader.getStaticResourceAccessor().getBundleIndex(basePackage, this.getClass()).toString();
+                    list = sw.toString();
+                } else {
+                    // OSGi-specific: whenever .index is not available we can generate it upon loading
+                    list = resourceLoader.getStaticResourceAccessor().getBundleIndex(basePackage, this.getClass()).toString();
                 }
-                
-                if (indexStr != null && !indexStr.isEmpty()) {
-                    Matcher matcher = pattern.matcher(indexStr);
-                    while (matcher.find()) {
-                        String name = matcher.group(1);
 
-                        DefType defType = byExtension.get(matcher.group(2));
-                        if (defType == null) {
-                            Matcher testSuiteMatcher = testSuitePattern.matcher(matcher.group(0));
-                            if (testSuiteMatcher.find()) {
-                                defType = byExtension.get(testSuiteMatcher.group(2));
-                                name = testSuiteMatcher.group(1);
-                            }
-                        }
-                        if (defType == DefType.STYLE) {
-                            name = "css://" + AuraTextUtil.replaceChar(name, ':', ".");
-                        } else if (defType == DefType.TESTSUITE) {
-                            name = "js://" + AuraTextUtil.replaceChar(name, ':', ".");
-                        } else {
-                            name = "markup://" + name;
-                        }
-                        
-                        // REVIEWME: osgi Avoids NPE if defType is null
-                        // This happens for .js resources: for some reason .js is not present in extensions EnumMap. Is this a bug?
-                        if(defType == null) {
-                            continue;
-                        }
-
-                        DefDescriptor<?> desc = DefDescriptorImpl.getInstance(name, defType.getPrimaryInterface());
-                        IndexKey key = new IndexKey(defType, desc.getNamespace());
-                        namespaces.add(desc.getNamespace());
-
-                        Set<DefDescriptor<?>> set = index.get(key);
-                        if (set == null) {
-                            set = Sets.newHashSet();
-                            index.put(key, set);
-                        }
-                        set.add(desc);
-                    }
+                if (list != null && list.length() > 1) {
+                    files = AuraTextUtil.splitSimple(",", list, list.length()/10);
                 }
             } finally {
-                if (reader != null) {
-                    reader.close();
+                //
+                // Make sure we close everything out.
+                //
+                try {
+                    if (reader != null) {
+                        reader.close();
+                    }
+                } catch (Throwable t) {
+                    // ignore exceptions on close.
+                }
+                try {
+                    if (is != null) {
+                        is.close();
+                    }
+                } catch (Throwable t) {
+                    // ignore exceptions on close.
                 }
             }
         } catch (IOException x) {
             throw new AuraRuntimeException(x);
+        }
+        if (files == null) {
+            _log.warn("Unused base: "+basePackage);
+            return;
+        }
+        for (String file : files) {
+            DefDescriptor<?> desc = getDescriptor(file);
+            if (desc == null) {
+                // This should be a fatal error, and we should always compile our sources (FAIL FAST).
+                // throw new AuraRuntimeException("Unrecognized entry, source skew "+file);
+                _log.error("Bad filename in index: "+file);
+                continue;
+            }
+            IndexKey key = new IndexKey(desc.getDefType(), desc.getNamespace());
+            namespaces.add(desc.getNamespace());
+
+            Set<DefDescriptor<?>> set = index.get(key);
+            if (set == null) {
+                set = Sets.newHashSet();
+                index.put(key, set);
+            }
+            set.add(desc);
         }
     }
 
@@ -171,14 +166,14 @@ public class ResourceSourceLoader extends BaseSourceLoader {
 
     @Override
     public <D extends Definition> Source<D> getSource(DefDescriptor<D> descriptor) {
-        Source<D> ret = new ResourceSource<D>(descriptor, resourcePrefix + "/" + getPath(descriptor), Format.XML);
+        Source<D> ret = new ResourceSource<D>(descriptor, resourcePrefix + "/" + getPath(descriptor), getFormat(descriptor));
         if (!ret.exists()) {
             @SuppressWarnings("unchecked")
             Set<DefDescriptor<D>> all = find((Class<D>) descriptor.getDefType().getPrimaryInterface(),
                     descriptor.getPrefix(), descriptor.getNamespace());
             for (DefDescriptor<D> candidate : all) {
                 if (candidate.equals(descriptor)) {
-                    ret = new ResourceSource<D>(candidate, resourcePrefix + "/" + getPath(candidate), Format.XML);
+                    ret = new ResourceSource<D>(candidate, resourcePrefix + "/" + getPath(candidate), getFormat(descriptor));
                     // REVIEWME: osgi Supposedly we should break after the first match
                     break;
                 }
@@ -218,4 +213,9 @@ public class ResourceSourceLoader extends BaseSourceLoader {
         }
     }
 
+    @Override
+    public boolean isPrivilegedNamespace(String namespace) {
+        // All resource based namespaces are considered system by default
+        return true;
+    }
 }

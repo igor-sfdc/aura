@@ -16,87 +16,36 @@
 /*jslint sub: true */
 /**
  * @namespace Creates a new AttributeDefSet instance.
- * @param {Object} parent
  * @param {Object} configs For each configs object provided, a new AttributeDef instance is added
  * @constructor
  * @protected
  */
-function AttributeDefSet(parent, configs){
+function AttributeDefSet(configs) {
     if (configs) {
-        var values = {};
+        this.values = {};
+        // maintain attribute order
+        this.valuesOrder = [];
         for (var i = 0; i < configs.length; i++) {
             var attributeDef = new AttributeDef(configs[i]);
-            values[attributeDef.getDescriptor().getQualifiedName().toLowerCase()] = attributeDef;
+            var qname = attributeDef.getDescriptor().getQualifiedName().toLowerCase();
+            this.values[qname] = attributeDef;
+            this.valuesOrder.push(qname);
         }
-
-        this.values = values;
     }
 }
 
 AttributeDefSet.prototype.auraType = "AttributeDefSet";
 
 /**
- * Creates instances of AttributeDefSet
- * @private
- */
-AttributeDefSet.prototype.createInstances = function(config, component, suppressValidation, localCreation){
-    var values = this.values;
-    var mapConfig = {};
-    if (values) {
-        var configValues = config ? config["values"] : null;
-        for (var lowerName in values) {
-            var attributeDef = values[lowerName];
-
-            var name = attributeDef.getDescriptor().getQualifiedName();
-            var value = undefined;
-
-            if (configValues) {
-                value = configValues[name];
-
-                /* This check is to distinguish between a AttributeDefRef that came from server
-                 * which has a descriptor and value, and just a thing that somebody on the client
-                 * passed in. This totally breaks when somebody pass a map that has a key in it
-                 * called "descriptor", like DefModel.java in the IDE
-                 * TODO: better way to distinguish real AttDefRefs from random junk
-                 */
-                if (value && value["descriptor"]) {
-                    value = value["value"];
-                }
-            }
-
-            var hasValue = !$A.util.isUndefined(value);
-            if (!suppressValidation){
-                aura.assert(hasValue || !attributeDef.isRequired(), "Missing required attribute " + name);
-            }
-
-            if (!hasValue) {
-                // We cannot defer creation of default facets because they must be recreated in server order on the client to maintain globalId integrity
-                var isFacet = attributeDef.getTypeDefDescriptor() === "aura://Aura.Component[]";
-                if (isFacet) {
-                    value = attributeDef.getDefault();
-                    hasValue = !$A.util.isUndefined(value);
-                }
-            }
-
-            if (hasValue) {
-                var attribute = this.createAttribute(value, attributeDef, component, config["valueProvider"], localCreation);
-                mapConfig[name] = attribute;
-            }
-        }
-    }
-
-    return new AttributeSet(new MapValue(mapConfig), config["valueProvider"], this, component, localCreation);
-};
-
-/**
  * For each AttributeDef value, pass it into the given function.
  * @param {Function} f The function to pass the values into.
  */
-AttributeDefSet.prototype.each = function(f){
+AttributeDefSet.prototype.each = function(f) {
     var values = this.values;
+    var valuesOrder = this.valuesOrder;
     if (values) {
-        for (var name in values){
-            f(values[name]);
+        for (var i = 0; i < valuesOrder.length; i++) {
+            f(values[valuesOrder[i]],i);
         }
     }
 };
@@ -104,9 +53,9 @@ AttributeDefSet.prototype.each = function(f){
 /**
  * Returns the AttributeDef object.
  * @param {String} name The name of the AttributeDef instance, which matches the qualified name of the attributeDef descriptor.
- * @returns {AttributeDef}
+ * @returns {AttributeDef} An AttributeDef object is stored in a parent definition, such as a ComponentDef object.
  */
-AttributeDefSet.prototype.getDef = function(name){
+AttributeDefSet.prototype.getDef = function(name) {
     var values = this.values;
     if (values) {
         return values[name.toLowerCase()];
@@ -115,70 +64,22 @@ AttributeDefSet.prototype.getDef = function(name){
 };
 
 /**
- * @private
+ * Get the set of names in the attribute def set.
+ *
+ * This provides access to an array, instead of having to walk the map.
+ *
+ * @return {Array} the array of names.
  */
-AttributeDefSet.prototype.createAttribute = function(config, def, component, valueProvider, localCreation, forceInstantiate) {
-    function createComponent(item) {
-        if (!v["attributes"]) {
-            v["attributes"] = {
-                "values": {}
-            };
-        }
+AttributeDefSet.prototype.getNames = function() {
+    return this.valuesOrder;
+};
 
-        v["attributes"]["values"][varName] = item;
-        v["delegateValueProvider"] = valueProvider;
-        v["valueProviders"] = {};
-        v["valueProviders"][varName] = item;
-
-        var cmp = componentService.newComponentDeprecated(v, valueProvider, localCreation, true);
-
-        delete v["attributes"]["values"][varName];
-        delete v["valueProviders"];
-
-        valueConfig.push(cmp);
-    }
-
-    var noInstantiate = def.getTypeDefDescriptor() === "aura://Aura.ComponentDefRef[]";
-    var valueConfig;
-    if (config && config["componentDef"]) {
-        valueConfig = componentService.newComponentDeprecated(config, null, localCreation, true);
-    } else if (aura.util.isArray(config)) {
-        valueConfig = [];
-
-        for(var i = 0; i < config.length; i++) {
-            var v = config[i];
-            if (v["componentDef"]) {
-                if (v["items"]) {
-                    //foreach
-                    var itemsValue = expressionService.getValue(valueProvider, valueFactory.create(v["items"]));
-                    // temp workaround for no typedef if value is null
-                    if (itemsValue && itemsValue.each) {
-                        var varName = v['var'];
-                        itemsValue.each(createComponent, v["reverse"]);
-                    }
-                } else {
-                    if (noInstantiate && !forceInstantiate) {
-                        // make a shallow clone of the cdr with the proper value provider set 
-                        var cdr = {};
-                        cdr["componentDef"] = v["componentDef"];
-                        cdr["localId"] = v["localId"];
-                        cdr["attributes"] = v["attributes"];
-                        cdr["valueProvider"] = valueProvider;
-                        valueConfig.push(new SimpleValue(cdr, def, component));
-                    } else {
-                        valueConfig.push(componentService.newComponentDeprecated(v, valueProvider, localCreation, true));
-                    }
-                }
-
-            } else {
-                valueConfig.push(v);
-            }
-        }
-    } else {
-        valueConfig = config;
-    }
-
-    return valueFactory.create(valueConfig, def, component);
+/**
+ * Returns map of AttributeDefs
+ * @returns {Object} values
+ */
+AttributeDefSet.prototype.getValues = function() {
+    return this.values;
 };
 
 //#include aura.attribute.AttributeDefSet_export

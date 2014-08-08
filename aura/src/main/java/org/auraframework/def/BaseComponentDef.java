@@ -17,7 +17,6 @@ package org.auraframework.def;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.auraframework.throwable.quickfix.QuickFixException;
@@ -54,6 +53,14 @@ public interface BaseComponentDef extends RootDefinition {
      * @throws QuickFixException
      */
     Collection<EventHandlerDef> getHandlerDefs() throws QuickFixException;
+    
+    /**
+     * Get the library import statements for the component.
+     * 
+     * @return all library requirements on this component, including those inherited
+     * @throws QuickFixException
+     */
+	Collection<ImportDef> getImportDefs() throws QuickFixException;
 
     DefDescriptor<ModelDef> getLocalModelDefDescriptor();
 
@@ -85,7 +92,7 @@ public interface BaseComponentDef extends RootDefinition {
 
     DefDescriptor<ComponentDef> getTemplateDefDescriptor();
 
-    Map<String, DefDescriptor<ThemeDef>> getThemeAliases();
+    public List<ClientLibraryDef> getClientLibraries();
 
     public static enum RenderType {
         SERVER, CLIENT, AUTO
@@ -114,4 +121,16 @@ public interface BaseComponentDef extends RootDefinition {
 
     DefDescriptor<? extends BaseComponentDef> getDefaultExtendsDescriptor();
 
+    /**
+     * Adds specified client libraries to definition
+     * @param clientLibs list of client libraries
+     */
+    void addClientLibs(List<ClientLibraryDef> clientLibs);
+
+    Set<ResourceDef> getResourceDefs() throws QuickFixException;
+
+    /**
+     * Gets the {@link ThemeDef} that's part of the component (or app) bundle.
+     */
+    DefDescriptor<ThemeDef> getCmpTheme();
 }

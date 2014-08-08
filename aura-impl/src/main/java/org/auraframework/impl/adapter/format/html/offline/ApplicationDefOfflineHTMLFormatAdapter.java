@@ -23,7 +23,7 @@ import java.io.InputStreamReader;
 import java.io.Writer;
 import java.util.List;
 import java.util.Map;
-
+import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
 
 import org.auraframework.Aura;
@@ -40,7 +40,7 @@ import org.auraframework.service.ContextService;
 import org.auraframework.service.InstanceService;
 import org.auraframework.service.RenderingService;
 import org.auraframework.system.AuraContext;
-import org.auraframework.system.AuraContext.Access;
+import org.auraframework.system.AuraContext.Authentication;
 import org.auraframework.system.AuraContext.Format;
 import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.throwable.AuraRuntimeException;
@@ -92,6 +92,9 @@ public class ApplicationDefOfflineHTMLFormatAdapter extends OfflineHTMLFormatAda
 
         Writer htmlWriter = new FileWriter(html);
         try {
+            String uid = context.getDefRegistry().getUid(null, def.getDescriptor());
+            Set<DefDescriptor<?>> dependencies = context.getDefRegistry().getDependencies(uid);
+
             ComponentDef templateDef = def.getTemplateDef();
             Map<String, Object> attributes = Maps.newHashMap();
 
@@ -102,7 +105,7 @@ public class ApplicationDefOfflineHTMLFormatAdapter extends OfflineHTMLFormatAda
             File css = new File(outputDir, String.format("%s.css", appName));
             FileWriter cssWriter = new FileWriter(css);
             try {
-                AuraResourceServlet.writeCss(cssWriter);
+                Aura.getServerService().writeAppCss(dependencies, cssWriter);
             } finally {
                 cssWriter.close();
             }
@@ -137,7 +140,7 @@ public class ApplicationDefOfflineHTMLFormatAdapter extends OfflineHTMLFormatAda
             File js = new File(outputDir, String.format("%s.js", appName));
             FileWriter jsWriter = new FileWriter(js);
             try {
-                AuraResourceServlet.writeDefinitions(jsWriter);
+                Aura.getServerService().writeDefinitions(dependencies, jsWriter);
 
                 // Write the app at the bottom of the same file
 
@@ -147,9 +150,7 @@ public class ApplicationDefOfflineHTMLFormatAdapter extends OfflineHTMLFormatAda
                 auraInit.put("token", AuraServlet.getToken());
                 auraInit.put("host", context.getContextPath());
 
-                context.addPreload("aura");
-
-                contextService.startContext(Mode.PROD, Format.HTML, Access.AUTHENTICATED, def.getDescriptor());
+                contextService.startContext(Mode.PROD, Format.HTML, Authentication.AUTHENTICATED, def.getDescriptor());
                 auraInit.put("context", contextService.getCurrentContext());
                 jsWriter.append("\n$A.initConfig($A.util.json.resolveRefs(");
                 Json.serialize(auraInit, jsWriter, context.getJsonSerializationContext());

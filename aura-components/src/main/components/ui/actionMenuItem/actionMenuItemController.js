@@ -15,10 +15,10 @@
  */
 ({
     handleClick : function(component, event, helper) {
-        var parent = component.getValue("v.parent");
-        if (parent && !parent.isEmpty()) {
-            var p = parent.getValue(0);
-            p.getConcreteComponent().setValue("v.visible", false);
+        var parent = component.get("v.parent");
+        if (parent && parent.length > 0) {
+            var p = parent[0];
+            p.getConcreteComponent().set("v.visible", false);
             helper.fireSelectEvent(component, event);
         } 
     }

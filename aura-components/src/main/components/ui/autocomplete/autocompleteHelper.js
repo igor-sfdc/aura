@@ -25,19 +25,21 @@
         var options = event.getParam("parameters");
         var listCmp = component.find("list");
         if (listCmp) {
-            listCmp.setValue("v.keyword", options.keyword);
+            listCmp.set("v.keyword", options.keyword);
         }
         
         // fire dataProvide event
-        var dataProviders = component.getValue("v.dataProvider");
+        var dataProviders = component.get("v.dataProvider");
         var index = event.getParam("index");
         if (!index) {
             index = 0;
         }
-        var provideEvent = dataProviders.get(index).get("e.provide");
+        
+        var provideEvent = dataProviders[index].get("e.provide");
         provideEvent.setParams({
             parameters: options
         });
+        
         provideEvent.fire();
     },
     
@@ -59,7 +61,7 @@
     hideList: function(component) {
         var list = component.find("list");
         if (list && list.get("v.visible") === true) {
-            list.setValue("v.visible", false);
+            list.set("v.visible", false);
         }
     },
     
@@ -129,7 +131,7 @@
         var listCmp = component.find("list");
         if (inputCmp && listCmp) {
             var elems = inputCmp.getElements();
-            listCmp.setValue("v.elementsToIgnoreClicking", elems);
+            listCmp.set("v.elementsToIgnoreClicking", elems);
         }
     },
     

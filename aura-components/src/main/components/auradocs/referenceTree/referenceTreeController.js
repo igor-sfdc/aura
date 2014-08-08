@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-{   
+({   
     /**
      * Wire the ui:tree to its decorators.
      */
     doInit : function(cmp, evt, helper) {
         var tree = cmp.find('tree');
-        cmp.find('topicTree').getAttributes().setValue('tree', tree);
-        cmp.find('searchTree').getAttributes().setValue('tree', tree);
+        cmp.find('topicTree').set('v.tree', tree);
+        cmp.find('searchTree').set('v.tree', tree);
     }
-}
+})

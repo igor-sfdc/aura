@@ -23,16 +23,16 @@
             var multiply = $A.test.getAction(cmp,"c.multiply", {"a" : 2},
                                                         function(action){
                                                             //If the call backs are in order, then this attribute will have the value set by c.add's call back
-                                                            $A.test.assertEquals("1", cmp.getAttributes().getValue('responseOrder').getValue(), "Action chaining did not preserve order at client.");
-                                                            cmp.getAttributes().setValue('responseOrder', "2");
+                                                            $A.test.assertEquals("1", cmp.get('v.responseOrder'), "Action chaining did not preserve order at client.");
+                                                            cmp.set('v.responseOrder', "2");
                                                         });
             multiply.setChained();
 
             var subtract = $A.test.getAction(cmp,"c.subtract",{"a" : 99},
                                                         function(action){
                                                             //If the call backs are in order, then this attribute will have the value set by c.multiply's call back
-                                                            $A.test.assertEquals("2", cmp.getAttributes().getValue('responseOrder').getValue(), "Action chaining did not preserve order at client.");
-                                                            cmp.getAttributes().setValue('responseOrder', "3");
+                                                            $A.test.assertEquals("2", cmp.get('v.responseOrder'), "Action chaining did not preserve order at client.");
+                                                            cmp.set('v.responseOrder', "3");
                                                     });
             subtract.setChained();
 
@@ -43,8 +43,8 @@
                                         })
                                     },function(action){
                                             //If the call backs are in order, then this attribute will have the default value
-                                            $A.test.assertEquals("", cmp.getAttributes().getValue('responseOrder').getValue(), "Action chaining did not preserve order at client.");
-                                            cmp.getAttributes().setValue('responseOrder', "1");
+                                            $A.test.assertEquals("", cmp.get('v.responseOrder'), "Action chaining did not preserve order at client.");
+                                            cmp.set('v.responseOrder', "1");
                                     });
             $A.enqueueAction(add);
             cmp.getEvent("press").fire();
