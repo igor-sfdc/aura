@@ -1,6 +1,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+    <properties>
+        <!-- Tells bundle plugin whether to package sources specified in bnd.bnd -->
+        <packageSources>false</packageSources>
+    </properties>
     <parent>
         <groupId>org.auraframework</groupId>
         <artifactId>aura-framework</artifactId>
@@ -163,6 +167,7 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
+                        <_sources>${packageSources}</_sources>
                         <_include>bnd.bnd</_include>
                     </instructions>
                 </configuration>

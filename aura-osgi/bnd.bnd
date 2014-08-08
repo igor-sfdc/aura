@@ -194,8 +194,7 @@ Include-Resource: ../aura-resources/target/src-gen/main/resources,\
     ../aura/target/resources/osgi-resources,\
     ../aura-impl/target/resources/osgi-resources,\
     ../aura-impl-expression/target/resources/osgi-resources
-#Attach sources
--sources: true
+#Attach sources (if <_sources> instruction is true)
 -sourcepath: ../aura/src/main/java,\
     ../aura-impl/src/main/java,\
     ../aura-components/src/main/java,\
