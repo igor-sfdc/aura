@@ -65,6 +65,9 @@ function MapValue(config, def, component) {
 }
 
 MapValue.prototype.auraType = "Value";
+MapValue.prototype._getValueType = function () {
+    return "MapValue";
+};
 
 /**
  * @class A simple object for a map that responds correctly to hasOwnProperty() to hide back ref to MapValue that created it.
@@ -105,6 +108,10 @@ RawMapValue.prototype.toJSON = function() {
         }
     }
     return copy;
+};
+
+RawMapValue.prototype._getValueType = function () {
+    return "RawMapValue";
 };
 
 /**
@@ -182,6 +189,63 @@ MapValue.prototype.setValue = function(newMap) {
  * TEMPORARILY INTERNALIZED TO GATE ACCESS
  * @private
  */
+
+// This hasChanged algorithm optimized for breath first:
+// Examining the direct children and if everything matches
+// delegates recursively
+MapValue.prototype._hasChanged = function (rawMapValue) {
+    var oldValueType = this._getValueType(),
+        newValueType = $A.util.getNormalizedValueType(rawMapValue),
+        oldValues    = this.value,
+        oldKeys      = this.keys,
+        oldValue, newValue,
+        oldCast, newCast,
+        key, tmpKey;
+
+
+    if (oldValueType !== newValueType) {
+        return true;
+    }
+
+    // Check if any property has been added in the rawMap
+    for (key in rawMapValue) {
+        if (rawMapValue.hasOwnProperty(key)) {
+            if (!oldValues.hasOwnProperty(key.toLowerCase())) {
+                return true;
+            }
+        }
+    }
+
+    // Check any property has been deleted in the rawMap
+    for (key in oldValues) {
+        if (oldValues.hasOwnProperty(key)) {
+            tmpKey = oldKeys[key] || key;
+            if (!rawMapValue.hasOwnProperty(tmpKey)) {
+                return true;
+            }
+            
+        }
+    }
+
+    // Check for the type-matching of the direct children
+    // And if is a single value check for that as well
+    for (key in oldValues) {
+        tmpKey   = oldKeys[key] || key;
+        oldValue = oldValues[key];
+        newValue = rawMapValue[tmpKey];
+        oldCast  = $A.util.getNormalizedValueType(oldValue);
+        newCast  = $A.util.getNormalizedValueType(newValue);
+
+        // if cast does not match, or a simple value is different
+        if (oldCast !== newCast || oldValue._hasChanged(newValue)) {
+            return true;
+        }
+    }
+
+    return false;
+
+};
+
 MapValue.prototype._setValue = function(newMap, skipChange) {
     this.oldvalue = this.value; // Held to test for dirty replaced subobjects & copy handlers
     this.value = {};
@@ -221,6 +285,10 @@ MapValue.prototype._setValue = function(newMap, skipChange) {
         }
     }
     
+    if (!this._hasChanged(newMap)) {
+        return;
+    }
+
     for (var originalKey in copyMap) {
         var lowerKey;
         if (copyKeys && copyKeys[originalKey]) {
@@ -447,14 +515,17 @@ MapValue.prototype.unwrap = function() {
 MapValue.prototype.add = function(k, config, subDirty, skipChange) {
     var key = k.toLowerCase();
     var v = config[k];
-    
-    var value = valueFactory.create(v, null, this.owner);
+    var expected = this.value[key];
+    if (!expected && this.oldvalue) {
+        expected = this.oldvalue[key];
+    }	
+    var value = valueFactory.create(v, null, this.owner, expected);
     this.value[key] = value;
 
     if (key !== k) {
         this.keys[key] = k;
     }
-    
+	
     if (this.oldvalue && this.oldvalue[key]) {
         this.copyHandlers(this.oldvalue[key], value);
     }
@@ -474,7 +545,7 @@ MapValue.prototype.add = function(k, config, subDirty, skipChange) {
             }
         }
     }
-    
+	
     if (!skipChange && (value.handlers || value.eventDispatcher)) {
         // Value might be simple, using eventDispatcher; it might be a map,
         // using handlers. Either way, if we have handlers from before or from

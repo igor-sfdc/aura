@@ -35,9 +35,22 @@
         $A.test.assertEquals(undefined, component._log);
     },
 
-    calculateSize: function(map) {
-        return $A.util.keys(map, true).length;
+    /**
+     * Checking to see what version of the browser we are looking at and returning whether we are looking at IE7/8.
+     * This is used mainly for $A.util.keys(...). The logic in it is different for IE7/8 vs all other browsers. A
+     * fix for $A.util.keys was the best approach but was too risky, since people on SFDC were already using it incorrectly.
+     * This approach will fix the test failures without causing additional test failures for everyone else that is using 
+     * $A.util.keys(...)
+     */
+    isIE7_8 : function(){
+    	var browser = $A.get("$Browser");
+	    return browser.isIE7 || browser.isIE8;
     },
+    
+    calculateSize: function(map) {  	
+        return $A.util.keys(map, !this.isIE7_8()).length;
+    },
+    
     /**
      * Verify creating map values.
      */
@@ -163,7 +176,7 @@
             component.set("v.map", sval);
             var map = component.get("v.map")
             $A.test.assertTrue($A.util.isObject(map)); //##$$ Remove this line
-    		$A.test.assertEquals(0, $A.util.keys(map, true).length); //##$$ Remove this line
+    		$A.test.assertEquals(0, $A.util.keys(map,  !this.isIE7_8()).length); //##$$ Remove this line
             //$A.test.assertNull(component.get("v.map")); ##$$ uncomment this line
         }
     },
@@ -178,8 +191,23 @@
             component.set("v.map", sval);
             var map = component.get("v.map")
             $A.test.assertTrue($A.util.isObject(map)); //##$$ Remove this line
-    		$A.test.assertEquals(0, $A.util.keys(map, true).length); //##$$ Remove this line
+    		$A.test.assertEquals(0, $A.util.keys(map, !this.isIE7_8()).length); //##$$ Remove this line
             //$A.test.assertUndefined(component.get("v.map")) ##$$ uncomment this line
+        }
+    },
+
+    /**
+     * Tests what happens when one attribut is assigned to another.
+     */
+    testMapAssignment: {
+        test: function(cmp) {
+            cmp.set("v.triggers2", cmp.get("v.triggers"));
+            cmp.set("v.triggers.triggerCount", 12);
+            cmp.set("v.triggers2.nested.count", 7);
+            $A.test.assertEquals(12, cmp.get("v.triggers.triggerCount"));
+            $A.test.assertEquals(0, cmp.get("v.triggers.nested.count"));
+            $A.test.assertEquals(0, cmp.get("v.triggers2.triggerCount"));
+            $A.test.assertEquals(7, cmp.get("v.triggers2.nested.count"));
         }
     },
 
@@ -271,7 +299,7 @@
                 count += 1;
             }
         }
-        $A.test.assertEquals(rawCount, count, "must have exactly four properties");
+        $A.test.assertEquals(rawCount, count, "must have exactly " + rawCount + " properties");
         $A.test.assertEquals('{"fruit":"apple","animal":"bear"}', $A.util.json.encode(map));
     },
 
@@ -289,6 +317,31 @@
             });
             $A.run(function() { $A.enqueueAction(a); });
             $A.test.addWaitFor(true, function() { return done; });
+        }
+    },
+
+    testSetNewSubmap: {
+        test: function(component) {
+           var leaf = component.get("m.map.was.missing.foo");
+           $A.test.assertUndefined(leaf);
+           var map = component.get("m.map");
+           this.checkMap(map, 3);
+           $A.test.assertUndefined(map.was);
+
+           component.set("m.map.was.missing.foo", 17);
+           leaf = component.get("m.map.was.missing.foo");
+           $A.test.assertEquals(17, leaf);
+           var submap = component.get("m.map.was");
+           for (var key in submap) {
+               if (!(submap[key] instanceof Function)) {
+                   $A.test.assertEquals("missing", key);
+               }
+           }
+           for (var key in submap.missing) {
+               if (!(submap[key] instanceof Function)) {
+                   $A.test.assertEquals("foo", key);
+               }
+           }
         }
     },
     

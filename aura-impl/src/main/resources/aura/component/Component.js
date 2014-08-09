@@ -150,7 +150,6 @@ Component.prototype.deIndex = function(localId, globalId){
 
 /**
  * Locates a component using the localId. Shorthand: <code>get("asdf")</code>, where "asdf" is the <code>aura:id</code> of the component to look for.
- * See <a href="#help?topic=findById">Finding Components by ID</a> for more information.
  * Returns instances of a component using the format <code>cmp.find({ instancesOf : "auradocs:sampleComponent" })</code>.
  * @param {String|Object} name If name is an object, return instances of it. Otherwise, finds a component using its index.
  * @public
@@ -295,7 +294,7 @@ Component.prototype.implementsDirectly = function(type){
 
 /**
  * Adds an event handler. Resolving the handler Action happens at Event-handling time, so the Action reference may be altered at runtime,
- * and that change is reflected in the handler. See <a href="#help?topic=dynamicHandler">Dynamically Adding Event Handlers</a> for more information.
+ * and that change is reflected in the handler.
  * @param {String} eventName The event name
  * @param {Object} valueProvider The value provider to use for resolving the actionExpression.
  * @param {Object} actionExpression The expression to use for resolving the handler Action against the given valueProvider.
@@ -404,7 +403,6 @@ Component.prototype.finishDestroy = function(){
  * Destroys the component and cleans up memory.
  *
  * <code>destroy()</code> destroys the component immediately while <code>destroy(true)</code> destroys it asychronously.
- * See <a href="#help?topic=dynamicCmp"/>Dynamically Creating Components</a> for more information.
  * <p>
  * Note that when this is called with async = true, it makes a specific race
  * condition (i.e. calling functions after destroy) harder to trigger. this
@@ -758,7 +756,6 @@ Component.prototype.getAttributes = function () {
 
 /**
  * Returns the collection of attributes for this component.
- * See <a href="#help?topic=hideMarkup">Dynamically Showing or Hiding Markup</a> for an example.
  * Shorthand : <code>get("v")</code>
  *
  * TEMPORARILY INTERNALIZED TO GATE ACCESS
@@ -786,12 +783,13 @@ Component.prototype.getValue = function (key) {
  * If you do not need the wrapper, use <code>get()</code> instead.
  * Temporarily internalized to gate access.
  * @param {String} key The data key to look up on the Component. E.g. <code>$A.get("root.v.mapAttring.key")</code>
+ * @param {Boolean} docreate set {@code true} to create missing MapValue entries
  *
  * @private
  *
  * @deprecated use Component.get(key,value) instead
  */
-Component.prototype._getValue = function(key){
+Component.prototype._getValue = function(key, docreate){
     // Should we deliberately break here?
     if (!this.isValid() || $A.util.isUndefinedOrNull(key)) {
         return undefined;
@@ -800,7 +798,7 @@ Component.prototype._getValue = function(key){
     // this getValue is special, the only one that accepts an expression or just a key
     if (key.toString() === "PropertyChain" || key.indexOf(".") !== -1) {
         // then we got an expression, lets deal with it
-        return expressionService.getValue(this, key);
+        return expressionService.getValue(this, key, undefined, docreate);
     }
 
     var priv = this.priv;
@@ -889,7 +887,7 @@ Component.prototype.mergeAttributes = function(yourMap, overwrite) {
  * @param {String} key The data key to look up on the Component.
  * @public
  */
-Component.prototype.get = function(key){
+Component.prototype.get = function(key, docreate){
     return $A.expressionService.get(this, key);
 };
 
@@ -901,7 +899,7 @@ Component.prototype.get = function(key){
  * @public
  */
 Component.prototype.set = function(key, value, ignoreChanges) {
-    var v = this._getValue(key);
+    var v = this._getValue(key, true);
     if ($A.util.isUndefinedOrNull(v)) {
         $A.error("Invalid key " + key);
         return;
