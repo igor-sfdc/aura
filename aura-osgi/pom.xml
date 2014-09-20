@@ -66,7 +66,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
+            <artifactId>httpclient-osgi</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -79,7 +79,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpcore</artifactId>
+            <artifactId>httpcore-osgi</artifactId>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>
@@ -91,7 +91,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
+            <artifactId>httpclient-osgi</artifactId>
         </dependency>
         <dependency>
             <groupId>log4j</groupId>

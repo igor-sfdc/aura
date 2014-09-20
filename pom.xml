@@ -221,13 +221,13 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
-                <artifactId>httpclient</artifactId>
-                <version>4.2</version>
+                <artifactId>httpclient-osgi</artifactId>
+                <version>4.3.1</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
-                <artifactId>httpcore</artifactId>
-                <version>4.2</version>
+                <artifactId>httpcore-osgi</artifactId>
+                <version>4.3.1</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>

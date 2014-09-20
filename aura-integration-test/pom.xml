@@ -69,7 +69,7 @@
         </dependency>
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
-			<artifactId>httpcore</artifactId>
+			<artifactId>httpcore-osgi</artifactId>
 		</dependency>
         <dependency>
             <groupId>net.sourceforge.pjl-comp-filter</groupId>
