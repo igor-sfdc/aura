@@ -119,7 +119,7 @@ public class MasterDefRegistryImplTest extends AuraImplTestCase {
                 for (DefRegistry<?> reg : registries) {
                     Set<String> ns = reg.getNamespaces();
 
-                    if (ns != null && (ns.contains("aura") || ns.contains("*"))) {
+                    if (ns != null) {
                         mdrregs.add(asMocks ? Mockito.spy(reg) : reg);
                     }
                 }
@@ -137,6 +137,9 @@ public class MasterDefRegistryImplTest extends AuraImplTestCase {
                 @Override
                 public Definition answer(InvocationOnMock invocation) throws Throwable {
                     Definition ret = (Definition) invocation.callRealMethod();
+                    if (ret == null) {
+                        return ret;
+                    }
                     if (mockUtil.isMock(ret)) {
                         return ret;
                     } else {
@@ -255,15 +258,15 @@ public class MasterDefRegistryImplTest extends AuraImplTestCase {
         // INTERFACE(InterfaceDef.class, Format.XML, DefDescriptor.MARKUP_PREFIX, ":"),
         // LAYOUTS(LayoutsDef.class, Format.XML, DefDescriptor.MARKUP_PREFIX, ":"),
         // NAMESPACE(NamespaceDef.class, Format.XML, DefDescriptor.MARKUP_PREFIX, ""),
-        new AddableDef<ControllerDef>(ControllerDef.class, "js://%s.%s",
+        new AddableDef<>(ControllerDef.class, "js://%s.%s",
                 "({method: function(cmp) {}})"),
-        new AddableDef<HelperDef>(HelperDef.class, "js://%s.%s",
+        new AddableDef<>(HelperDef.class, "js://%s.%s",
                 "({method: function(cmp) {}})"),
             // new AddableDef<ProviderDef>(ProviderDef.class, "js://%s.%s",
         //        "({provide: function(cmp) {}})"),
-        new AddableDef<RendererDef>(RendererDef.class, "js://%s.%s",
+        new AddableDef<>(RendererDef.class, "js://%s.%s",
                 "({render: function(cmp) {}})"),
-        new AddableDef<StyleDef>(StyleDef.class, "css://%s.%s",
+        new AddableDef<>(StyleDef.class, "css://%s.%s",
                 ".THIS {display:block;}"),
         // Ignoring TESTSUITE(TestSuiteDef.class, Format.JS, DefDescriptor.JAVASCRIPT_PREFIX, "."),
         // Ignoring THEME(ThemeDef.class, Format.XML, DefDescriptor.MARKUP_PREFIX, ":");
@@ -856,7 +859,7 @@ public class MasterDefRegistryImplTest extends AuraImplTestCase {
         Map<DefType, DefDescriptor<?>> defs = addDefsToCaches(mdr);
         DefDescriptor<?> cmpDef = defs.get(DefType.COMPONENT);
         Aura.getCachingService().notifyDependentSourceChange(Collections.<WeakReference<SourceListener>> emptySet(),
-                cmpDef, SourceListener.SourceMonitorEvent.changed, null);
+                cmpDef, SourceListener.SourceMonitorEvent.CHANGED, null);
 
         assertFalse("ComponentDef not cleared from cache", isInDefsCache(defs.get(DefType.COMPONENT), mdr));
         assertTrue("ControllerDef in same bundle as cmp should not be cleared from cache",
@@ -875,7 +878,7 @@ public class MasterDefRegistryImplTest extends AuraImplTestCase {
         Map<DefType, DefDescriptor<?>> defs = addDefsToCaches(mdr);
         DefDescriptor<?> namespaceDef = defs.get(DefType.NAMESPACE);
         Aura.getCachingService().notifyDependentSourceChange(Collections.<WeakReference<SourceListener>> emptySet(),
-                namespaceDef, SourceListener.SourceMonitorEvent.changed, null);
+                namespaceDef, SourceListener.SourceMonitorEvent.CHANGED, null);
 
         assertFalse("NamespaceDef not cleared from cache", isInDefsCache(defs.get(DefType.NAMESPACE), mdr));
         assertFalse("ComponentDef in same namespace as changed namespaceDef not cleared from cache",
@@ -897,7 +900,7 @@ public class MasterDefRegistryImplTest extends AuraImplTestCase {
         Map<DefType, DefDescriptor<?>> defs = addDefsToCaches(mdr);
         DefDescriptor<?> layoutsDef = defs.get(DefType.LAYOUTS);
         Aura.getCachingService().notifyDependentSourceChange(Collections.<WeakReference<SourceListener>> emptySet(),
-                layoutsDef, SourceListener.SourceMonitorEvent.changed, null);
+                layoutsDef, SourceListener.SourceMonitorEvent.CHANGED, null);
 
         assertFalse("LayoutsDef not cleared from cache", isInDefsCache(defs.get(DefType.LAYOUTS), mdr));
         assertFalse("ApplicationDef in same bundle as LayoutsDef not cleared from cache",
@@ -926,7 +929,7 @@ public class MasterDefRegistryImplTest extends AuraImplTestCase {
         DefDescriptor<LayoutsDef> layoutsDef = DefDescriptorImpl.getInstance("test:layouts",
                 LayoutsDef.class);
 
-        Map<DefType, DefDescriptor<?>> map = new HashMap<DefType, DefDescriptor<?>>();
+        Map<DefType, DefDescriptor<?>> map = new HashMap<>();
         map.put(DefType.NAMESPACE, namespaceDef);
         map.put(DefType.COMPONENT, cmpDef);
         map.put(DefType.CONTROLLER, cmpControllerDef);
@@ -1410,7 +1413,7 @@ public class MasterDefRegistryImplTest extends AuraImplTestCase {
                         + "</aura:layout>"
                         + "</aura:layouts>", "cstring:nplayout", false);
 
-        Map<DefType, DefDescriptor<?>> map = new HashMap<DefType, DefDescriptor<?>>();
+        Map<DefType, DefDescriptor<?>> map = new HashMap<>();
         map.put(DefType.NAMESPACE, namespaceDef);
         map.put(DefType.COMPONENT, cmpDef);
         map.put(DefType.CONTROLLER, cmpControllerDef);

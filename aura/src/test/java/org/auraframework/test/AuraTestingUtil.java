@@ -47,7 +47,7 @@ public class AuraTestingUtil {
     private static AtomicLong nonce = new AtomicLong(System.currentTimeMillis());
 
     private Set<DefDescriptor<?>> cleanUpDds;
-
+    
     public void tearDown() {
         if (cleanUpDds != null) {
             StringSourceLoader loader = StringSourceLoader.getInstance();
@@ -234,7 +234,7 @@ public class AuraTestingUtil {
         };
         definitionService.subscribeToChangeNotification(listener);
         for (DefDescriptor<?> desc : cached) {
-            definitionService.onSourceChanged(desc, SourceMonitorEvent.changed, null);
+            definitionService.onSourceChanged(desc, SourceMonitorEvent.CHANGED, null);
         }
         if (!latch.await(CACHE_CLEARING_TIMEOUT_SECS, TimeUnit.SECONDS)) {
             throw new AuraRuntimeException(String.format(
@@ -260,6 +260,18 @@ public class AuraTestingUtil {
         String uid = ctxt.getDefRegistry().getUid(null, desc);
         ctxt.addLoaded(desc, uid);
         return ctxt;
+    }
+
+    /**
+     * restart context.
+     */
+    public void restartContext() throws QuickFixException {
+        AuraContext context = Aura.getContextService().getCurrentContext();
+        DefDescriptor<? extends BaseComponentDef> cmp = context.getApplicationDescriptor();
+        String uid = context.getUid(cmp);
+        Aura.getContextService().endContext();
+        AuraContext newctxt = setupContext(context.getMode(), context.getFormat(), cmp);
+        newctxt.addLoaded(cmp, uid);
     }
 
     /**
@@ -347,4 +359,5 @@ public class AuraTestingUtil {
         sb.setCharAt(3, flip);
         return sb.toString();
     }
+
 }

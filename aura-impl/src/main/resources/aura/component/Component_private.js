@@ -134,7 +134,7 @@ var ComponentPriv = (function() { // Scoping priv
 
             // for components inside of a foreach, sets up the value provider
             // they will delegate all m/v/c values to
-            this.setupDelegateValueProvider(config["delegateValueProvider"], localCreation, cmp.ccc);
+            this.setupDelegateValueProvider(config["delegateValueProvider"], localCreation);
 
             // join attributes from partial config and config, preferring
             // partial when overlapping
@@ -145,20 +145,22 @@ var ComponentPriv = (function() { // Scoping priv
                 } else {
                     configAttributes = {};
                     var atCfg = config["attributes"];
-                    for ( var key in atCfg) {
-                        configAttributes[key] = atCfg[key];
+                    for (var key in atCfg) {
+                    	if (atCfg.hasOwnProperty(key)) {
+                    		configAttributes[key] = atCfg[key];
+                    	}
                     }
 
                     atCfg = partialConfig["attributes"];
                     for (key in atCfg) {
-                        if (key !== "valueProvider") {
+                        if (atCfg.hasOwnProperty(key) && key !== "valueProvider") {
                             configAttributes[key] = atCfg[key];
                         }
                     }
 
                     atCfg = config["attributes"]["values"];
                     for (key in atCfg) {
-                        if (!configAttributes["values"][key]) {
+                        if (atCfg.hasOwnProperty(key) && !configAttributes["values"][key]) {
                             configAttributes["values"][key] = atCfg[key];
                         }
                     }
@@ -170,7 +172,7 @@ var ComponentPriv = (function() { // Scoping priv
 
             // runs component provider and replaces this component with the
             // provided one
-            this.injectComponent(config, cmp, localCreation, cmp.ccc);
+            this.injectComponent(config, cmp, localCreation);
 
             // instantiates this components model
             this.setupModel(config["model"], cmp);
@@ -179,7 +181,7 @@ var ComponentPriv = (function() { // Scoping priv
             this.setupValueProviders(config["valueProviders"], cmp);
 
             // instantiate super component(s)
-            this.setupSuper(cmp, configAttributes, localCreation, cmp.ccc);
+            this.setupSuper(cmp, configAttributes, localCreation);
 
             // does some extra attribute validation for requiredness
             this.validateAttributes(cmp, configAttributes);
@@ -350,7 +352,7 @@ var ComponentPriv = (function() { // Scoping priv
         this.componentDef = componentDef;
     };
 
-    ComponentPriv.prototype.setupDelegateValueProvider = function(config, localCreation, ccc) {
+    ComponentPriv.prototype.setupDelegateValueProvider = function(config, localCreation) {
         if (config) {
             if (config["globalId"]) {
                 this.delegateValueProvider = componentService.get(config["globalId"]);
@@ -358,15 +360,7 @@ var ComponentPriv = (function() { // Scoping priv
                 this.delegateValueProvider = config;
             }
             if (!this.delegateValueProvider) {
-
-                if (ccc) {
-                    var self = this;
-                    ccc.loadComponent(config, null, localCreation, function(component) {
-                        self.delegateValueProvider = component;
-                    }, false, false, true);
-                } else {
-                    this.delegateValueProvider = componentService.newComponentDeprecated(config, null, localCreation, true);
-                }
+                this.delegateValueProvider = componentService.newComponentDeprecated(config, null, localCreation, true);
             }
         }
     };
@@ -401,7 +395,7 @@ var ComponentPriv = (function() { // Scoping priv
     };
 
     ComponentPriv.prototype.setupSuper = function(attributeValueProvider,
-                    configAttributes, localCreation, ccc) {
+                    configAttributes, localCreation) {
         var superDef = this.componentDef.getSuperDef();
         if (superDef) {
             var attributeValues = {};
@@ -465,13 +459,7 @@ var ComponentPriv = (function() { // Scoping priv
             $A.pushCreationPath("super");
 
             try {
-
-                if (ccc) {
-                    ccc.loadComponent(superConfig, null, localCreation, setSuperComponent, false, false, true);
-                } else {
-                    setSuperComponent(componentService.newComponentDeprecated(superConfig, null, localCreation, true));
-                }
-
+                setSuperComponent(componentService.newComponentDeprecated(superConfig, null, localCreation, true));
             } finally {
                 $A.popCreationPath("super");
             }
@@ -643,14 +631,17 @@ var ComponentPriv = (function() { // Scoping priv
         }
     };
 
-    ComponentPriv.prototype.injectComponent = function(config, cmp, localCreation, ccc) {
+    ComponentPriv.prototype.injectComponent = function(config, cmp, localCreation) {
 
         var self = this,
             setProvided = function(realComponentDef, attributes) {
-                $A.assert(realComponentDef
-                    && realComponentDef.auraType === "ComponentDef"
-                    && !realComponentDef.isAbstract(),
-                    "No concrete implementation provided");
+                // Provide better error messaging with each assertion
+                $A.assert(realComponentDef && realComponentDef.auraType === "ComponentDef",
+                    "No definition for provided component");
+                $A.assert(!realComponentDef.isAbstract(), "No concrete implementation provided");
+                // client provider and current config wasn't from the server
+                $A.assert(!realComponentDef.hasRemoteDependencies() || (realComponentDef.hasRemoteDependencies() && self.partialConfig),
+                    "Client provided component cannot have server dependencies.");
 
                 self.componentDef = realComponentDef;
                 self.attributes.recreate(realComponentDef.getAttributeDefs(), attributes);
@@ -668,7 +659,7 @@ var ComponentPriv = (function() { // Scoping priv
             }
             if (providerDef) {
                 // use it
-                providerDef.provide(cmp, localCreation, setProvided, ccc);
+                providerDef.provide(cmp, localCreation, setProvided);
             } else {
                 var partialConfig = this.partialConfig;
                 $A.assert(partialConfig,

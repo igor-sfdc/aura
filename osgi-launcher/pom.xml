@@ -5,7 +5,8 @@
     <parent>
         <groupId>org.auraframework</groupId>
         <artifactId>aura-framework</artifactId>
-        <version>0.1327-SNAPSHOT</version>
+        <version>0.1417-SNAPSHOT</version>
+
         <relativePath>../pom.xml</relativePath>
     </parent>
     <packaging>jar</packaging>
@@ -152,7 +153,9 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
+            <!-- Disabling b/c of java.lang.NoClassDefFoundError: Lorg/sonatype/aether/RepositorySystem -->
+            <!-- See https://github.com/evgeny-goldin/maven-plugins/issues/10 -->
+            <!--plugin>
                 <groupId>com.github.goldin</groupId>
                 <artifactId>properties-maven-plugin</artifactId>
                 <version>0.2.5</version>
@@ -177,7 +180,7 @@
                         </configuration>
                     </execution>
                 </executions>
-            </plugin>
+            </plugin-->
         </plugins>
         <pluginManagement>
             <plugins>

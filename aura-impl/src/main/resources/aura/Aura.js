@@ -126,8 +126,6 @@ var clientService;
  */
 $A.ns.Aura = function() {
     this.util = new $A.ns.Util(); 
-    //TODO W-2334986: HACK to get past closure, $A.util.on is getting stomped over by closure property rename
-    this.util["on"] = this.util.on;
     this["util"] = this.util;
     //#if {"modes" : ["TESTING","AUTOTESTING", "TESTINGDEBUG", "AUTOTESTINGDEBUG"]}
     this.test = new $A.ns.Test();
@@ -978,7 +976,8 @@ $A.ns.Aura.prototype.logInternal = function(type, message, error, trace) {
 };
 
 /**
- *  Log something.  Currently, this logs to the JavaScript console if it is available, and does not throw errors otherwise.
+ *  Logs to the browser's JavaScript console if it is available.
+ *  This method doesn't log in PROD or PRODDEBUG modes.
  *  If both value and error are passed in, value shows up in the console as a group with value logged within the group.
  *  If only value is passed in, value is logged without grouping.
  *  <p>For example, <code>$A.log(action.getError());</code> logs the error from an action.</p>
@@ -1001,7 +1000,8 @@ $A.ns.Aura.prototype.log = function(value, error) {
 };
 
 /**
- * Logs using <code>console.log()</code> if defined on the console implementation.
+ *  Logs to the browser's JavaScript console if it is available.
+ *  This method doesn't log in PROD or PRODDEBUG modes.
  */
 $A.ns.Aura.prototype.logf = function() {
     //#if {"excludeModes" : ["PRODUCTION", "PRODUCTIONDEBUG"]}

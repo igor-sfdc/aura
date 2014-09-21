@@ -31,13 +31,15 @@ public class RendererForAISWithCustomJScript extends AbstractRendererForTestingI
         Map<String, Object> attr = (Map<String, Object>)component.getAttributes().getValue("attrMap");
         String placeholder = (String)component.getAttributes().getValue("placeholder");
         String localId = (String)component.getAttributes().getValue("localId");
+        Boolean useAsync = (Boolean) component.getAttributes().getValue("useAsync");
         out.append("<script>"
                 + "function clickHandler__t(event){document._clickHandlerCalled = true; document.__clickEvent=event;}\n"
+                + "function click2Handler__t(event){document._click2HandlerCalled = true; document.__click2Event=event;}\n"
                 + "function changeHandler__t(event){document._changeHandlerCalled = 'Custom JS Code'; document.__changeEvent=event;}"
                 + "</script>");
         out.append(String.format("<div id='%s' style='border: 1px solid black'/>", placeholder));
 
-        injectComponent(desc, attr, localId, placeholder, out);
+        injectComponent(desc, attr, localId, placeholder, out, useAsync);
 
     }
 

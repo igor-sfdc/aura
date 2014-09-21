@@ -166,12 +166,19 @@ public class ClientLibraryServiceImpl implements ClientLibraryService {
 
         AuraContext.Mode mode = context.getMode();
         String uid = context.getUid(context.getApplicationDescriptor());
+        String contextPath = context.getContextPath();
+        String nonce = context.getFrameworkUID();
 
         if (uid == null) {
             return Collections.emptySet();
         }
 
-        String key = new StringBuilder(uid).append(":").append(type).append(":").append(mode).toString();
+        //
+        // TODO: rethink this caching. It has an awful lot in the keys. Maybe we can prepend the
+        // 'prefix' string on output if it is a relative URL.
+        //
+        String key = new StringBuilder(uid).append(":").append(type).append(":").append(mode)
+            .append(":").append(nonce).append(":").append(contextPath).toString();
         Set<String> urls = getUrlsCache().getIfPresent(key);
 
         if (urls == null) {
@@ -373,5 +380,23 @@ public class ClientLibraryServiceImpl implements ClientLibraryService {
         return combinable;
     }
 
-
+    // TODO: aura->osgi move this to a separate class (see SourceNotifier in the same package) 
+//
+//    /**
+//     * Invalidate caches on source changes
+//     */
+//    private static SourceNotifier sourceNotifier = new SourceNotifier();
+//
+//    static {
+//        Aura.getDefinitionService().subscribeToChangeNotification(sourceNotifier);
+//    }
+//
+//    private static class SourceNotifier implements SourceListener {
+//        @Override
+//        public void onSourceChanged(DefDescriptor<?> source, SourceMonitorEvent event, String filePath) {
+//            
+//            Aura.getCachingService().getClientLibraryOutputCache().invalidateAll();
+//            Aura.getCachingService().getClientLibraryUrlsCache().invalidateAll();
+//        }
+//    }
 }

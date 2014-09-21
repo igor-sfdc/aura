@@ -232,7 +232,7 @@ var priv = {
      * Process a single action/response.
      * 
      * Note that it does this inside an $A.run to provide protection against error returns, and to notify the user if an
-     * erroroccurs.
+     * error occurs.
      * 
      * @private
      * @param {Action}
@@ -266,15 +266,18 @@ var priv = {
                 errorHandler = action.getStorageErrorHandler();
                 
                 if (toStore) {
-                    try {
-                        storage.put(key, toStore);
-                    } catch (error) {
-                        if (errorHandler && $A.util.isFunction(errorHandler)) {
-                            errorHandler(error);
-                        } else {
-                            $A.error(error);
+                    storage.put(key, toStore).then(
+                        function() {},
+                        function(error){
+                            $A.run(function() {
+                                if (errorHandler && $A.util.isFunction(errorHandler)) {
+                                    errorHandler(error);
+                                } else {
+                                    $A.error(error);
+                                }
+                            });
                         }
-                    }
+                    );
                 }
             }
         }, key);

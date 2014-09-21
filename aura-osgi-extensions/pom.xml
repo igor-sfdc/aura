@@ -4,7 +4,8 @@
     <parent>
         <groupId>org.auraframework</groupId>
         <artifactId>aura-framework</artifactId>
-        <version>0.1327-SNAPSHOT</version>
+        <version>0.1417-SNAPSHOT</version>
+
     </parent>
     <artifactId>aura-osgi-extensions</artifactId>
     <dependencies>

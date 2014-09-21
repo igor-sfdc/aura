@@ -15,26 +15,11 @@
  */
 package org.auraframework.test;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.PrintWriter;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.io.*;
+import java.lang.annotation.*;
 import java.lang.reflect.Method;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.Set;
+import java.net.*;
+import java.util.*;
 import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -43,44 +28,28 @@ import junit.framework.AssertionFailedError;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.http.NameValuePair;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.message.BasicNameValuePair;
 import org.auraframework.Aura;
-import org.auraframework.def.ApplicationDef;
-import org.auraframework.def.BaseComponentDef;
-import org.auraframework.def.ComponentDef;
-import org.auraframework.def.DefDescriptor;
-import org.auraframework.def.Definition;
+import org.auraframework.def.*;
 import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.test.WebDriverUtil.BrowserType;
 import org.auraframework.test.annotation.FreshBrowserInstance;
 import org.auraframework.test.annotation.WebDriverTest;
-import org.auraframework.test.perf.PerfResultsUtil;
-import org.auraframework.test.perf.PerfUtil;
-import org.auraframework.test.perf.PerfWebDriverUtil;
-import org.auraframework.test.perf.metrics.PerfMetrics;
-import org.auraframework.test.perf.metrics.PerfMetricsCollector;
-import org.auraframework.test.perf.metrics.PerfRunsCollector;
+import org.auraframework.test.perf.*;
+import org.auraframework.test.perf.metrics.*;
 import org.auraframework.test.perf.rdp.RDPNotification;
 import org.auraframework.util.AuraUITestingUtil;
 import org.auraframework.util.AuraUtil;
 import org.eclipse.jetty.util.log.Log;
 import org.json.JSONObject;
-import org.openqa.selenium.By;
-import org.openqa.selenium.Dimension;
-import org.openqa.selenium.Keys;
+import org.openqa.selenium.*;
 import org.openqa.selenium.NoSuchElementException;
-import org.openqa.selenium.TimeoutException;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.interactions.Action;
-import org.openqa.selenium.interactions.Actions;
-import org.openqa.selenium.interactions.HasTouchScreen;
+import org.openqa.selenium.interactions.*;
 import org.openqa.selenium.interactions.touch.FlickAction;
 import org.openqa.selenium.interactions.touch.TouchActions;
-import org.openqa.selenium.remote.DesiredCapabilities;
-import org.openqa.selenium.remote.RemoteWebDriver;
-import org.openqa.selenium.remote.ScreenshotException;
+import org.openqa.selenium.remote.*;
 import org.openqa.selenium.support.events.EventFiringWebDriver;
 import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -123,6 +92,14 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
         BrowserType[] value();
     }
 
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target({ ElementType.TYPE, ElementType.METHOD })
+    @Inherited
+    public @interface CheckAccessibility {
+        boolean value() default true;
+        BrowserType browserType() default BrowserType.GOOGLECHROME; // default browser to run accessibility test is Google Chrome
+    }
+
     public WebDriverTestCase(String name) {
         super(name);
     }
@@ -133,6 +110,7 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
     @Override
     public void setUp() throws Exception {
         super.setUp();
+        
     }
 
     public String getBrowserTypeString() {
@@ -223,13 +201,18 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
         // this may be due to the extra steps that happen when everything is initialized
         // here we force the first test to execute single threaded and also initialize
         // aura before invoking that first test
+        HttpGet get = null;
         try {
             LOCK_FIRST_TEST_SEMAPHORE.acquire();
             if (numWebDriverTestsExecuted == 0) {
-                perform(obtainGetMethod("/uitest/testApp.app", true, null));
+                get = obtainGetMethod("/uitest/testApp.app", true, null);
+                getResponseBody(perform(get)); // need to drain response for HttpClient
             }
             runTestImpl();
         } finally {
+            if (get != null) {
+                get.releaseConnection();
+            }
             numWebDriverTestsExecuted++;
             // release enough permits to run in parallel after first
             LOCK_FIRST_TEST_SEMAPHORE.release(TestExecutor.NUM_THREADS);
@@ -758,6 +741,21 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
         }
         return Sets.newEnumSet(Arrays.asList(excludeBrowsers.value()), BrowserType.class);
     }
+    
+    public boolean isAccessibilityTestDisabled() {
+        CheckAccessibility checkAccessibility = null;
+        try {
+            Method method = getClass().getMethod(getName());
+            checkAccessibility = method.getAnnotation(CheckAccessibility.class);
+            if (checkAccessibility == null) {
+                // Inherit defaults from the test class
+                checkAccessibility = getClass().getAnnotation(CheckAccessibility.class);
+            }
+        } catch (NoSuchMethodException e) {
+            // Do nothing
+        }
+        return checkAccessibility != null ? !checkAccessibility.value() : false;
+    }
 
     public WebDriver getDriver() {
         if (currentDriver == null) {
@@ -971,7 +969,7 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
                 }
                 return false;
             }
-        }, timeoutInSecs);
+        }, timeoutInSecs,"fail on loading url:"+url);
 
         if (waitForInit) {
             auraUITestingUtil.waitForAuraInit(getAuraErrorsExpectedDuringInit());
@@ -997,7 +995,7 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
             public Boolean apply(WebDriver d) {
                 return auraUITestingUtil.getBooleanEval(javascript);
             }
-        }, timeoutInSecs);
+        }, timeoutInSecs,"fail on waiting for condition:"+javascript);
     }
 
     /**
@@ -1047,7 +1045,7 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
             public Boolean apply(WebDriver d) {
                 return isPresent == text.equals(e.getText());
             }
-        }, timeout);
+        }, timeout,"fail on waiting for element text:"+text);
     }
 
     protected void waitForElementAbsent(String msg, final WebElement e) {
@@ -1161,7 +1159,7 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
                             .contains(itemAttrShouldContain);
                 }
             }
-        }, timeoutInSecs);
+        }, timeoutInSecs,"fail on waiting for component to change status");
     }
 
     /**
@@ -1177,7 +1175,7 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
                 String pageContent = page.getAttribute("innerHTML");
                 return pageContent.contains(expectedText);
             }
-        }, timeoutInSecs);
+        }, timeoutInSecs, "fail on waiting for Carousel Page to Change");
     }
 
     public void waitForAutoCompleteListVisible(final WebElement list, final boolean isVisible) {
@@ -1187,7 +1185,7 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
                 boolean isInvisible = hasCssClass(list, "invisible");
                 return isVisible != isInvisible;
             }
-        }, timeoutInSecs);
+        }, timeoutInSecs,"fail on waiting AutoCompleteList to be visible");
     }
 
     /**

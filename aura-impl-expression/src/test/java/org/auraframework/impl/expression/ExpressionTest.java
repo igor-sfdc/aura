@@ -40,33 +40,25 @@ import com.google.common.collect.ImmutableList;
 public class ExpressionTest extends AuraImplExpressionTestCase {
 
     private static final Location l = new Location("test", -1);
-    private static final PropertyReference blah = new PropertyReferenceImpl("blah", l);
-    private static final PropertyReference meh = new PropertyReferenceImpl("meh", l);
+    private static final PropertyReference i314 = new PropertyReferenceImpl("i314", l);
+    private static final PropertyReference i235325 = new PropertyReferenceImpl("i235325", l);
+    private static final PropertyReference bTrue = new PropertyReferenceImpl("bTrue", l);
+    private static final PropertyReference bFalse = new PropertyReferenceImpl("bFalse", l);
 
-    private static ValueProvider numbers = new ValueProvider() {
+    private static ValueProvider values = new ValueProvider() {
         @Override
         public Object getValue(PropertyReference key) {
-            if (key == blah) {
-                return 314;
-            } else if (key == meh) {
-                return 235325;
+            if (key == i314) {
+                return Integer.valueOf(314);
+            } else if (key == i235325) {
+                return Integer.valueOf(235325);
+            } else if (key == bTrue) {
+                return Boolean.TRUE;
+            } else if (key == bFalse) {
+                return Boolean.FALSE;
             }
             return null;
         }
-
-    };
-
-    private static ValueProvider bools = new ValueProvider() {
-        @Override
-        public Object getValue(PropertyReference key) {
-            if (key == blah) {
-                return true;
-            } else if (key == meh) {
-                return false;
-            }
-            return null;
-        }
-
     };
 
     public ExpressionTest(String name) {
@@ -74,40 +66,31 @@ public class ExpressionTest extends AuraImplExpressionTestCase {
     }
 
     public void testNumberExpression() throws Exception {
-        Expression e = new FunctionCallImpl(ADD, ImmutableList.<Expression> of(blah, meh), l);
-        Object o = e.evaluate(numbers);
+        Expression e = new FunctionCallImpl(ADD, ImmutableList.<Expression> of(i314, i235325), l);
+        Object o = e.evaluate(values);
         assertEquals(314 + 235325.0, o);
 
-        // (blah + meh) - (blah + blah)
+        // (i314 + i235325) - (i314 + i314)
         e = new FunctionCallImpl(SUBTRACT, ImmutableList.<Expression> of(e,
-                new FunctionCallImpl(ADD, ImmutableList.<Expression> of(blah, blah), l)), l);
-        o = e.evaluate(numbers);
+                new FunctionCallImpl(ADD, ImmutableList.<Expression> of(i314, i314), l)), l);
+        o = e.evaluate(values);
         assertEquals((314 + 235325.0) - (314 + 314), o);
 
         e = new FunctionCallImpl(SUBTRACT, ImmutableList.<Expression> of(e, new LiteralImpl(new BigDecimal(17), l)), l);
-        o = e.evaluate(numbers);
+        o = e.evaluate(values);
         assertEquals(((314 + 235325.0) - (314 + 314)) - 17, o);
     }
 
-    public void testBooleanExpression() throws Exception {
-        Expression e = new FunctionCallImpl(AND, ImmutableList.<Expression> of(blah, meh), l);
-        Object o = e.evaluate(bools);
-        assertEquals(false, o);
-
-        e = new FunctionCallImpl(OR, ImmutableList.<Expression> of(blah, meh), l);
-        o = e.evaluate(bools);
-        assertTrue("Expected boolean expression to be true", o);
-
-        e = new FunctionCallImpl(NOT, ImmutableList.<Expression> of(blah), l);
-        o = e.evaluate(bools);
-        assertFalse("Expected boolean expression to be false", o);
+    public void testBooleanComplex() throws Exception {
+        Expression e;
+        Object o;
 
         // true && (false || !true)
         e = new FunctionCallImpl(AND, ImmutableList.<Expression> of(
-                blah,
+                bTrue,
                 new FunctionCallImpl(OR, ImmutableList.<Expression> of(new LiteralImpl(false, l), new FunctionCallImpl(
                         NOT, ImmutableList.<Expression> of(new LiteralImpl(true, l)), l)), l)), l);
-        o = e.evaluate(bools);
+        o = e.evaluate(values);
         assertFalse("Expected boolean expression to be false", o);
     }
 

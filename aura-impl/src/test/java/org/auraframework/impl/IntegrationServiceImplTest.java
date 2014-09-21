@@ -32,6 +32,7 @@ import org.auraframework.system.AuraContext;
 import org.auraframework.system.AuraContext.Authentication;
 import org.auraframework.system.AuraContext.Format;
 import org.auraframework.system.AuraContext.Mode;
+import org.auraframework.test.AuraTestingMarkupUtil;
 import org.auraframework.throwable.AuraRuntimeException;
 import org.auraframework.throwable.quickfix.DefinitionNotFoundException;
 import org.auraframework.throwable.quickfix.QuickFixException;
@@ -55,13 +56,17 @@ public class IntegrationServiceImplTest extends AuraImplTestCase {
         super(name, false);
     }
 
+    AuraTestingMarkupUtil tmu;
+    
     private IntegrationService service;
     private final String simpleComponentTag = "ui:button";
+    private final String arraysComponentTag = "expressionTest:arrays";
 
     @Override
     public void setUp() throws Exception {
         super.setUp();
         service = Aura.getIntegrationService();
+        tmu = getAuraTestingMarkupUtil();
     }
 
     /**
@@ -134,7 +139,7 @@ public class IntegrationServiceImplTest extends AuraImplTestCase {
     public void testSanityCheck() throws Exception {
         assertNotNull("Failed to locate implementation of IntegrationService.", service);
 
-        Mode[] testModes = new Mode[] { Mode.UTEST, Mode.PROD };
+        Mode[] testModes = new Mode[] { Mode.UTEST, Mode.PROD, Mode.FTEST, Mode.JSTEST, Mode.JSTESTDEBUG, Mode.PRODDEBUG, Mode.PTEST, Mode.SELENIUM, Mode.STATS };
         for (Mode m : testModes) {
             Integration integration = service.createIntegration("", m, true, null, getNoDefaultPreloadsApp().getQualifiedName(), null);
             assertNotNull(String.format(
@@ -153,6 +158,7 @@ public class IntegrationServiceImplTest extends AuraImplTestCase {
 
     /**
      * Verify injecting multiple components using a single Integration Object.
+     * writeApplication will get skipped during second injection so we won't write html script&style twice
      */
     public void testInjectingMultipleComponents() throws Exception {
         DefDescriptor<ComponentDef> cmp1 = addSourceAutoCleanup(ComponentDef.class,
@@ -178,50 +184,63 @@ public class IntegrationServiceImplTest extends AuraImplTestCase {
         }
         assertEquals("Bootstrap template should be written out only once.", 1, counter);
     }
-
+    
     /**
      * Verify injection a component with different attribute types.
      * 
      * @throws Exception
      */
-    public void testAttributeTypes() throws Exception {
-        String attributeMarkup = "<aura:attribute name='strAttr' type='String'/>"
-                + "<aura:attribute name='booleanAttr' type='Boolean'/>"
-                + "<aura:attribute name='strList' type='List'/>"
-                + "<aura:attribute name='booleanArray' type='Boolean[]'/>"
-                + "<aura:attribute name='cmps' type='Aura.Component[]'/>"
-                + "<aura:attribute name='obj' type='Object'/>";
-        String attributeWithDefaultsMarkup = "<aura:attribute name='strAttrDefault' type='String' default='IS'/>"
-                + "<aura:attribute name='booleanAttrDefault' type='Boolean' default='true'/>"
-                + "<aura:attribute name='strListDefault' type='List' default='foo,bar'/>"
-                + "<aura:attribute name='booleanArrayDefault' type='Boolean[]' default='[true,false,false]'/>"
-                + "<aura:attribute name='objDefault' type='Object' default='fooBar'/>"
-                + "<aura:attribute name='cmpsDefault' type='Aura.Component[]'>" + "<div/><span/>text<p/>"
-                + "</aura:attribute>";
-
+    public void runTestAttributeTypes(boolean async) throws Exception {
+    	String attributeMarkup = tmu.getCommonAttributeMarkup(true, true, true, false)
+        		+tmu.getCommonAttributeListMarkup(true, true, true, false, false);
+    	String attributeWithDefaultsMarkup = 
+        		tmu.getCommonAttributeWithDefaultMarkup(true, true, true, false, 
+        				"'IS'", "'true'", "'fooBar'", "") +
+        		tmu.getCommonAttributeListWithDefaultMarkup(true, true, true, false, true,
+        				"'foo,bar'", "'Melon,Berry,Grapes'", "'[true,false,false]'","","<div/><span/>text<p/>");
+    	
         DefDescriptor<ComponentDef> cmp = addSourceAutoCleanup(ComponentDef.class,
                 String.format(baseComponentTag, "", attributeMarkup + attributeWithDefaultsMarkup));
         Map<String, Object> attributes = Maps.newHashMap();
         attributes.put("strAttr", "");
         attributes.put("booleanAttr", false);
         attributes.put("strList", Lists.newArrayList("food", "bared"));
-        attributes.put("booleanArray", new Boolean[] { true, false });
-        attributes.put("obj", "Object");
+        attributes.put("booleanList", new Boolean[] { true, false });
+        attributes.put("objAttr", "Object");
 
         Appendable out = new StringBuffer();
         Integration integration = createIntegration();
         try {
-            integration.injectComponent(cmp.getDescriptorName(), attributes, "", "", out);
+            integration.injectComponent(cmp.getDescriptorName(), attributes, "", "", out, async);
         } catch (Exception unexpected) {
             fail("Exception occured when injecting component with attribute values. Exception:"
                     + unexpected.getMessage());
         }
+    }
+    
+    /**
+     * Verify injection a component with different attribute types.
+     * 
+     * @throws Exception
+     */
+    public void  testAttributeTypes() throws Exception {
+    	runTestAttributeTypes(false);
+    }
+    
+    /**
+     * Verify injection a component with different attribute types.
+     * 
+     * @throws Exception
+     */
+    public void  testAttributeTypesAsync() throws Exception {
+    	runTestAttributeTypes(true);
     }
 
     /**
      * Verify initializing attributes and event handlers during component
      * injection.
      * @throws QuickFixException 
+     * W-2370679: this test pass, but adding handler function like this doesn't work.
      */
     public void testAttributesAndEvents() throws QuickFixException {
         String attributeMarkup = "<aura:attribute name='strAttr' type='String'/>"
@@ -234,6 +253,7 @@ public class IntegrationServiceImplTest extends AuraImplTestCase {
         Map<String, Object> attributes = Maps.newHashMap();
         attributes.put("strAttr", "");
         attributes.put("booleanAttr", false);
+        
         attributes.put("press", "function(e){alert('press')}");
         attributes.put("mouseout", "function(e){alert('mouseout')}");
 
@@ -265,7 +285,27 @@ public class IntegrationServiceImplTest extends AuraImplTestCase {
             assertEquals("Unknown attribute or event ui:button - fooBar", expected.getMessage());
         }
     }
-
+    
+    
+    /**
+     * Verify that pass attributes with wrong type to injected cmp will result in some exception.
+     * W-2359123: This is currently not throwing any error , the injected cmp will take whatever container gives it
+     */
+    public void _testAttributeTypeMismatch() throws Exception {
+        Map<String, Object> attributes = Maps.newHashMap();
+        attributes.put("stringArray", "I am not a list!");
+        Appendable out = new StringBuffer();
+        Integration integration = createIntegration();
+        try {
+            integration.injectComponent(arraysComponentTag, attributes, "", "", out);
+            fail("Passing attribute with wrong type should have failed.");
+        } catch (AuraRuntimeException expected) {
+            // TODO rework after ccollab: Earlier error message was like
+            // "Unknown attribute or event ui:button:fooBar"
+            assertEquals("Whatever we gonna throw ....", expected.getMessage());
+        }
+    }
+    
 	private Integration createIntegration() throws QuickFixException {
 		return service.createIntegration("", Mode.UTEST, true, null, getNoDefaultPreloadsApp().getQualifiedName(), null);
 	}
@@ -371,6 +411,24 @@ public class IntegrationServiceImplTest extends AuraImplTestCase {
         Integration integration = service.createIntegration("", Mode.UTEST, true, null, getNoDefaultPreloadsApp().getQualifiedName(), mockObserver);
         injectSimpleComponent(integration);
         Mockito.verify(mockObserver, Mockito.times(2)).contextEstablished(integration, cntx);
+    }
+
+    /**
+     * Test app used for integration should extend aura:integrationServiceApp
+     */
+    public void testAppDoesntExtendIntegrationApp() throws Exception {
+        String appMarkup = "<aura:application></aura:application>";
+        DefDescriptor<ApplicationDef> appDesc = getAuraTestingUtil().addSourceAutoCleanup(
+                ApplicationDef.class, appMarkup);
+        Map<String, Object> attributes = Maps.newHashMap();
+        Appendable out = new StringBuffer();
+        Integration integration = service.createIntegration("", Mode.UTEST, true, null, appDesc.getQualifiedName(), null);
+        try {
+            integration.injectComponent(simpleComponentTag, attributes, "", "", out);
+            fail("App used for integration should extend aura:integrationServiceApp");
+        } catch (AuraRuntimeException expected) {
+            assertEquals("Application must extend aura:integrationServiceApp.", expected.getMessage());
+        }
     }
     
     private void assertException(Integration obj, String tag, Map<String, Object> attributes, String localId,

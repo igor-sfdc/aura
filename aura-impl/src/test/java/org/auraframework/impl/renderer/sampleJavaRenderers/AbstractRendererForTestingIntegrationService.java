@@ -28,15 +28,16 @@ import org.auraframework.throwable.AuraRuntimeException;
 import org.auraframework.throwable.quickfix.QuickFixException;
 
 public abstract class AbstractRendererForTestingIntegrationService implements Renderer {
+
     protected void injectComponent(String tag, Map<String, Object> attributes, String localId, String locatorDomId,
-            Appendable out) throws AuraRuntimeException, QuickFixException, IOException {
+            Appendable out, boolean useAsync, String applicationTag) throws AuraRuntimeException, QuickFixException, IOException {
         ContextService contextService = Aura.getContextService();
         AuraContext ctx = contextService.getCurrentContext();
         contextService.endContext();
 
         Integration integration = Aura.getIntegrationService().createIntegration(
-                "", Mode.DEV, true, null, null, null);
-        integration.injectComponent(tag, attributes, localId, locatorDomId, out);
+                "", Mode.DEV, true, null, applicationTag, null);
+        integration.injectComponent(tag, attributes, localId, locatorDomId, out, useAsync);
 
         // The only not-so-ideal part of this approach to testing
         // IntegrationService is that we have to start the
@@ -45,4 +46,10 @@ public abstract class AbstractRendererForTestingIntegrationService implements Re
         contextService.startContext(ctx.getMode(), ctx.getFormat(), ctx.getAccess(),
                 ctx.getApplicationDescriptor());
     }
+    
+    protected void injectComponent(String tag, Map<String, Object> attributes, String localId, String locatorDomId,
+            Appendable out, boolean useAsync) throws AuraRuntimeException, QuickFixException, IOException {
+    	injectComponent(tag,attributes,localId,locatorDomId,out,useAsync,null);
+    }
+    
 }

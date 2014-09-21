@@ -18,7 +18,7 @@ package org.auraframework.perfTest;
 import java.util.Map;
 
 import org.auraframework.system.AuraContext.Mode;
-import org.auraframework.test.annotation.UnAdaptableTest;
+import org.auraframework.test.WebDriverTestCase.CheckAccessibility;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 
@@ -29,6 +29,7 @@ import com.google.common.collect.Maps;
  * 
  * Automation to verify UIPerf marks for rerender cycle.
  */
+@CheckAccessibility(false)
 public class RerenderMarksUITest extends PerfMetricsTestCase {
     public RerenderMarksUITest(String name) {
         super(name);
@@ -46,15 +47,16 @@ public class RerenderMarksUITest extends PerfMetricsTestCase {
         clearUIPerfStats();
         WebElement button = getDriver().findElement(By.cssSelector("button[class~='uiButton']"));
         button.click();
-        waitForElementTextPresent(getDriver().findElement(By.cssSelector("button[class~='uiButton']")), "clicked");
+        waitForElementTextPresent(getDriver().findElement(By.cssSelector("div[class~='changeCount']")), "1");
 
-        logStats.putAll(getUIPerfStats(Lists.newArrayList("Rerendering-2: ['markup://ui:button']")));
+        logStats.putAll(getUIPerfStats(Lists.newArrayList("Rerendering-2: ['markup://performanceTest:ui_button']")));
         assertFalse("Did not find UIPerf marks with component information for Rerender cycle.",
                 logStats.isEmpty());
         logStats.clear();
 
         button.click();
-        logStats.putAll(getUIPerfStats(Lists.newArrayList("Rerendering-3: ['markup://ui:button']")));
+        waitForElementTextPresent(getDriver().findElement(By.cssSelector("div[class~='changeCount']")), "2");
+        logStats.putAll(getUIPerfStats(Lists.newArrayList("Rerendering-3: ['markup://performanceTest:ui_button']")));
         assertFalse("Did not mark multiple Rerender of same component.",
                 logStats.isEmpty());
     }
@@ -65,7 +67,6 @@ public class RerenderMarksUITest extends PerfMetricsTestCase {
      * 
      * @throws Exception
      */
-    @UnAdaptableTest("we need a annotation for accessibility test : W-2312560")
     public void testRerenderMarksHaveAllComponentNames() throws Exception {
         Map<String, String> logStats = Maps.newHashMap();
         open("/performanceTest/perfApp.app", Mode.CADENCE);
@@ -85,8 +86,11 @@ public class RerenderMarksUITest extends PerfMetricsTestCase {
         // components
         WebElement innerButton = getDriver().findElement(By.cssSelector("button[class~='changeIteratonIndex']"));
         innerButton.click();
+        waitForElementDisappear("Iteration never rerendered after end index changed.",
+                By.xpath("//div[@class='performanceTestIterateBasicData']/table/tr[11]"));
+        // Changing iteration end index only rerenders iterations with number of items greater than new end index
         logStats.putAll(getUIPerfStats(Lists
-                .newArrayList("Rerendering-4: ['markup://performanceTest:perfApp','markup://aura:iteration','markup://aura:iteration','markup://aura:iteration']")));
+                .newArrayList("Rerendering-4: ['markup://performanceTest:perfApp','markup://aura:iteration','markup://aura:iteration']")));
         assertFalse("Multiple component Rerender should be marked with all componentNames.",
                 logStats.isEmpty());
         logStats.clear();

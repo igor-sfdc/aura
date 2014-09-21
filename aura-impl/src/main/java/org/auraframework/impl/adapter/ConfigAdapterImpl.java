@@ -72,23 +72,23 @@ public class ConfigAdapterImpl implements ConfigAdapter {
     private static final String TIMESTAMP_PROPERTY = "aura.build.timestamp";
     private static final String VERSION_PROPERTY = "aura.build.version";
     private static final String VALIDATE_CSS_CONFIG = "aura.css.validate";
-
+    
     private static final Set<String> SYSTEM_NAMESPACES = Sets.newHashSet();
 
-    private static final Set<String> UNSECURED_PREFIXES = new ImmutableSortedSet.Builder<String>(String.CASE_INSENSITIVE_ORDER).add("aura", "layout").build();
-
-    private static final Set<String> UNDOCUMENTED_NAMESPACES = new ImmutableSortedSet.Builder<String>(String.CASE_INSENSITIVE_ORDER).add("auradocs").build();
-
+    private static final Set<String> UNSECURED_PREFIXES = new ImmutableSortedSet.Builder<>(String.CASE_INSENSITIVE_ORDER).add("aura", "layout").build();
+    
+    private static final Set<String> UNDOCUMENTED_NAMESPACES = new ImmutableSortedSet.Builder<>(String.CASE_INSENSITIVE_ORDER).add("auradocs").build();
+    
     private static final Set<String> CACHEABLE_PREFIXES = ImmutableSet.of("aura", "java");
-
+    
     protected final Set<Mode> allModes = EnumSet.allOf(Mode.class);
     private JavascriptGroup jsGroup;
-    private ResourceLoader resourceLoader;
-    private Long buildTimestamp;
     private FileGroup resourcesGroup;
     private String jsUid = "";
     private String resourcesUid = "";
     private String fwUid = "";
+    private ResourceLoader resourceLoader;
+    private Long buildTimestamp;
     private String auraVersionString;
     private boolean lastGenerationHadCompilationErrors = false;
     private boolean validateCss;
@@ -202,7 +202,7 @@ public class ConfigAdapterImpl implements ConfigAdapter {
     public String getDefaultNamespace() {
         return null;
     }
-
+    
     @Override
     public boolean isUnsecuredPrefix(String prefix) {
         return UNSECURED_PREFIXES.contains(prefix);

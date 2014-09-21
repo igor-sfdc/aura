@@ -44,6 +44,7 @@ public abstract class AuraTestCase extends UnitTestCase {
     protected final static String baseComponentTag = "<aura:component %s>%s</aura:component>";
 
     private AuraTestingUtil auraTestingUtil;
+    private AuraTestingMarkupUtil auraTesingMarkupUtil;
 
     public AuraTestCase(String name) {
         super(name);
@@ -52,6 +53,7 @@ public abstract class AuraTestCase extends UnitTestCase {
     @Override
     public void setUp() throws Exception {
         super.setUp();
+        endContextIfEstablished();
         TestContextAdapter testContextAdapter = Aura.get(TestContextAdapter.class);
         if (testContextAdapter != null) {
             testContextAdapter.getTestContext(getQualifiedName());
@@ -69,10 +71,7 @@ public abstract class AuraTestCase extends UnitTestCase {
         } catch (Throwable t) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, t.getMessage(), t);
         }
-        ContextService contextService = Aura.getContextService();
-        if (contextService != null && contextService.isEstablished()) {
-            contextService.endContext();
-        }
+        endContextIfEstablished();
         TestContextAdapter testContextAdapter = Aura.get(TestContextAdapter.class);
         if (testContextAdapter != null) {
             testContextAdapter.release();
@@ -156,7 +155,7 @@ public abstract class AuraTestCase extends UnitTestCase {
      * 
      * @param e the exception to check.
      * @param clazz a class to match if it is not null.
-     * @param message The message to match (must be exact match).
+     * @param regex The regex string to match (must be exact match).
      * @param filename a 'file name' to match the location.
      */
     protected void checkExceptionRegex(Throwable e, Class<?> clazz, String regex, String filename) {
@@ -280,6 +279,13 @@ public abstract class AuraTestCase extends UnitTestCase {
         }
         return auraTestingUtil;
     }
+    
+    protected AuraTestingMarkupUtil getAuraTestingMarkupUtil() {
+        if (auraTesingMarkupUtil == null) {
+        	auraTesingMarkupUtil = new AuraTestingMarkupUtil();
+        }
+        return auraTesingMarkupUtil;
+    }
 
     protected DefDescriptor<ControllerDef> getClientController(BaseComponentDef def) throws Exception {
         for (DefDescriptor<ControllerDef> cd : def.getControllerDefDescriptors()) {
@@ -315,6 +321,13 @@ public abstract class AuraTestCase extends UnitTestCase {
             // If running from source, strip "file:" prefix, as in XMLParser.getLocation()
             String filePath = fileUrl.substring(5);
             assertLocation(e, filePath);
+        }
+    }
+
+    protected void endContextIfEstablished() {
+        ContextService contextService = Aura.getContextService();
+        if (contextService != null && contextService.isEstablished()) {
+            contextService.endContext();
         }
     }
 }

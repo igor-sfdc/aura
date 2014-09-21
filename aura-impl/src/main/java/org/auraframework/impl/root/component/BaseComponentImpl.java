@@ -64,8 +64,8 @@ import com.google.common.collect.Maps;
 public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends BaseComponent<D, I>> implements
         BaseComponent<D, I> {
     /**
-     * Top level component instance with attributes passed in. Builds out the
-     * tree recursively, but only after the attribute values are all set.
+     * Top level component instance with attributes passed in. Builds out the tree recursively, but only after the
+     * attribute values are all set.
      * 
      * @param descriptor
      * @param attributes
@@ -99,41 +99,24 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
     }
 
     /**
-     * Constructor used to create instances for all ComponentDefRefs, which come
-     * from both the children and the facets (attributes). Builds out the tree
-     * recursively, but only after all the attribute values, including facets
-     * are set.
+     * Constructor used to create instances for all ComponentDefRefs, which come from both the children and the facets
+     * (attributes). Builds out the tree recursively, but only after all the attribute values, including facets are set.
      * 
      * @throws QuickFixException
      */
     public BaseComponentImpl(DefDescriptor<D> descriptor, Collection<AttributeDefRef> attributeDefRefs,
             BaseComponent<?, ?> attributeValueProvider, String localId) throws QuickFixException {
-        //
-        // DANGER WILL ROBINSON!!!! DANGER WILL ROBINSON!!!
-        // Thit does not call finishComponent because it actually uses the version
-        // of the constructor immediately below, which has already called finishComponent.
-        //
-        this(descriptor, attributeDefRefs, attributeValueProvider, null, null);
-        this.localId = localId;
-    }
-
-    public BaseComponentImpl(DefDescriptor<D> descriptor, Collection<AttributeDefRef> attributeDefRefs,
-            BaseComponent<?, ?> attributeValueProvider, Map<String, Object> valueProviders,
-            ValueProvider delegateValueProvider) throws QuickFixException {
-        this(descriptor, attributeValueProvider, valueProviders, null, null);
+        this(descriptor, attributeValueProvider, null, null, null);
         LoggingService loggingService = Aura.getLoggingService();
         loggingService.startTimer(LoggingService.TIMER_COMPONENT_CREATION);
         try {
             this.attributeSet.set(attributeDefRefs);
-            this.delegateValueProvider = delegateValueProvider;
-            if (delegateValueProvider != null) {
-                this.valueProviders.remove(ValueProviderType.VIEW.getPrefix());
-            }
             finishInit();
         } finally {
             loggingService.stopTimer(LoggingService.TIMER_COMPONENT_CREATION);
         }
         Aura.getContextService().getCurrentContext().getInstanceStack().popInstance(this);
+        this.localId = localId;
     }
 
     /**
@@ -157,9 +140,8 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
     }
 
     /**
-     * The base constructor that the other 2 use to initialize the object, but
-     * not he attributes. Sets all defaults for attributes. Does not build out
-     * the tree recursively.
+     * The base constructor that the other 2 use to initialize the object, but not he attributes. Sets all defaults for
+     * attributes. Does not build out the tree recursively.
      * 
      * @param descriptor The descriptor for this component's definition
      * @param def TODO
@@ -172,25 +154,25 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
 
         InstanceStack instanceStack = context.getInstanceStack();
         Instance<?> parent = instanceStack.peek();
-		
+
         this.descriptor = descriptor;
         this.originalDescriptor = descriptor;
         this.path = instanceStack.getPath();
         instanceStack.pushInstance(this, descriptor);
-        
+
         if (def == null) {
             try {
                 def = descriptor.getDef();
                 if (extender == null && (def.isAbstract() || def.getLocalProviderDef() != null)) {
                     this.intfDescriptor = def.getDescriptor();
                 }
-                
+
                 desc = descriptor;
             } catch (DefinitionNotFoundException e) {
                 if (!e.getDescriptor().equals(descriptor)) {
                     throw e;
                 }
-                
+
                 DefDescriptor<InterfaceDef> intfDescriptor = DefDescriptorImpl.getInstance(
                         descriptor.getQualifiedName(), InterfaceDef.class);
                 InterfaceDef intfDef = intfDescriptor.getDef();
@@ -207,11 +189,11 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
         }
 
         MasterDefRegistry defRegistry = Aura.getDefinitionService().getDefRegistry();
-		if (parent != null) {
-	        // Insure that the parent is allowed to create an instance of this component
-        	defRegistry.assertAccess(parent.getDescriptor(), desc.getDef());
+        if (parent != null) {
+            // Insure that the parent is allowed to create an instance of this component
+            defRegistry.assertAccess(parent.getDescriptor(), desc.getDef());
         }
-        
+
         LoggingService loggingService = Aura.getLoggingService();
         loggingService.startTimer(LoggingService.TIMER_COMPONENT_CREATION);
         try {
@@ -222,16 +204,16 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
             if (valueProviders != null) {
                 this.valueProviders.putAll(valueProviders);
             }
-            
+
             this.valueProviders.put(ValueProviderType.VIEW.getPrefix(), attributeSet);
-            
+
             // def can be null if a definition not found exception was thrown for that definition. Odd.
             if (def != null) {
                 ControllerDef cd = def.getControllerDef();
                 if (cd != null) {
                     // Insure that this def is allowed to create an instance of the controller
-            		defRegistry.assertAccess(descriptor, cd);
-                	
+                    defRegistry.assertAccess(descriptor, cd);
+
                     this.valueProviders.put(ValueProviderType.CONTROLLER.getPrefix(), cd);
                 }
             }
@@ -259,7 +241,7 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
         def.retrieveLabels();
 
         DefDescriptor<RendererDef> rendererDesc = def.getRendererDescriptor();
-        if ((rendererDesc != null && rendererDesc.getDef().isLocal()) || !context.isPreloaded(getDescriptor())) {
+        if ((rendererDesc != null && rendererDesc.getDef().isLocal())) {
             hasLocalDependencies = true;
         }
         context.registerComponent(this);
@@ -286,7 +268,7 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
                     if (attributeSet.getValueProvider() != null) {
                         desc = attributeSet.getValueProvider().getDescriptor();
                     }
-                    
+
                     throw new MissingRequiredAttributeException(desc, attr.getName(), attr.getLocation());
                 }
             }
@@ -325,8 +307,7 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
     }
 
     /**
-     * this is only to serialize the general shape and ids, to ensure that we
-     * generate the same stuff in the client
+     * this is only to serialize the general shape and ids, to ensure that we generate the same stuff in the client
      */
     @Override
     public void serialize(Json json) throws IOException {
@@ -395,8 +376,8 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
         try {
             ModelDef modelDef = getComponentDef().getModelDef();
             if (modelDef != null) {
-            	Aura.getDefinitionService().getDefRegistry().assertAccess(descriptor, modelDef);
-            	
+                Aura.getDefinitionService().getDefRegistry().assertAccess(descriptor, modelDef);
+
                 model = modelDef.newInstance();
                 if (modelDef.hasMembers()) {
                     hasLocalDependencies = true;
@@ -410,8 +391,7 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
     }
 
     /**
-     * @return the next id to use, the ordering must match exactly what is
-     *         generated client side
+     * @return the next id to use, the ordering must match exactly what is generated client side
      */
     private static String getNextGlobalId() {
         AuraContext context = Aura.getContextService().getCurrentContext();
@@ -475,10 +455,6 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
                     return root;
                 }
             }
-            // try the delegate
-            if (delegateValueProvider != null) {
-                return delegateValueProvider.getValue(expr);
-            }
             return null;
         } finally {
             context.setCurrentComponent(oldComponent);
@@ -538,7 +514,7 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
             AttributeDef attr = foo.getValue();
             DefDescriptor<?> typeDesc;
             if (attr instanceof AttributeDefImpl) {
-                AttributeDefImpl attri = (AttributeDefImpl)attr;
+                AttributeDefImpl attri = (AttributeDefImpl) attr;
                 typeDesc = attri.getTypeDesc();
             } else {
                 // bad.
@@ -548,7 +524,7 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
                 Object val = getAttributes().getValue(foo.getKey().getName());
                 if (val instanceof List) {
                     @SuppressWarnings("unchecked")
-                    List<BaseComponent<?, ?>> facet = (List<BaseComponent<?, ?>>)val;
+                    List<BaseComponent<?, ?>> facet = (List<BaseComponent<?, ?>>) val;
                     for (BaseComponent<?, ?> c : facet) {
                         c.reinitializeModel();
                     }
@@ -565,7 +541,6 @@ public abstract class BaseComponentImpl<D extends BaseComponentDef, I extends Ba
     protected String localId;
     protected final AttributeSet attributeSet;
     private Model model;
-    private ValueProvider delegateValueProvider;
     protected I superComponent;
     protected I concreteComponent;
     protected boolean remoteProvider = false;

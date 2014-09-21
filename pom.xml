@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.auraframework</groupId>
     <artifactId>aura-framework</artifactId>
-    <version>0.1327-SNAPSHOT</version>
+    <version>0.1417-SNAPSHOT</version>
     <packaging>pom</packaging>
     <organization>
         <url>http://www.auraframework.org</url>
@@ -745,6 +745,24 @@
                             <version>1.6.4</version>
                         </dependency>
                     </dependencies>
+                </plugin>
+                <plugin>
+                    <groupId>org.auraframework</groupId>
+                    <artifactId>aura-tools</artifactId>
+                    <version>${project.version}</version>
+                    <executions>
+                        <execution>
+                            <id>aura:compile-components</id>
+                            <phase>disabled</phase>
+                            <configuration>
+                                <outputDir>target/generated-sources/components/</outputDir>
+                                <componentDir>src/main/components</componentDir>
+                            </configuration>
+                            <goals>
+                                <goal>compile-components</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
