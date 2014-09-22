@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 salesforce.com, inc.
+ * Copyright (C) 2014 salesforce.com, inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,7 +131,7 @@ static {
 
 static final String packageString =
 "/*\n" + 
-" * Copyright (C) 2013 salesforce.com, inc.\n" + 
+" * Copyright (C) 2014 salesforce.com, inc.\n" + 
 " *\n" + 
 " * Licensed under the Apache License, Version 2.0 (the \"License\");\n" + 
 " * you may not use this file except in compliance with the License.\n" + 

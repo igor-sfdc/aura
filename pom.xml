@@ -16,7 +16,7 @@
             <url>http://www.apache.org/licenses/LICENSE-2.0</url>
             <distribution>repo</distribution>
             <comments>
-                  Copyright (C) 2013 salesforce.com, inc.
+                  Copyright (C) 2014 salesforce.com, inc.
                  
                   Licensed under the Apache License, Version 2.0 (the "License");
                   you may not use this file except in compliance with the License.
@@ -484,7 +484,7 @@
                     <aggregate>true</aggregate>
                     <properties>
                         <owner>salesforce.com, inc.</owner>
-                        <year>2013</year>
+                        <year>2014</year>
                     </properties>
                     <includes>
                         <include>**/src/main/java/**</include>

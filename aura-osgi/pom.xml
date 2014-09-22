@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <properties>
         <!-- Tells bundle plugin whether to package sources specified in bnd.bnd -->
-        <packageSources>false</packageSources>
+        <packageSources>true</packageSources>
     </properties>
     <parent>
         <groupId>org.auraframework</groupId>
