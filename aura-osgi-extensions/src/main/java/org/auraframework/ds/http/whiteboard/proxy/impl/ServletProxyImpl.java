@@ -31,12 +31,12 @@ import org.auraframework.ds.log.AuraDSLog;
 
 /**
  * VirtualProxy pattern is applied to defer real servlet instantiation/initialization
- * 
+ *
  *
  *
  * @param <T> real servlet type
  */
-public abstract class ServletProxyImpl<T extends Servlet> 
+public abstract class ServletProxyImpl<T extends Servlet>
         extends HttpServiceProviderProxyImpl<T> implements ServletProxy<T>, Comparable<Object> {
 
     private ServletConfig servletConfig;
@@ -71,7 +71,7 @@ public abstract class ServletProxyImpl<T extends Servlet>
         this.servletConfig = servletConfig;
         setInitialized();
     }
-    
+
     @Override
     protected void init(T realServlet) throws ServletException {
         AuraDSLog.get().info("[" + realServlet.getClass().getSimpleName() + "] " + " Istantiated for " + alias);
@@ -88,9 +88,9 @@ public abstract class ServletProxyImpl<T extends Servlet>
     }
 
     private void logServiceRequest(ServletRequest request, T realServlet) {
-        HttpServletRequest httRequest = (HttpServletRequest)request;
-        String uri = httRequest.getRequestURI();
-        String qs = httRequest.getQueryString();
+        HttpServletRequest httpRequest = (HttpServletRequest)request;
+        String uri = httpRequest.getRequestURI();
+        String qs = httpRequest.getQueryString();
         qs = qs != null && !qs.isEmpty() ? "?" + qs : "";
         AuraDSLog.get().info("[" + realServlet.getClass().getSimpleName() + "] service request for " + uri + qs);
     }
@@ -104,7 +104,7 @@ public abstract class ServletProxyImpl<T extends Servlet>
     public int compareTo(Object otherObject) {
         return 0;
     }
-    
+
     @Override
     public String toString() {
         StringBuilder buffer = new StringBuilder();
@@ -116,5 +116,6 @@ public abstract class ServletProxyImpl<T extends Servlet>
         return buffer.toString();
     }
 
+    @Override
     abstract protected T newInstance();
 }

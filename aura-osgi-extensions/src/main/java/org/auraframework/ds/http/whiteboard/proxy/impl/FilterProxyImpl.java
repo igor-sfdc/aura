@@ -34,26 +34,26 @@ import org.auraframework.ds.log.AuraDSLog;
 
 /**
  * VirtualProxy pattern is applied to defer real filter instantiation/initialization
- * 
+ *
  *
  *
  * @param <T> real filter type
  */
-public abstract class FilterProxyImpl<T extends Filter> 
+public abstract class FilterProxyImpl<T extends Filter>
         extends HttpServiceProviderProxyImpl<T> implements FilterProxy<T>, Comparable<Object> {
 
     private FilterConfig filterConfig;
     final String patternStr;
     private final Pattern pattern;
     private final int ranking;
-    
+
     protected FilterProxyImpl(String patternStr, int ranking) {
         this.patternStr = patternStr;
         pattern = Pattern.compile(patternStr);
         this.ranking = ranking;
         AuraDSLog.get().info(getClass().getSimpleName() + " Instantiated");
     }
-    
+
     @Override
     public void destroy() {
         T realFilter = getRealProviderOptional();
@@ -73,10 +73,10 @@ public abstract class FilterProxyImpl<T extends Filter>
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain)
             throws IOException, ServletException {
-        HttpServletRequest httRequest = (HttpServletRequest)request;
-        if (matchesPattern(request, response, filterChain, httRequest)) {
+        HttpServletRequest httpRequest = (HttpServletRequest)request;
+        if (matchesPattern(request, response, filterChain, httpRequest)) {
             T realFilter = getRealProvider();
-            logFilterRequest(httRequest, realFilter);
+            logFilterRequest(httpRequest, realFilter);
             realFilter.doFilter(request, response, filterChain);
         } else {
             filterChain.doFilter(request, response);
@@ -85,18 +85,24 @@ public abstract class FilterProxyImpl<T extends Filter>
 
     private boolean matchesPattern(ServletRequest request,
             ServletResponse response, FilterChain filterChain,
-            HttpServletRequest httRequest) throws IOException, ServletException {
-        String uri = httRequest.getRequestURI();
-        Matcher matcher = pattern.matcher(uri);
+            HttpServletRequest httpRequest) throws IOException, ServletException {
+        String uri = httpRequest.getRequestURI();
+        String pathToMatch = uri;
+        String contextPath = httpRequest.getServletContext().getContextPath();
+        if (contextPath != null && contextPath.length() > 1 && pathToMatch.startsWith(contextPath)) {
+            pathToMatch = pathToMatch.substring(contextPath.length());
+        }
+        Matcher matcher = pattern.matcher(pathToMatch);
         return matcher.matches();
     }
 
-    private void logFilterRequest(HttpServletRequest httRequest, T realFilter) {
-        String qs = httRequest.getQueryString();
+    private void logFilterRequest(HttpServletRequest httpRequest, T realFilter) {
+        String qs = httpRequest.getQueryString();
         qs = qs != null && !qs.isEmpty() ? "?" + qs : "";
-        AuraDSLog.get().info("[" + realFilter.getClass().getSimpleName() + "] " + patternStr + " : " + " doFilter() for " + httRequest.getRequestURI() + qs );
+        AuraDSLog.get().info("[" + realFilter.getClass().getSimpleName() + "] " + patternStr + " : " + " doFilter() for " + httpRequest.getRequestURI() + qs );
     }
 
+    @Override
     protected abstract T newInstance();
 
     @Override
@@ -126,7 +132,7 @@ public abstract class FilterProxyImpl<T extends Filter>
             return 1;
         }
     }
-    
+
     @Override
     public String toString() {
         StringBuilder buffer = new StringBuilder();
