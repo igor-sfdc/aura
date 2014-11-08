@@ -36,7 +36,6 @@ import com.google.common.collect.ImmutableSortedSet;
  *
  * @since 0.0.178
  */
-@Component (provide=AuraServiceProvider.class)
 public class MockConfigAdapterImpl extends ConfigAdapterImpl implements MockConfigAdapter {
     private static final Set<String> SYSTEM_TEST_NAMESPACES = new ImmutableSortedSet.Builder<String>(String.CASE_INSENSITIVE_ORDER).add(
     		"auratest", "actionsTest", "attributesTest", "auraStorageTest", "gvpTest", "preloadTest", "clientLibraryTest", "clientApiTest",
