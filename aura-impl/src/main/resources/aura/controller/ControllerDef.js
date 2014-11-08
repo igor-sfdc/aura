@@ -15,7 +15,7 @@
  */
 /*jslint sub: true */
 /**
- * @namespace Creates a new ControllerDef, including the descriptor and action definitions.
+ * @description Creates a new ControllerDef, including the descriptor and action definitions.
  * A ControllerDef instance is created as part of the ComponentDef initialization.
  * @constructor
  * @param {Object} config
@@ -28,7 +28,7 @@ function ControllerDef(config){
     for(var i=0;i<actionDefs.length;i++){
         var actionDefConfig = actionDefs[i];
         var actionDef = $A.services.component.getActionDef(actionDefConfig);
-        this.actionDefs[actionDef.getName()] = actionDef;
+        this.actionDefs[actionDef.getName().toLowerCase()] = actionDef;
     }
 }
 
@@ -48,7 +48,7 @@ ControllerDef.prototype.getDescriptor = function(){
  * @returns {Object}
  */
 ControllerDef.prototype.getActionDef = function(key){
-    return this.actionDefs[key];
+    return this.actionDefs[key&&key.toLowerCase()];
 };
 
 /**
@@ -56,7 +56,7 @@ ControllerDef.prototype.getActionDef = function(key){
  * @param {String} key The data key to look up on the element.
  * @returns {Object} A new Action Definition instance
  */
-ControllerDef.prototype.getValue = function(key){
+ControllerDef.prototype.get = function(key){
     return this.getActionDef(key).newInstance();
 };
 

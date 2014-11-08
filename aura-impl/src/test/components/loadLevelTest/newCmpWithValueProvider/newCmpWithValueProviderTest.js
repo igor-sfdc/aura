@@ -14,14 +14,18 @@
  * limitations under the License.
  */
 ({
+	tearDown : function(cmp){
+		cmp._avp = null;
+		delete cmp._avp;
+	},
     /**
      * Create a new component whose definition was already preloaded and use the current component as attribute value provider.
      */
     testValueProviderForPreloadedDef:{
-        test:function(cmp){
-            $A.run(function(){
-                cmp.get('c.createCmpWithPreloadedDef').runDeprecated();
-            });
+        test:[ function(cmp){
+           
+             cmp.get('c.createCmpWithPreloadedDef').runDeprecated();
+        }, function(cmp) {
 
             var body = cmp.get('v.body');
             $A.test.assertEquals(1,body.length);
@@ -32,7 +36,7 @@
             var newTextCmp = cmp.find("txt_Id");
             $A.test.assertTruthy(newTextCmp, "Failed to find new Component with its localId");
             $A.test.assertEquals("markup://aura:text", newTextCmp.getDef().getDescriptor().getQualifiedName());
-        }
+        }]
     },
 
     /**
@@ -41,13 +45,10 @@
      */
     testPassThroughValueAsValueProvider:{
         test:[ function(cmp){
-            var avp;
-
-            $A.run(function(){
                 var a = cmp.get('c.createCmpWithPassthroughValue');
                 a.runDeprecated();
-                avp = a.getReturnValue();
-            });
+                cmp._avp = a.getReturnValue();
+        }, function(cmp) {
 
             //Verify that local ID can be used to find the component
             var newTextCmp = cmp.find("txt_Id");
@@ -56,9 +57,7 @@
             $A.test.assertEquals("markup://aura:text", newTextCmp.getDef().getDescriptor().getQualifiedName());
             $A.test.assertEquals("Washington", newTextCmp.get('v.value'));
             $A.test.assertEquals("Washington", $A.test.getText(newTextCmp.getElement()));
-            cmp._avp = avp;
-        },
-        function(cmp) {
+        }, function(cmp) {
             var newTextCmp = cmp.find("txt_Id");
             // this should test the valueprovider fix.
             cmp._avp.deIndex(newTextCmp);
@@ -92,7 +91,7 @@
     },
 
     /**
-     * Verify component with PropertyChain in MapValue attributes has correct values
+     * Verify component with PropertyReferenceValue in MapValue attributes has correct values
      */
     testMapValueProviderForDefFetchedFromServer:{
         test: function(cmp){
@@ -105,11 +104,12 @@
                 $A.test.assertEquals("markup://loadLevelTest:displayMap",
                     mapCmp.getDef().getDescriptor().getQualifiedName(),
                     "Failed to create new component: markup://loadLevelTest:displayMap");
-                $A.test.assertEquals("barFoo", mapCmp.get('v.map.propRef'), "Wrong value for v.map.propRef");
-                $A.test.assertEquals("barFoo", mapCmp.get('v.map.map2.propRef'), "Wrong value for v.map.map2.propRef");
-                mapCmp.set("v.stringAttribute", "fooBar");
-                $A.test.assertEquals("fooBar", mapCmp.get('v.map.propRef'), "Wrong value for v.map.propRef. Should be updated");
-                $A.test.assertEquals("fooBar", mapCmp.get('v.map.map2.propRef'), "Wrong value for v.map.map2.propRef. Should be updated");
+                $A.test.assertEquals("fooBar", mapCmp.get('v.map.propRef'), "Wrong value for v.map.propRef");
+                $A.test.assertEquals("fooBar", mapCmp.get('v.map.map2.propRef'), "Wrong value for v.map.map2.propRef");
+                
+                cmp.set("v.stringAttribute", "somethingNew");
+                $A.test.assertEquals("somethingNew", mapCmp.get('v.map.propRef'), "Wrong value for v.map.propRef. Should be updated");
+                $A.test.assertEquals("somethingNew", mapCmp.get('v.map.map2.propRef'), "Wrong value for v.map.map2.propRef. Should be updated");
 
                 // Verify that new Component was provided the local id specified in config
                 $A.test.assertTruthy(cmp.find("map_Id"), "Failed to find new Component with its localId");
@@ -163,15 +163,14 @@
      * The attributes of new component has no reference to attributes of the parent component.
      */
     testNewComponentWithoutDependenceOnAVP:{
-        test:function(cmp){
-            $A.run(function(){
+        test : [function(cmp){
                 cmp.get('c.createCmpWithNoRequirementForAVP').runDeprecated();
-            });
+            }, function(cmp){
 
             var body = cmp.get('v.body');
             $A.test.assertEquals(1,body.length);
             $A.test.assertEquals("markup://aura:text",body[0].getDef().getDescriptor().getQualifiedName());
             $A.test.assertEquals("SelfSustaining", $A.test.getText(body[0].getElement()));
-        }
+        }]
     }
 })

@@ -161,7 +161,7 @@
         }
     </aura:attribute>
     {!v.doctype}
-    <html manifest="{!v.manifest}" data-lm="{!v.lastMod}">
+    <html manifest="{!v.manifest}">
         <head>
             <title>{!v.title}</title>
             <script>var pageStartTime = (new Date()).getTime();</script>
@@ -267,15 +267,24 @@
             {!v.auraPreInitBlock}
 
             <script>
-            if ({!v.autoInitialize}) {
-                $A.initAsync({!v.auraInit});
-            }else if({!v.autoInitializeSync}){
-                $A.initConfig({!v.auraInitSync});
-            }
-            function dismissError() {
-                $A.util.removeClass(document.body,'auraError');
-                $A.util.removeClass(auraErrorMask,'auraForcedErrorBox');
-            }
+                if ({!v.autoInitialize}) {
+                    $A.initAsync({!v.auraInit});
+                } else if ({!v.autoInitializeSync}){
+                    $A.initConfig({!v.auraInitSync});
+                }
+                function dismissError() {
+                    $A.util.removeClass(document.body,'auraError');
+                    $A.util.removeClass(auraErrorMask,'auraForcedErrorBox');
+                }
+                // To support older browsers
+                if (window.addEventListener) {
+                    window.addEventListener('load', function() {
+                        // If server-side only aura rendering, window.FastClick won't be loaded
+                        if (window.FastClick) {
+                            window.FastClick.attach(document.body, {tapDelay: 100, touchBoundary: 10});
+                        }
+                    }, false);
+                }
             </script>
             
             {!v.auraInitBlock}

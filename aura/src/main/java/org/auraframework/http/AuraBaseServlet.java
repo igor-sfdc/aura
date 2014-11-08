@@ -18,6 +18,7 @@ package org.auraframework.http;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,6 +34,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.http.HttpHeaders;
 import org.auraframework.Aura;
 import org.auraframework.adapter.ConfigAdapter;
+import org.auraframework.adapter.ContentSecurityPolicy;
 import org.auraframework.adapter.ExceptionAdapter;
 import org.auraframework.def.ApplicationDef;
 import org.auraframework.def.BaseComponentDef;
@@ -46,7 +48,6 @@ import org.auraframework.system.AuraContext;
 import org.auraframework.system.AuraContext.Format;
 import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.system.MasterDefRegistry;
-import org.auraframework.system.SourceListener;
 import org.auraframework.throwable.AuraError;
 import org.auraframework.throwable.AuraRuntimeException;
 import org.auraframework.throwable.AuraUnhandledException;
@@ -87,14 +88,14 @@ public abstract class AuraBaseServlet extends HttpServlet {
     /** Baseline clickjack protection level for HDR_FRAME_OPTIONS header */
     public static final String HDR_FRAME_SAMEORIGIN = "SAMEORIGIN";
 
+    /** No-framing-at-all clickjack protection level for HDR_FRAME_OPTIONS header */
+    public static final String HDR_FRAME_DENY = "DENY";
+    /** Open, unprotected level for HDR_FRAME_OPTIONS header */
+    public static final String HDR_FRAME_ALLOW = "ALLOW";
+
     protected static MimetypesFileTypeMap mimeTypesMap = new MimetypesFileTypeMap();
     public static final String OUTDATED_MESSAGE = "OUTDATED";
     protected final static StringParam csrfToken = new StringParam(AURA_PREFIX + "token", 0, true);
-    private static SourceNotifier sourceNotifier = new SourceNotifier();
-
-    static {
-        Aura.getDefinitionService().subscribeToChangeNotification(sourceNotifier);
-    }
 
     protected static void addCookie(HttpServletResponse response, String name, String value, long expiry) {
         if (name != null) {
@@ -333,7 +334,6 @@ public abstract class AuraBaseServlet extends HttpServlet {
                 // that this is still a bit dangerous, as we seem to have a lot
                 // of magic in the serializer.
                 //
-                context.setSerializeLastMod(false);
                 Aura.getSerializationService().write(mappedEx, null, out);
                 if (format == Format.JSON) {
                     out.write("/*ERROR*/");
@@ -417,41 +417,6 @@ public abstract class AuraBaseServlet extends HttpServlet {
             }
         }
         return null;
-    }
-
-    // This routine is about to die!
-    public static long getLastMod() {
-        DefinitionService definitionService = Aura.getDefinitionService();
-        AuraContext context = Aura.getContextService().getCurrentContext();
-        DefDescriptor<? extends BaseComponentDef> app = context.getApplicationDescriptor();
-        Mode mode = context.getMode();
-        long appLastMod = -1;
-
-        // if there are conditions where cache must be disabled, set this boolean false
-        boolean useCache = (Aura.getConfigAdapter().isProduction() || (mode == Mode.PROD || mode == Mode.PTEST || mode == Mode.CADENCE));
-
-        if (app != null) {
-            if (useCache) {
-                Long tmp = lastModMap.get(app.getQualifiedName());
-                if (tmp != null) {
-                    appLastMod = tmp.longValue();
-                }
-            }
-            if (appLastMod == -1) {
-                try {
-                    String uid = definitionService.getDefRegistry().getUid(null, app);
-                    appLastMod = definitionService.getLastMod(uid);
-                    lastModMap.put(app.getQualifiedName(), Long.valueOf(appLastMod));
-                } catch (QuickFixException qfe) {
-                    // ignore. the QFE will get thrown elsewhere.
-                }
-            }
-        }
-        long lastMod = Aura.getConfigAdapter().getAuraJSLastMod();
-        if (appLastMod > lastMod) {
-            lastMod = appLastMod;
-        }
-        return lastMod;
     }
 
     protected DefDescriptor<?> setupQuickFix(AuraContext context) {
@@ -539,6 +504,7 @@ public abstract class AuraBaseServlet extends HttpServlet {
         }
 
         ret.add(config.getMomentJSURL());
+        ret.add(config.getFastClickJSURL());
         ret.addAll(config.getWalltimeJSURLs());
 
         ret.addAll(getClientLibraryUrls(context, ClientLibraryDef.Type.JS));
@@ -577,18 +543,32 @@ public abstract class AuraBaseServlet extends HttpServlet {
     /**
      * Sets mandatory headers, notably for anti-clickjacking.
      */
-    protected void setBasicHeaders(HttpServletResponse rsp) {
-        rsp.setHeader(HDR_FRAME_OPTIONS, HDR_FRAME_SAMEORIGIN);   
-    }
+    protected void setBasicHeaders(DefDescriptor top, HttpServletRequest req, HttpServletResponse rsp) {
+        ContentSecurityPolicy csp = Aura.getConfigAdapter().getContentSecurityPolicy(
+                top == null ? null : top.getQualifiedName(), req);
 
-    /**
-     * Singleton class to manage external calls to the parent class' static cache
-     */
-    private static class SourceNotifier implements SourceListener {
-        @Override
-        public void onSourceChanged(DefDescriptor<?> source, SourceMonitorEvent event, String filePath) {
-            lastModMap.clear();
+        if (csp != null) {
+            rsp.setHeader(CSP.Header.SECURE, csp.getCspHeaderValue());
+            Collection<String> terms = csp.getFrameAncestors();
+            if (terms == null) {
+                // open to the world
+                rsp.setHeader(HDR_FRAME_OPTIONS, HDR_FRAME_ALLOW);
+            } else {
+                if (terms.size() == 0) {
+                    // closed to any framing at all
+                    rsp.setHeader(HDR_FRAME_OPTIONS, HDR_FRAME_DENY);
+                } else {
+                    for (String site : terms) {
+                        if (site == null) {
+                            // Add same-origin headers and policy terms
+                            rsp.addHeader(HDR_FRAME_OPTIONS, HDR_FRAME_SAMEORIGIN);
+                        } else {
+                            rsp.addHeader(HDR_FRAME_OPTIONS, site);
+                        }
+                    }
+                }
+            }
+
         }
     }
-
 }

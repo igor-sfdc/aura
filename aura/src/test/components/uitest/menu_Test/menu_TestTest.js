@@ -18,7 +18,10 @@
 	 * Test to verify action menu works when interacting with the menu items
 	 * using AURA API  
 	 */
+	owner:"ronak.shah",
+	
 	testActionMenu:{
+		owner:"ctatlah,ronak.shah",
 		test: [function(cmp) {
 				actionMenu = cmp.find("actionMenu");
 	        	menuLabel = cmp.find("trigger");
@@ -30,7 +33,7 @@
 	        	$A.test.assertTrue($A.util.hasClass(actionMenu.getElement(),"uiMenuList"), "Class name should be just uiMenuList");
 	        	$A.test.assertFalse($A.util.hasClass(actionMenu.getElement(),"visible"), "Class name should not contain visible");
 	        	menuLabel.get("e.click").fire();
-	            
+
 	            //Check if secondItem in the menu is disabled
 	            $A.test.addWaitForWithFailureMessage(true, function(){return cmp.find("actionItem2").get("v.disabled");}, "Check if Item2 in the menu is disabled");
 			}, function(cmp) {
@@ -64,7 +67,7 @@
 	 * using AURA API  
 	 */
     testCheckboxMenu:{
-		test: [function(cmp) {
+    	test: [function(cmp) {
 				menuLabel = cmp.find("checkboxMenuLabel");
 				checkboxMenu = cmp.find("checkboxMenu");
 				ouptutButton = cmp.find("checkboxButton");
@@ -111,13 +114,13 @@
 	 * using AURA API  
 	 */
     testRadioMenu:{
-		test: [function(cmp) {
+    	test: [function(cmp) {
 				menuLabel = cmp.find("radioMenuLabel");
 				radioMenu = cmp.find("radioMenu");
 				ouptutButton = cmp.find("radioButton");
 				item1 = cmp.find("radioItem1")
 				item2 = cmp.find("radioItem2")
-				
+
 				menuLabel.get("e.click").fire();
 				//check if menu is visible
 				$A.test.addWaitForWithFailureMessage(true, function(){return $A.util.hasClass(radioMenu.getElement(),"visible")}, "Radio Menu should be visible");
@@ -150,7 +153,7 @@
 	 * Test Case for W-1617363, W-1617518 
 	 */
     testRadioMenuCreatedByIteration:{
-		test: [function(cmp) {
+    	test: [function(cmp) {
 				menuLabel = cmp.find("iterationTrigger");
 				radioMenu = cmp.find("iterationRadioMenu");
 				ouptutButton = cmp.find("radioIterationButton");
@@ -185,7 +188,7 @@
 				//menu item 1 should be unchecked after selecting item2
 				$A.test.assertFalse(item1.get('v.selected'),"Radio Menu item 1 should be unchecked");
 				menuLabel.get("e.click").fire();
-				$A.test.addWaitForWithFailureMessage(false, 
+				$A.test.addWaitForWithFailureMessage(false,
 						function(){
 							return $A.util.hasClass(radioMenu.getElement(),"visible")
 						}, "Radio Menu created by Iteration should not be visible");
@@ -205,13 +208,14 @@
 	 * General Test to verify focus on menu item using AURA API  
 	 */
     testFocusOnMenuItem:{
-    	test:function(cmp){
+    	test : [function(cmp){
 				trigger = cmp.find("trigger");
 				trigger.get("e.click").fire();
+    	},function(cmp){
 				var menuItem3 = cmp.find("actionItem3");
 				menuItem3.get("e.mouseover").fire();
 				$A.test.addWaitForWithFailureMessage(menuItem3.get('v.label'), function(){return $A.test.getActiveElementText()}, "Focus should be on item 3");
-			}
+			}]
 	},
     
     /**
@@ -284,7 +288,7 @@
 	        	$A.test.assertTrue($A.util.hasClass(actionMenu.getElement(),"uiMenuList"), "Class name should be just uiMenuList");
 	        	$A.test.assertFalse($A.util.hasClass(actionMenu.getElement(),"visible"), "Class name should not contain visible");
 	        	menuLabel.get("e.click").fire();
-	            
+
 	            //Check if secondItem in the menu is disabled
 	            $A.test.addWaitForWithFailureMessage(true, function(){return cmp.find("actionItem2").get("v.disabled");}, "Check if Item2 in the menu is disabled");
 			}, function(cmp) {
@@ -313,5 +317,28 @@
 	        	$A.test.assertFalse(actionMenu.get('v.visible'),"Menu should not be visible after selecting actionItem4");
 	        }
 	   ]
-   }
+   },
+   /**
+    * Test to verify menuSelect event is fired only 1 time upon selecting a menu item and not multiple times
+    * Test Case: W-2413902
+    */
+   testMenuSelectEventFiredOncePerMenuItemClick:{
+   	test: [function(cmp) {
+   			trigger = cmp.find("triggercheckPosition");
+			menuList = cmp.find("checkPosition");
+			menuListElement = menuList.getElement();
+			$A.test.assertEquals(0, cmp.get("v.menuSelectFireCount"),"menuSelect event should not be fired yet");
+			item1 = cmp.find("checkPositionItem1");
+			trigger.get("e.click").fire();
+			$A.test.addWaitForWithFailureMessage(true, function(){return $A.util.hasClass(menuList.getElement(),"visible")}, "Menu list Should be visible");
+		},function(cmp){
+			//click item1
+			item1.get("e.click").fire();
+			$A.test.addWaitForWithFailureMessage(false, function(){return $A.util.hasClass(menuList.getElement(),"visible")}, "Menu list Should not be visible");
+		}, function(cmp){
+			//make sure menuSelect event is fired only once
+			$A.test.assertEquals(1, cmp.get("v.menuSelectFireCount"),"menuSelect event should be fired only once");
+		}
+	]
+  }
 })

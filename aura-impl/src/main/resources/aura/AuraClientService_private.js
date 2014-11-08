@@ -64,6 +64,7 @@ var priv = {
     loadEventQueue : [],
     appcacheDownloadingEventFired : false,
     isOutdated : false,
+    isUnloading : false,
     initDefsObservers : [],
     isDisconnected : false,
     foreground : new $A.ns.FlightCounter(1),
@@ -76,6 +77,10 @@ var priv = {
      * @private
      */
     checkAndDecodeResponse : function(response, noStrip) {
+        if (priv.isUnloading) {
+            return null;
+        }
+
         var e;
 
         // failure to communicate with server
@@ -234,13 +239,13 @@ var priv = {
      * Note that it does this inside an $A.run to provide protection against error returns, and to notify the user if an
      * error occurs.
      * 
-     * @private
      * @param {Action}
      *            action the action.
      * @param {Boolean}
      *            noAbort if false abortable actions will be aborted.
      * @param {Object}
      *            actionResponse the server response.
+     * @private
      */
     singleAction : function(action, noAbort, actionResponse) {
         var key = action.getStorageKey();
@@ -255,7 +260,7 @@ var priv = {
                 	action.finishAction($A.getContext());
                 }
                 if (action.isRefreshAction()) {
-                    action.fireRefreshEvent("refreshEnd");
+                    action.fireRefreshEvent("refreshEnd", needUpdate);
                 }
             } else {
                 action.abort();
@@ -289,7 +294,6 @@ var priv = {
      * This function does all of the processing for a set of actions that come back from the server. It correctly deals
      * with the case of interrupted communications, and handles aborts.
      * 
-     * @private
      * @param {Object}
      *            response the response from the server.
      * @param {ActionCollector}
@@ -298,6 +302,7 @@ var priv = {
      *            the in flight counter under which the actions were run
      * @param {Scalar}
      *            the abortableId associated with the set of actions.
+     * @private
      */
     actionCallback : function(response, collector, flightCounter, abortableId) {
         var responseMessage = this.checkAndDecodeResponse(response);
@@ -341,7 +346,7 @@ var priv = {
                     priv.token = token;
                 }
 
-                $A.getContext().join(responseMessage["context"]);
+                $A.getContext().merge(responseMessage["context"]);
 
                 // Look for any Client side event exceptions
                 var events = responseMessage["events"];
@@ -382,7 +387,7 @@ var priv = {
                     }
                     that.singleAction(action, noAbort, actionResponse);
                 }
-            } else if (priv.isDisconnectedOrCancelled(response)) {
+            } else if (priv.isDisconnectedOrCancelled(response) && !priv.isUnloading) {
                 var actions = collector.getActionsToSend();
 
                 for ( var m = 0; m < actions.length; m++) {
@@ -426,11 +431,11 @@ var priv = {
      * This function should never be called unless flightCounter.start() was called and returned true (meaning there is
      * capacity in the channel).
      * 
-     * @private
      * @param {Array}
      *            actions the list of actions to process.
      * @param {FlightCounter}
      *            the flight counter under which the actions should be run.
+     * @private
      */
     request : function(actions, flightCounter) {
         $A.Perf.mark("AuraClientService.request");
@@ -778,6 +783,13 @@ var priv = {
         }
     }
 };
+
+$A.ns.Util.prototype.on(window, "beforeunload", function(event) {
+    if (!$A.util.isIE) {
+        priv.isUnloading = true;
+        priv.requestQueue = [];
+    }
+});
 
 $A.ns.Util.prototype.on(window, "load", function(event) {
     // Lazy load data-src scripts

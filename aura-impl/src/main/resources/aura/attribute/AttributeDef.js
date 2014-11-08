@@ -1,4 +1,4 @@
-/*
+    /*
  * Copyright (C) 2013 salesforce.com, inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,7 @@
  */
 /*jslint sub: true */
 /**
- * @namespace Creates a new AttributeDef instance, including the descriptor.
+ * @description Creates a new AttributeDef instance, including the descriptor.
  * @constructor
  * @param {Object} config
  */
@@ -23,6 +23,22 @@ function AttributeDef(config){
     this.descriptor = new DefDescriptor(config["name"]);
     this.typeDefDescriptor = config["type"];
     this.defaultValue = config["default"];
+    if(this.defaultValue === undefined){
+        // KRIS: So if you specify any data type as an array (Boolean[], String[]) and then don't specify a defaultValue, it should be array.
+        // Obviously would be nice if we fixed this on the server.
+        // if(this.typeDefDescriptor === "aura://Aura.Component[]" || this.typeDefDescriptor === "aura://Aura.ComponentDefRef[]"){
+        //     this.defaultValue=[];
+        // }
+
+        // KRIS: GORDON is going to fix this by returning the proper default value.
+        // at which point we can remove this whole this.defaultValue === undefined block
+        var nativeType = this.getNativeType();
+        if(nativeType==="object") {
+            this.defaultValue=null;
+        } else if(nativeType==="array") {
+            this.defaultValue=[];   
+        }
+    }
     this.required = config["required"] === true;
 }
 
@@ -47,8 +63,9 @@ AttributeDef.prototype.isRequired = function(){
 
 /**
  * Gets the type definition. Returns a TypeDef object.
- * @private
+ * 
  * @returns {TypeDef}
+ * @private
  */
 AttributeDef.prototype.getTypeDef = function(){
     return this.typeDef;
@@ -59,16 +76,37 @@ AttributeDef.prototype.getTypeDef = function(){
  * @returns {Object}
  */
 AttributeDef.prototype.getDefault = function(){
-    return this.defaultValue;
+    return $A.util.copy(this.defaultValue);
 };
 
 /**
  * Gets the type of the definition descriptor.
- * @private
+ * 
  * @returns {String}
+ * @private
  */
 AttributeDef.prototype.getTypeDefDescriptor = function(){
     return this.typeDefDescriptor;
+};
+
+AttributeDef.prototype.getNativeType = function() {
+    $A.assert(this.typeDefDescriptor, "getNativeType() failed as there was no typeDefDescriptor for attribute " + this.getDescriptor() + ". Eacha attribute must have a definition before being set.");
+    if(this.typeDefDescriptor.lastIndexOf("[]") === this.typeDefDescriptor.length - 2) {
+        return "array";
+    }
+
+    switch(this.typeDefDescriptor) {
+        case "aura://List": return "array";
+        case "aura://Boolean": return "boolean";
+        case "aura://String":  return "string";
+        case "aura://Decimal": return "number";
+        case "aura://Number":  return "number";
+        case "aura://Integer": return "number";
+        //case "aura://Map": return "object";
+    }
+
+    // What would we be missing? Error out?
+    return "object";
 };
 
 //#include aura.attribute.AttributeDef_export

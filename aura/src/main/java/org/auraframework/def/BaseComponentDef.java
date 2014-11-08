@@ -53,14 +53,14 @@ public interface BaseComponentDef extends RootDefinition {
      * @throws QuickFixException
      */
     Collection<EventHandlerDef> getHandlerDefs() throws QuickFixException;
-    
+
     /**
      * Get the library import statements for the component.
      * 
      * @return all library requirements on this component, including those inherited
      * @throws QuickFixException
      */
-	Collection<ImportDef> getImportDefs() throws QuickFixException;
+    Collection<ImportDef> getImportDefs() throws QuickFixException;
 
     DefDescriptor<ModelDef> getLocalModelDefDescriptor();
 
@@ -73,6 +73,7 @@ public interface BaseComponentDef extends RootDefinition {
     ModelDef getModelDef() throws QuickFixException;
 
     ControllerDef getControllerDef() throws QuickFixException;
+    ControllerDef getDeclaredControllerDef() throws QuickFixException;
 
     DefDescriptor<? extends BaseComponentDef> getExtendsDescriptor();
 
@@ -89,6 +90,8 @@ public interface BaseComponentDef extends RootDefinition {
     boolean isLocallyRenderable() throws QuickFixException;
 
     ComponentDef getTemplateDef() throws QuickFixException;
+
+    DefDescriptor<DesignDef> getDesignDefDescriptor();
 
     DefDescriptor<ComponentDef> getTemplateDefDescriptor();
 
@@ -123,6 +126,7 @@ public interface BaseComponentDef extends RootDefinition {
 
     /**
      * Adds specified client libraries to definition
+     * 
      * @param clientLibs list of client libraries
      */
     void addClientLibs(List<ClientLibraryDef> clientLibs);

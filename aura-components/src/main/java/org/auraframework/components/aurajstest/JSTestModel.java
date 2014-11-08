@@ -76,7 +76,7 @@ public class JSTestModel {
             List<TestCaseDef> temp = descriptor.getDef().getTestCaseDefs();
             for (TestCaseDef t : temp) {
                 if (t.getName().equals(test)) {
-                    List<TestCaseDef> testCases = new ArrayList<TestCaseDef>();
+                    List<TestCaseDef> testCases = new ArrayList<>();
                     testCases.add(t);
                     return testCases;
                 }
@@ -100,8 +100,4 @@ public class JSTestModel {
         return url;
     }
 
-    @AuraEnabled
-    public Boolean getIsHybrid() {
-        return url.contains("/hybridContainerTest/");
-    }
 }

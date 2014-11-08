@@ -15,7 +15,7 @@
  */
 /*jslint sub: true */
 /**
- * @namespace Label Queue. Holds the components and callbacks for a particular $Label.
+ * @description Label Queue. Holds the components and callbacks for a particular $Label.
  * Queues request for the same $Label to make server calls efficient
  *
  * @constructor
@@ -42,7 +42,7 @@ $A.ns.LabelQueue.prototype.addComponent = function(component) {
 
 /**
  * SimpleValues getter
- * @return {SimpleValue[]} array of SimpleValues
+ * @return {String[]} array of Strings
  */
 $A.ns.LabelQueue.prototype.getReturnValues = function() {
     return this.returnValues;
@@ -50,7 +50,7 @@ $A.ns.LabelQueue.prototype.getReturnValues = function() {
 
 /**
  * Add SimpleValue to return values
- * @param {SimpleValue} value
+ * @param {String} value
  */
 $A.ns.LabelQueue.prototype.addReturnValue = function(value) {
     this.returnValues.push(value);

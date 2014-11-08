@@ -15,7 +15,7 @@
  */
 /*jslint sub: true */
 /**
- * @namespace The Aura Event Service, accessible using $A.eventService. Creates and Manages Events.
+ * @description The Aura Event Service, accessible using $A.eventService. Creates and Manages Events.
  * @constructor
  */
 var AuraEventService = function() {
@@ -56,7 +56,7 @@ var AuraEventService = function() {
          * @memberOf AuraEventService
          * @public
          */
-        getValue : function(name) {
+        get : function(name) {
             return $A.services.event.newEvent(name);
         },
 

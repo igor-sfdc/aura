@@ -16,7 +16,7 @@
 /*jslint sub: true */
 
 /**
- * @namespace The value Object used in the backing store of the MemoryStorageAdapter.
+ * @description The value Object used in the backing store of the MemoryStorageAdapter.
  * @constructor
  */
 var MemoryStorageValue = function MemoryStorageValue(item, size) {
@@ -33,7 +33,7 @@ MemoryStorageValue.prototype.getSize = function() {
 };
 
 /**
- * @namespace The Memory adapter for storage service implementation
+ * @description The Memory adapter for storage service implementation
  * @constructor
  */
 var MemoryStorageAdapter = function MemoryStorageAdapter(config) {
@@ -190,7 +190,8 @@ MemoryStorageAdapter.prototype.evict = function(spaceNeeded) {
                     spaceReclaimed += itemRemoved.getSize();
 
                     if (that.debugLoggingEnabled) {
-                        $A.logInternal("MemoryStorageAdapter.evict(): evicted", [key, itemRemoved, spaceReclaimed]);
+                        var msg = ["MemoryStorageAdapter.evict(): evicted", key, itemRemoved, spaceReclaimed].join(" ");
+                        $A.log(msg);
                     }
 
                     if(spaceReclaimed > spaceNeeded || that.mru.length <= 0) {

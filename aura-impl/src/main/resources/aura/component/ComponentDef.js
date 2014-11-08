@@ -15,8 +15,11 @@
  */
 /*jslint sub: true */
 /**
- * @class Constructs a new ComponentDef object, which is a component definition.
- *        A ComponentDef instance is created as part of Aura initialization.
+ * @class ComponentDef
+ *
+ * Constructs a new ComponentDef object, which is a component definition.
+ * A ComponentDef instance is created as part of Aura initialization.
+ *
  * @constructor
  * @protected
  */
@@ -312,11 +315,22 @@ $A.ns.ComponentDef.prototype.getControllerDef = function() {
 
 /**
  * Gets the model definition. Returns a ModelDef object.
- * 
+ *
  * @returns {ModelDef}
  */
 $A.ns.ComponentDef.prototype.getModelDef = function() {
     return this.modelDef;
+};
+
+/**
+ * Value Event Enum
+ *
+ * @returns {ModelDef}
+ */
+$A.ns.ComponentDef.valueEvents = {
+    "change" : "aura:valueChange",
+    "init" : "aura:valueInit",
+    "destroy" : "aura:valueDestroy"
 };
 
 /**
@@ -331,7 +345,10 @@ $A.ns.ComponentDef.prototype.getModelDef = function() {
 $A.ns.ComponentDef.prototype.getEventDef = function(name, includeValueEvents) {
     var ret = this.registerEventDefs[name];
     if (!ret && includeValueEvents) {
-        ret = BaseValue.getEventDef(name);
+        if ($A.ns.ComponentDef.valueEvents.hasOwnProperty(name)) {
+            name = $A.ns.ComponentDef.valueEvents[name];
+        }
+        ret=$A.get("e").getEventDef(name);
     }
     return ret;
 };
