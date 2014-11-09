@@ -92,6 +92,7 @@
         <module>aura-integration-test</module>
         <module>auradocs-integration-test</module>
         <module>aura-archetype</module>
+        <module>aura-osgi-api</module>
     </modules>
     <scm>
         <connection>scm:git:git@github.com:forcedotcom/lumen-beta.git</connection>
@@ -184,6 +185,11 @@
                 <type>test-jar</type>
                 <version>0.1529-SNAPSHOT</version>
             </dependency>
+	        <dependency>
+	        	<groupId>org.auraframework</groupId>
+	        	<artifactId>aura-osgi-api</artifactId>
+	        	<version>0.1529-SNAPSHOT</version>
+	        </dependency>
             <dependency>
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
@@ -366,6 +372,11 @@
                 <groupId>com.salesforce</groupId>
                 <artifactId>omakase</artifactId>
                 <version>0.2.1</version>
+            </dependency>
+            <dependency>
+                <groupId>biz.aQute</groupId>
+                <artifactId>bnd</artifactId>
+                <version>1.50.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

@@ -21,11 +21,15 @@ import java.util.Collection;
 import javax.annotation.concurrent.ThreadSafe;
 
 import org.auraframework.def.StyleDef;
+import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.throwable.quickfix.QuickFixException;
+
+import aQute.bnd.annotation.component.Component;
 
 /**
  */
 @ThreadSafe
+@Component (provide=AuraServiceProvider.class)
 public class StyleDefCSSFormatAdapter extends CSSFormatAdapter<StyleDef> {
 
     @Override

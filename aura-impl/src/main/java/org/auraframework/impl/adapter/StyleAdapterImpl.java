@@ -21,9 +21,13 @@ import org.auraframework.css.ThemeList;
 import org.auraframework.css.ThemeValueProvider;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.StyleDef;
+import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.impl.css.ThemeValueProviderImpl;
 import org.auraframework.throwable.quickfix.QuickFixException;
 
+import aQute.bnd.annotation.component.Component;
+
+@Component (provide=AuraServiceProvider.class)
 public final class StyleAdapterImpl implements StyleAdapter {
     @Override
     public ThemeValueProvider getThemeValueProvider(DefDescriptor<StyleDef> descriptor) throws QuickFixException {
