@@ -16,7 +16,7 @@ The latest Maven version 3.1.0 has problems with one of the plugins being used h
     cd <path-to-local-repo>
     git clone https://github.com/igor-sfdc/aura
     cd <path-to-local-repo>/aura
-    mvn install -DskipUnitTests -DstartLauncher -DstartBrowser -DhttpPort=9090
+    mvn clean install -DskipUnitTests -DstartLauncher -DstartBrowser -DhttpPort=9090
 
 Your default browser should automatically open Auradocs application. If
 it does not then try manually navigating to: 
@@ -31,8 +31,8 @@ it does not then try manually navigating to:
     cd <path-to-local-repo>/aura
     git submodule init
     git submodule update
-    mvn install -DskipUnitTests
-    mvn install -f aura-note/pom.xml
+    mvn clean install -DskipUnitTests
+    mvn clean install -f aura-note/pom.xml
     mvn install -pl osgi-launcher -DstartLauncher -DstartBrowser -DhttpPort=9090
 
 After your default browser opens Auradocs page navigate to Aura-note:

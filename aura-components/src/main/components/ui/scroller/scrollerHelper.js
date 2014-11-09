@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 salesforce.com, inc.
+ * Copyright (C) 2013 salesforce.com, inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -487,7 +487,7 @@ _initScrollerPlugins: function () {
 },
 _initScroller: function () {
     /*
- * Copyright (C) 2014 salesforce.com, inc.
+ * Copyright (C) 2013 salesforce.com, inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2154,7 +2154,7 @@ _initScroller: function () {
 },
 _initSurfaceManagerPlugin: function () {
     /*
- * Copyright (C) 2014 salesforce.com, inc.
+ * Copyright (C) 2013 salesforce.com, inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2715,7 +2715,7 @@ _initSurfaceManagerPlugin: function () {
 },
 _initIndicatorsPlugin: function () {
     /*
- * Copyright (C) 2014 salesforce.com, inc.
+ * Copyright (C) 2013 salesforce.com, inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3202,7 +3202,7 @@ _initIndicatorsPlugin: function () {
 },
 _initPullToRefreshPlugin: function () {
     /*
- * Copyright (C) 2014 salesforce.com, inc.
+ * Copyright (C) 2013 salesforce.com, inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3446,7 +3446,7 @@ _initPullToRefreshPlugin: function () {
 },
 _initPullToLoadMorePlugin: function () {
     /*
- * Copyright (C) 2014 salesforce.com, inc.
+ * Copyright (C) 2013 salesforce.com, inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3729,7 +3729,7 @@ _initPullToLoadMorePlugin: function () {
 },
 _initInfiniteLoadingPlugin: function () {
     /*
- * Copyright (C) 2014 salesforce.com, inc.
+ * Copyright (C) 2013 salesforce.com, inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3875,7 +3875,7 @@ _initInfiniteLoadingPlugin: function () {
 },
 _initEndlessPlugin: function () {
     /*
- * Copyright (C) 2014 salesforce.com, inc.
+ * Copyright (C) 2013 salesforce.com, inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3980,7 +3980,7 @@ _initEndlessPlugin: function () {
 },
 _initSnapPlugin: function () {
     /*
- * Copyright (C) 2014 salesforce.com, inc.
+ * Copyright (C) 2013 salesforce.com, inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
