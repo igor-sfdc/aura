@@ -33,6 +33,7 @@ import org.auraframework.def.ResourceDef;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.impl.system.DefDescriptorImpl;
 import org.auraframework.system.AuraContext;
+import org.auraframework.system.SourceListener;
 import org.auraframework.throwable.AuraRuntimeException;
 import org.auraframework.throwable.NoContextException;
 import org.auraframework.throwable.quickfix.ClientLibraryException;
@@ -371,5 +372,24 @@ public class ClientLibraryServiceImpl implements ClientLibraryService {
             }
         }
         return combinable;
+    }
+
+
+    /**
+     * Invalidate caches on source changes
+     */
+    private static SourceNotifier sourceNotifier = new SourceNotifier();
+
+    static {
+        Aura.getDefinitionService().subscribeToChangeNotification(sourceNotifier);
+    }
+
+    private static class SourceNotifier implements SourceListener {
+        @Override
+        public void onSourceChanged(DefDescriptor<?> source, SourceMonitorEvent event, String filePath) {
+        	
+            Aura.getCachingService().getClientLibraryOutputCache().invalidateAll();
+            Aura.getCachingService().getClientLibraryUrlsCache().invalidateAll();
+        }
     }
 }
