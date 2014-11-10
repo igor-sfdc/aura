@@ -15,6 +15,7 @@
  */
 package org.auraframework.test;
 
+import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.remote.DesiredCapabilities;
 
@@ -30,7 +31,7 @@ import org.openqa.selenium.remote.DesiredCapabilities;
 // - to save port range: edit /etc/sysctl.conf and edit/add property for
 // net.ipv4.ip_local_port_range = 1025
 // 32000
-public interface WebDriverProvider {
+public interface WebDriverProvider extends AuraServiceProvider {
     String WEBDRIVER_SERVER_PROPERTY = "webdriver.remote.server";
     String REUSE_BROWSER_PROPERTY = "webdriver.reusebrowser";
     String BROWSER_TYPE_PROPERTY = "webdriver.browser.type";
