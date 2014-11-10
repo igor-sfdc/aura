@@ -25,13 +25,13 @@ import org.auraframework.ds.log.AuraDSLog;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.util.ServiceLoader;
 
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+
 import aQute.bnd.annotation.component.Activate;
 import aQute.bnd.annotation.component.Component;
 import aQute.bnd.annotation.component.Deactivate;
 import aQute.bnd.annotation.component.Reference;
-
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
 /**
  * 
@@ -76,7 +76,7 @@ public class OSGiServiceLoaderImpl implements ServiceLoader {
     }
 
     @Override
-    public <T> T get(Class<T> type) {
+    public <T extends AuraServiceProvider> T get(Class<T> type) {
         @SuppressWarnings("unchecked")  // This should have been verified when the class was added to the map
         Set<T> implementingServiceInstances = (Set<T>) serviceMap.get(type);
         
@@ -92,7 +92,7 @@ public class OSGiServiceLoaderImpl implements ServiceLoader {
     }
 
     @Override
-    public <T> Set<T> getAll(Class<T> type) {
+    public <T extends AuraServiceProvider> Set<T> getAll(Class<T> type) {
         
         @SuppressWarnings("unchecked")  // This should have been verified when the class was added to the map
         Set<T> implementingServiceInstances = (Set<T>) serviceMap.get(type);
@@ -107,7 +107,7 @@ public class OSGiServiceLoaderImpl implements ServiceLoader {
     }
 
     @Override
-    public <T> T get(Class<T> type, String name) {
+    public <T extends AuraServiceProvider> T get(Class<T> type, String name) {
         // Currently unsupported
         // FIXME: osgi - When injecting service object into service map need to capture "name" annotation property
         throw new UnsupportedOperationException();
