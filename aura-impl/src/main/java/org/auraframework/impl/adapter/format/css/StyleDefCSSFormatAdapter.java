@@ -22,7 +22,6 @@ import javax.annotation.concurrent.ThreadSafe;
 
 import org.auraframework.def.StyleDef;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
-import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.throwable.quickfix.QuickFixException;
 
 import aQute.bnd.annotation.component.Component;

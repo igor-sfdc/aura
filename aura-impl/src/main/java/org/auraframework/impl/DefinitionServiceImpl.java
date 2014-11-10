@@ -30,7 +30,6 @@ import org.auraframework.def.DescriptorFilter;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.impl.system.DefDescriptorImpl;
 import org.auraframework.impl.system.SubDefDescriptorImpl;
-import org.auraframework.service.CachingService;
 import org.auraframework.service.ContextService;
 import org.auraframework.service.DefinitionService;
 import org.auraframework.system.AuraContext;
@@ -42,11 +41,10 @@ import org.auraframework.throwable.ClientOutOfSyncException;
 import org.auraframework.throwable.quickfix.DefinitionNotFoundException;
 import org.auraframework.throwable.quickfix.QuickFixException;
 
+import com.google.common.collect.Sets;
+
 import aQute.bnd.annotation.component.Activate;
 import aQute.bnd.annotation.component.Component;
-import aQute.bnd.annotation.component.Reference;
-
-import com.google.common.collect.Sets;
 
 /**
  * The public access to definitions inside Aura.
@@ -143,28 +141,6 @@ public class DefinitionServiceImpl implements DefinitionService {
 
         cs.assertEstablished();
         return cs.getCurrentContext().getDefRegistry();
-    }
-
-    /**
-     * Get the last mod for a set of descriptorss.
-     */
-    @Override
-    public <T extends Definition> long getLastMod(DefDescriptor<T> descriptor) {
-        String uid;
-        try {
-            uid = getDefRegistry().getUid(null, descriptor);
-        } catch (QuickFixException qfe) {
-            return 0;
-        }
-        return getDefRegistry().getLastMod(uid);
-    }
-
-    /**
-     * Get the last mod for a set of descriptorss.
-     */
-    @Override
-    public long getLastMod(String uid) {
-        return getDefRegistry().getLastMod(uid);
     }
 
     @Override

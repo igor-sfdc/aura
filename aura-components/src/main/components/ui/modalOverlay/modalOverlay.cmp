@@ -15,7 +15,7 @@
     limitations under the License.
 
 -->
-<aura:component description="A panel for modals">
+<aura:component description="A panel for modals. Use ui:panelManager to manage your modal panels.">
 
     <aura:attribute name="closeOnClickOut" type="Boolean" default="false" description="Add listener to close on click outside"/>
     <aura:attribute name="closeAction" type="Aura.Action" default="{!c.hide}" description="Close Aura Action function"/>
@@ -39,7 +39,7 @@
     <aura:dependency resource="markup://ui:panelTransitionEnd" type="EVENT" />
     <aura:dependency resource="markup://ui:updateSize" type="EVENT" />
     
-	<div>
+	<div class="{!v.class}">
 		<!-- Full screen grey glass behind the modal -->
 	    <div aura:id='modal-glass' class="modal-glass" style="display:none"></div>
 	    

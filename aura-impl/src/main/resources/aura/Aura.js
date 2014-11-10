@@ -30,7 +30,7 @@ function exp() {
 }
 
 /**
- * @namespace This, $A, is supposed to be our ONLY window-polluting top-level variable. Everything else in Aura is
+ * @description This, $A, is supposed to be our ONLY window-polluting top-level variable. Everything else in Aura is
  *            attached to it. Note that this almost empty object $A is replaced later, after $A.ns (created below) is
  *            populated with the types that can be used to populate the "real" $A. TODO(fabbott): Make that "only gobal
  *            name" goal become true; today it ain't.
@@ -38,7 +38,7 @@ function exp() {
 window['$A'] = {};
 
 /**
- * @namespace The separate Aura "namespace" object contains Aura types, as opposed to instances and properties and such
+ * @description The separate Aura "namespace" object contains Aura types, as opposed to instances and properties and such
  *            which might hang off $A. This allows some colliding or near-miss variable duplication (e.g. $A.util is an
  *            instance of $A.ns.Util), and collects our proper types into one place. The types themselves must be proper
  *            functional objects with prototypes, or Closure can't deal with obfuscating them (and particularly their
@@ -52,6 +52,7 @@ var clientService;
 // #include aura.Promise
 // #include aura.util.Function
 // #include aura.util.Util
+// #include aura.Logger
 // #include {"modes" : ["TESTING","AUTOTESTING", "TESTINGDEBUG", "AUTOTESTINGDEBUG", "DOC"], "path" : "aura.test.Test"}
 // #include aura.system.DefDescriptor
 // #include aura.util.Json
@@ -60,12 +61,7 @@ var clientService;
 // #include aura.util.Bitset
 // #include aura.util.NumberFormat
 // #include aura.context.AuraContext
-// #include aura.value.BaseValue
-// #include aura.value.AttributeValue
-// #include aura.value.SimpleValue
-// #include aura.value.MapValue
-// #include aura.value.ArrayValue
-// #include aura.value.PropertyChain
+// #include aura.value.PropertyReferenceValue
 // #include aura.value.FunctionCallValue
 // #include aura.value.ActionReferenceValue
 // #include aura.value.PassthroughValue
@@ -118,10 +114,11 @@ var clientService;
 // #include aura.provider.GlobalValueProviders
 // #include aura.provider.LabelQueue
 // #include aura.provider.LabelValueProvider
-// #include aura.provider.SimpleValueProvider
+// #include aura.provider.ObjectValueProvider
 
 /**
- * @class The Aura framework. Default global instance name is $A.
+ * @class Aura
+ * @classdesc The Aura framework. Default global instance name is $A.
  * @constructor
  */
 $A.ns.Aura = function() {
@@ -142,7 +139,7 @@ $A.ns.Aura = function() {
     this.layoutService = new AuraLayoutService();
     this.localizationService = new AuraLocalizationService();
     this.storageService = new AuraStorageService();
-    this.componentStack = new $A.ns.AuraComponentContext();
+    this.logger = new $A.ns.Logger();
 
     //#if {"excludeModes" : ["PRODUCTION", "PRODUCTIONDEBUG"]}
     this.devToolService = new AuraDevToolService();
@@ -156,7 +153,7 @@ $A.ns.Aura = function() {
          *
          * @public
          * @type AuraRenderingService
-         * @memberOf Aura.prototype
+         * @memberOf Aura
          */
         rendering : aura.renderingService,
         /**
@@ -164,7 +161,7 @@ $A.ns.Aura = function() {
          *
          * @public
          * @type AuraEventService
-         * @memberOf Aura.prototype
+         * @memberOf Aura
          */
         event : aura.eventService,
         /**
@@ -172,7 +169,7 @@ $A.ns.Aura = function() {
          *
          * @public
          * @type AuraComponentService
-         * @memberOf Aura.prototype
+         * @memberOf Aura
          */
         component : aura.componentService,
         /**
@@ -240,7 +237,7 @@ $A.ns.Aura = function() {
          */
         l10n : aura.localizationService,
 
-        getValue : function(key) {
+        get : function(key) {
             var ret = $A.services[key];
             if (!ret && key === "root") {
                 return $A.getRoot();
@@ -353,6 +350,7 @@ $A.ns.Aura = function() {
      * @param {Boolean} doForce For internal use only. doForce enforces client-side creation and defaults to false.
      * @param {Boolean} forceServer For internal use only. forceServer enforces server-side creation and defaults to false.
      */
+
     this.newCmpAsync = function(callbackScope, callback, config, attributeValueProvider, localCreation, doForce, forceServer){
         return this.componentService.newComponentAsync(callbackScope, callback, config, attributeValueProvider, localCreation, doForce, forceServer);
     };
@@ -366,15 +364,15 @@ $A.ns.Aura = function() {
      * @public
      */
     this.pushCreationPath = function(creationPath) {
-        var ctx = this.getContext();
-        if (!ctx) {
+    	var ctx = this.getContext();
+    	if (!ctx) {
             return;
-        }
-        var act = ctx.getCurrentAction();
-        if (!act) {
+    	}
+    	var act = ctx.getCurrentAction();
+    	if (!act) {
             return;
-        }
-        act.pushCreationPath(creationPath);
+    	}
+    	act.pushCreationPath(creationPath);
     };
 
     /**
@@ -384,15 +382,15 @@ $A.ns.Aura = function() {
      * @public
      */
     this.popCreationPath = function(creationPath) {
-        var ctx = this.getContext();
-        if (!ctx) {
+    	var ctx = this.getContext();
+    	if (!ctx) {
             return;
-        }
-        var act = ctx.getCurrentAction();
-        if (!act) {
+    	}
+    	var act = ctx.getCurrentAction();
+    	if (!act) {
             return;
-        }
-        act.popCreationPath(creationPath);
+    	}
+    	act.popCreationPath(creationPath);
     };
 
     /**
@@ -402,15 +400,15 @@ $A.ns.Aura = function() {
      * @public
      */
     this.setCreationPathIndex = function(idx) {
-        var ctx = this.getContext();
-        if (!ctx) {
+    	var ctx = this.getContext();
+    	if (!ctx) {
             return;
-        }
-        var act = ctx.getCurrentAction();
-        if (!act) {
+    	}
+    	var act = ctx.getCurrentAction();
+    	if (!act) {
             return;
-        }
-        act.setCreationPathIndex(idx);
+    	}
+    	act.setCreationPathIndex(idx);
     };
 
 
@@ -443,6 +441,7 @@ $A.ns.Aura = function() {
         "rerender", aura.rerender,
         "unrender", aura.unrender,
         "afterRender", aura.afterRender,
+        "logger", aura.logger,
         "getCmp", aura.getCmp,
         "pushCreationPath", aura.pushCreationPath,
         "popCreationPath", aura.popCreationPath,
@@ -469,10 +468,10 @@ $A.ns.Aura = function() {
         "storage", services.storage,
         "cmp", services.cmp,
         "e", services.e,
-        "getValue", services.getValue,
         "c", {
-                getValue : function(name) {
-                    return services.cmp.getControllerDef({descriptor : name});
+                get: function(name) {
+                    var path = (name||'').split('.');
+                    return services.cmp.getControllerDef({descriptor : path.shift()}).get(path.shift());
                 }
             }
     );
@@ -517,14 +516,14 @@ $A.ns.Aura.prototype.initAsync = function(config) {
     // we don't handle components that come back here. This is used in the case where there
     // are none.
     //
-    $A.context = new AuraContext(config["context"], function() {
-        clientService.initHost(config["host"]);
-        clientService.loadComponent(config["descriptor"], config["attributes"], function(resp) {
-            $A.initPriv(resp);
-            $A.Perf.endMark("Component Load Complete");
-        }, config["deftype"]);
-        $A.Perf.endMark("Component Load Initiated");
-    });
+    $A.context = new AuraContext(config["context"]);
+    clientService.initHost(config["host"]);
+    clientService.loadComponent(config["descriptor"], config["attributes"], function(resp) {
+        $A.initPriv(resp);
+        $A.Perf.endMark("Component Load Complete");
+    }, config["deftype"]);
+
+    $A.Perf.endMark("Component Load Initiated");
 };
 
 /**
@@ -542,10 +541,7 @@ $A.ns.Aura.prototype.initConfig = function(config, useExisting, doNotInitializeS
 
     if (!useExisting || $A.util.isUndefined($A.getContext())) {
         clientService.initHost(config["host"]);
-
-        // FIXME: AuraContext accepts a callback because its init is async (eg loading of the GVP
-        // from persistent storage). Only AIS uses this setup method and AIS doesn't use persistent
-        // storage with an async fetch (eg Smart Store Adapter).
+        // creating context.
         $A.context = new AuraContext(config["context"]);
         this.initPriv($A.util.json.resolveRefs(config["instance"]), config["token"], null, doNotInitializeServices, doNotCallUIPerfOnLoad);
         $A.context.finishComponentConfigs($A.context.getCurrentAction().getId());
@@ -553,7 +549,7 @@ $A.ns.Aura.prototype.initConfig = function(config, useExisting, doNotInitializeS
     } else {
         // Use the existing context and just join the new context into it
         // FIXME: is this used? it won't do the right thing if there are components.
-        $A.getContext().join(config["context"]);
+        $A.getContext().merge(config["context"]);
     }
 };
 
@@ -624,13 +620,13 @@ $A.ns.Aura.prototype.finishInit = function(doNotCallUIPerfOnLoad) {
 };
 
 /**
- * Use <code>$A.error()</code> in response to a serious error that has no recovery path.
+ * @description Use <code>$A.error()</code> in response to a serious error that has no recovery path.
  *
  * If this occurs during a test, the test will be stopped unless you add calls to '$A.test.expectAuraError' for
  * each error that occurs. <code>auraErrorsExpectedDuringInit</code> allows server side errors to not stop the
  * test as well.
  *
- * @description <p>Example:</p>
+ *@example
  * <pre>
  * testDuplicate : {
    auraErrorsExpectedDuringInit : ["Duplicate found!"],
@@ -649,79 +645,7 @@ $A.ns.Aura.prototype.finishInit = function(doNotCallUIPerfOnLoad) {
  * @param {Error} [e] The error object to be displayed to the user.
  */
 $A.ns.Aura.prototype.error = function(msg, e){
-    var logMsg = msg || "";
-    var dispMsg;
- 
-    if (!$A.util.isString(msg)) {
-        e = msg; 
-        logMsg = "";
-        msg = "Unknown Error";
-    }
-    if (!e) {
-        e = undefined;
-    } else if (!$A.util.isError(e)) {
-        // Somebody's thrown something bogus, or we're on IE, but either way we
-        // should do what we can...
-        if ($A.util.isObject(e) && e.message) {
-            var stk = e.stack;
-            e = new Error("caught " + e.message);
-            if (stk) {
-                e.stack = stk;      
-            }
-        } else {
-            e = new Error("caught " + $A.util.json.encode(e));
-        }
-    }
-    if (!logMsg.length) {
-        logMsg = "Unknown Error";
-    }
-    dispMsg = logMsg;
-    if (e && !$A.util.isUndefinedOrNull(e.message)) {
-        dispMsg = dispMsg+" : "+e.message;
-    }
-
-    var testMsg = dispMsg;
-
-    //#if {"excludeModes" : ["PRODUCTION", "PRODUCTIONDEBUG"]}
-    var stack = this.getStackTrace(e);
-    $A.logInternal("Error", logMsg, e, stack);
-    //
-    // Error obejcts in older versions of IE are represented as maps with multiple entries containing the error message
-    // string. Checking that the object here is not an Error obeject prevents the error message from being displayed
-    // multiple times.
-    //
-    if ($A.util.isObject(e) && !$A.util.isError(e)) {
-        for(var k in e) {
-            try {
-                var val = e[k];
-
-                if ($A.util.isString(val)) {
-                    if (dispMsg === "Unknown Error") {
-                        dispMsg = val;
-                    } else {
-                        dispMsg = dispMsg + '\n' + val;
-                    }
-                    msg = dispMsg;
-                }
-            } catch (e2) {
-                // Ignore serialization errors
-            }
-        }
-    }
-    if (stack) {
-        dispMsg = dispMsg+"\n"+stack.join("\n");
-    }
-    //#end
-    $A.message(dispMsg);
-    if ($A.test) {
-        //
-        // Note that this sends the only the error message string (no stack) through to the test
-        //
-        $A.test.auraError(testMsg);
-    }
-    if (!$A.initialized) {
-        $A["hasErrors"] = true;
-    }
+    this.logger.error(msg, e);
 };
 
 /**
@@ -735,10 +659,7 @@ $A.ns.Aura.prototype.error = function(msg, e){
  * @param {Error} e an error, if any.
  */
 $A.ns.Aura.prototype.warning = function(w, e) {
-    $A.logInternal("Warning",w, e, this.getStackTrace(e));
-    if ($A.test) {
-        $A.test.auraWarning(w);
-    }
+    this.logger.warning(w, e);
 };
 
 /**
@@ -758,15 +679,29 @@ $A.ns.Aura.prototype.message = function(msg) {
 };
 
 /**
- * Returns the raw value referenced using property syntax. Gets the raw value from within the Value object.
- * Shorthand for <code>getValue().unwrap()</code>.
+ * Returns the value referenced using property syntax. Gets the value from the specified global value provider.
  * @public
  * @function
- * @param {String} key The data key to look up on element, for example, <code>$A.get("root.v.mapAttring.key")</code>.
+ * @param {String} key The data key to look up on element, for example, <code>$A.get("$Label.section.key")</code>.
  * @param {Function} callback The method to call with the result if a server trip is expected.
  */
 $A.ns.Aura.prototype.get = function(key, callback) {
-    return this.expressionService.get($A.services, key, callback);
+    if($A.util.isString(key)) {
+        key = $A.expressionService.normalize(key);
+        var path = key.split('.');
+        var root = path.shift();
+        var valueProvider = $A.services[root];
+        if (!valueProvider) {
+            valueProvider = $A.getGlobalValueProvider(root);
+        }
+        if (valueProvider) {
+            if (path.length) {
+                return valueProvider.get(path.join('.'), callback);
+            }
+            return valueProvider.getValues?valueProvider.getValues():valueProvider;
+        }
+    }
+    return undefined;
 };
 
 /**
@@ -797,18 +732,6 @@ $A.ns.Aura.prototype.getContext = function() {
 };
 
 /**
- * Returns the unwrapped value.
- *
- * @param {Object} val If the Aura type corresponds to "Value", returns the unwrapped value.
- */
-$A.ns.Aura.prototype.unwrap = function(val) {
-    if ($A.util.isValue(val)) {
-        return val.unwrap();
-    }
-    return val;
-};
-
-/**
  * Runs a function within the standard Aura lifecycle.
  *
  * This insures that <code>enqueueAction</code> methods and rerendering are handled properly.
@@ -826,7 +749,7 @@ $A.ns.Aura.prototype.run = function(func, name) {
 
     $A.services.client.pushStack(name);
     try {
-        //console.log("$A.run()", name);
+    	//console.log("$A.run()", name);
 
         return func();
     } catch (e) {
@@ -838,45 +761,21 @@ $A.ns.Aura.prototype.run = function(func, name) {
     return undefined;
 };
 
-/**
+/**@description
  * Checks the condition and if the condition is false, displays an error message.
  *
  * Displays an error message if condition is false, runs <code>trace()</code> and stops JS execution. The
  * app will cease to function until reloaded if this is called, and errors are not caught.
+ * Internal assertion, should never happen
  * <p>For example, <code>$A.assert(cmp.get("v.name") , "The name attribute is required.");</code> checks for the name attribute.
  *
+ * This is protected as it is an internal assertion, should never happen.
+ *
  * @param {Boolean} condition True prevents the error message from being displayed, or false otherwise.
- * @param {String} assertMessage A message to be displayed when condition is false.
- * @protected Internal assertion, should never happen
+ * @param {String} assertMessage A message to be displayed when condition is false
  */
 $A.ns.Aura.prototype.assert = function(condition, assertMessage) {
-    //#if {"excludeModes" : ["PRODUCTION", "PRODUCTIONDEBUG"]}
-    if (!condition) {
-        var message = "Assertion Failed!: " + assertMessage + " : " + condition;
-        var error = new Error(message);
-        $A.trace();
-        //
-        // Trying to fire an event here is a very dangerous thing to do, as
-        // we have no idea of where we are, or what went wrong to cause a call
-        // to assert(). In order to avoid problems, we do the most basic thing
-        // to alert the user.
-        //
-        // var event = $A.get("e.aura:systemError");
-        // if (event) {
-        // event.setParams({message : message, error : error});
-        // event.fire();
-        // }
-        var elt = $A.util.getElement("auraErrorMessage");
-        if (elt) {
-            elt.innerHTML = message;
-            $A.util.removeClass(document.body, "loading");
-            $A.util.addClass(document.body, "auraError");
-        } else {
-            alert(message);
-        }
-        throw error;
-    }
-    //#end
+    this.logger.assert(condition, assertMessage);
 };
 
 /**
@@ -893,89 +792,6 @@ $A.ns.Aura.prototype.userAssert = function(condition, msg) {
 };
 
 /**
- * Internal routine to stringify a log message.
- *
- * @private
- */
-$A.ns.Aura.prototype.stringVersion = function(logMsg, error, trace) {
-    var stringVersion = logMsg;
-    if (!$A.util.isUndefinedOrNull(error) && !$A.util.isUndefinedOrNull(error.message)) {
-        stringVersion += " : " + error.message;
-        if ($A.util.isObject(error)) {
-        }
-    }
-    if (!$A.util.isUndefinedOrNull(trace)) {
-        stringVersion += "\nStack: " + trace.join("\n");
-    }
-    return stringVersion;
-};
-
-/**
- * Log something: for internal use only..
- *
- * This logs to both the console (if available), and to the aura debug component.
- *
- * @private
- * @param {String} type the type of message (error, warning, info).
- * @param {String} message the message to display.
- * @param {Error} an error (if truthy).
- * @param {Array} the stack trace as an array (if truthy).
- */
-$A.ns.Aura.prototype.logInternal = function(type, message, error, trace) {
-    //#if {"excludeModes" : ["PRODUCTION", "PRODUCTIONDEBUG"]}
-    var logMsg = type + ": ";
-    var stringVersion = null;
-
-    if (!$A.util.isUndefinedOrNull(message)) {
-        stringVersion += " : " + message;
-        logMsg += message;
-    }
-    if (!$A.util.isUndefinedOrNull(error) && !$A.util.isUndefinedOrNull(error.message)) {
-        stringVersion += " : " + error.message;
-    }
-    if (window["console"]) {
-        var console = window["console"];
-        if (console["group"]) {
-            console["group"](logMsg);
-            if (!$A.util.isUndefinedOrNull(error)) {
-                console["debug"](error);
-            } else {
-                console["debug"](message);
-            }
-            if (trace) {
-                console["group"]("stack");
-                for ( var i = 0; i < trace.length; i++) {
-                    console["debug"](trace[i]);
-                }
-                console["groupEnd"]();
-            }
-            console["groupEnd"]();
-        } else {
-            stringVersion = this.stringVersion(logMsg, error, trace);
-            if (console["debug"]) {
-                console["debug"](stringVersion);
-            } else if (console["log"]) {
-                console["log"](stringVersion);
-            }
-        }
-    }
-
-    // sending logging info to debug tool if enabled
-    if(!$A.util.isUndefinedOrNull($A.util.getDebugToolComponent())) {
-        if ($A.util.isUndefinedOrNull(stringVersion)) {
-            if ($A.util.isUndefinedOrNull(trace)) {
-                trace = this.getStackTrace(error);
-            }
-            stringVersion = this.stringVersion(logMsg, error, trace);
-        }
-        var debugLogEvent = $A.util.getDebugToolsAuraInstance().get("e.aura:debugLog");
-        debugLogEvent.setParams({"type" : type, "message" : stringVersion});
-        debugLogEvent.fire();
-    }
-    //#end
-};
-
-/**
  *  Logs to the browser's JavaScript console if it is available.
  *  This method doesn't log in PROD or PRODDEBUG modes.
  *  If both value and error are passed in, value shows up in the console as a group with value logged within the group.
@@ -986,17 +802,7 @@ $A.ns.Aura.prototype.logInternal = function(type, message, error, trace) {
  * @param {Object} error The error messages to be logged in the stack trace.
  */
 $A.ns.Aura.prototype.log = function(value, error) {
-    var trace;
-    if (this.util.isError(value)) {
-        error = value;
-        value = error.message;
-    }
-    if (this.util.isError(error)) {
-        trace = this.getStackTrace(error);
-    } else if (error && error.stack) {
-        trace = error.stack;
-    }
-    this.logInternal("Info", value, error, trace);
+    this.logger.info(value, error);
 };
 
 /**
@@ -1046,41 +852,6 @@ $A.ns.Aura.prototype.rpad = function(str, padString, length) {
 };
 
 /**
- * Returns the stack trace, including the functions on the stack if available (Error object varies across browsers).
- * Values are not logged.
- *
- * @private
- */
-$A.ns.Aura.prototype.getStackTrace = function(e, remove) {
-    var stack = undefined;
-
-    if (!remove) {
-        remove = 0;
-    }
-    if (!e || !e.stack) {
-        try {
-            throw new Error("foo");
-        } catch (f) {
-            e = f;
-            remove += 2;
-        }
-    }
-    if (e && e.stack) {
-        stack = e.stack;
-    }
-    if (stack) {
-        var ret = stack.replace(/(?:\n@:0)?\s+$/m, '');
-        ret = ret.replace(new RegExp('^\\(', 'gm'), '{anonymous}(');
-        ret = ret.split("\n");
-        if (remove !== 0) {
-            ret.splice(0,remove);
-        }
-        return ret;
-    }
-    return null;
-};
-
-/**
  * Logs a stack trace. Trace calls using <code>console.trace()</code> if defined on the console implementation.
  * @public
  */
@@ -1093,8 +864,8 @@ $A.ns.Aura.prototype.trace = function() {
 /**
  * Sets mode to production (default), development, or testing.
  *
- * @private
  * @param {String} mode Possible values are production "PROD", development "DEV", or testing "PTEST".
+ * @private
  */
 $A.ns.Aura.prototype.setMode = function(mode) {
     this.mode = mode;
@@ -1103,12 +874,13 @@ $A.ns.Aura.prototype.setMode = function(mode) {
 
 /**
  * Get GVP directly.
- * @return {GlobalValueProviders} The global value provider, such as $Label, $Browser, $Locale, etc.
+ * @param {String} type The type of global value provider to retrieve.
+ * @return {GlobalValueProvider} The global value provider, such as $Label, $Browser, $Locale, etc.
  *
  * @private
  */
-$A.ns.Aura.prototype.getGlobalValueProviders = function() {
-    return this.getContext().getGlobalValueProviders();
+$A.ns.Aura.prototype.getGlobalValueProvider = function(type) {
+    return this.getContext().getGlobalValueProvider(type);
 };
 
 
@@ -1435,3 +1207,4 @@ window['aura'] = window['$A'];
 // #include aura.storage.adapters.MemoryAdapter
 // #include aura.storage.adapters.IndexedDBAdapter
 // #include aura.storage.adapters.WebSQLAdapter
+// #include aura.Logging

@@ -26,7 +26,7 @@
         }
         return selectedOptions.join(";");
     },
-    
+
     /**
      * Returns a package with the array of options (as either an array of components or an array of JS objects)
      * and the strategy to work with that array
@@ -34,7 +34,7 @@
     getOptionsWithStrategy: function(cmp) {
         var opts = cmp.get("v.options"),
         	strat = this.optionsStrategy;
-        
+
         if ($A.util.isEmpty(opts)) {
         	opts = cmp.get("v.body");
         	if (!$A.util.isEmpty(opts)) {
@@ -54,7 +54,7 @@
     	if (cmp._suspendChangeHandlers) {
     		return;
     	}
-
+    	
         var value = cmp.get("v.value"),
         	optionsPack = this.getOptionsWithStrategy(cmp),
         	selectedOptions = optionsPack.strategy.getSelected(optionsPack.options);
@@ -67,10 +67,10 @@
         if (selectedOptions.found && value === selectedOptions.optionValue) {
             return;
         }
-        
+
         var newValues = (cmp.get("v.value") || "").split(";");
 
-        if (!optionsPack.strategy.updateOptions(optionsPack.options, newValues) && !($A.util.getBooleanValue(cmp.get("v.multiple")) && value == "")) {
+        if (!optionsPack.strategy.updateOptions(cmp, optionsPack.options, newValues) && !($A.util.getBooleanValue(cmp.get("v.multiple")) && value == "")) {
         	this.updateValueFromOptions(cmp, optionsPack);
         } else {
         	cmp._suspendChangeHandlers = true;
@@ -83,15 +83,15 @@
      * Updates this component's "value" attribute based on the state of its options' "selected" attributes
      */
     updateValueFromOptions: function(cmp, optionsPack) {
-        if (cmp._suspendChangeHandlers) {
-        	return;
+    	if (cmp._suspendChangeHandlers) {
+    		return;
     	}
-        
+    	
         var value = cmp.get("v.value"),
         	isMultiple = $A.util.getBooleanValue(cmp.get("v.multiple")),
         	optionsPack = optionsPack || this.getOptionsWithStrategy(cmp),
         	selectedOptions = optionsPack.strategy.getSelected(optionsPack.options);
-        
+
         if (!selectedOptions.found || value !== selectedOptions.optionValue) {
         	if (!isMultiple && !selectedOptions.found) {
         		selectedOptions.optionValue = optionsPack.strategy.getValue(optionsPack.options, 0);
@@ -104,13 +104,13 @@
         	cmp.set("v.value", selectedOptions.optionValue, true);
         }
     },
-    
+
     /**
      * Strategies for working with either an array of option objects or of body components, passed through to the
      * select component either through the "v.options" attribute or through the body in markup.
      * Abstracts the implementation away so that the logic specific to the two data structures can be separated from
      * the main component logic
-     * 
+     *
      * Main functions available:
      *   updateOptions(options, newValues) - updates the list of options based on newValues, which is either an array or a string
      *   	Used for ensuring consistency between "v.value" and the list of options
@@ -120,35 +120,37 @@
      *   setOptionSelected(options, index, selected) - equivalent to options[index].selected = selected
      *   persistOptions(cmp, options) - persists the array of options into the appropriate component attribute
      */
-    
+
     /**
      * Strategy object for an array of option objects
      */
     optionsStrategy: {
     	// If an option is in newValues, we want to select it
-    	updateOptions : function(options, newValues) {
+    	updateOptions : function(cmp, options, newValues) {
     		var found = false;
 
-    		$A.util.forEach(options, function(option) {
+    		for(var i=0;i<options.length;i++){
+                var option=options[i];
     			var val = option.value;
     			var selectOption = (newValues.length > 1 && aura.util.arrayIndexOf(newValues, val) > -1) || newValues[0] == val.toString();
-    			
+
     			found = found || selectOption;
-    			option.selected = selectOption;
-    		}, this);
-    		
+                option.selected = selectOption;
+    		};
+
     		return found;
     	},
     	// If an option is selected, we want to aggregate it into our list
     	getSelected : function(options) {
     		var values = [];
-    		
-    		$A.util.forEach(options, function(option) {
-    			if (option.selected) {
+
+            for(var i=0;i<options.length;i++){
+    			var option=options[i];
+                if (option.selected) {
     				values.push(option.value);
     			}
-    		}, this);
-    		
+    		}
+
     		return { found : (values.length > 0), optionValue : values.join(";") };
     	},
     	getValue : function(options, index) {
@@ -168,13 +170,13 @@
     		cmp.set("v.options", options);
     	}
     },
-    
+
     /**]
      * Strategy object for an array of components (used for maintaining support for using inputSelectOption components in the body)
      */
     bodyStrategy: {
     	// Updates options based on their existence in newValues
-    	updateOptions : function(options, newValues) {    		
+    	updateOptions : function(cmp, options, newValues) {
             var result = { found : false };
             // Perform single option update function on all of our options
     		this.performOperationOnCmps(options, this.updateOption, result, newValues);
@@ -203,34 +205,35 @@
     	},
     	// Performs op on every ui:inputSelectOption in opts, where op = function(optionCmp, resultsObject, optionalArguments)
     	performOperationOnCmps : function(opts, op, result, newValues) {
-    		$A.util.forEach(opts, function(cmp) {
-        		var descriptor = cmp.getDef().getDescriptor();
-        		var cmpName = descriptor.getNamespace() + ":" + descriptor.getName();
-        		if (cmpName === "ui:inputSelectOptionGroup") {
+    		for(var i=0;i<opts.length;i++){
+        		var cmp=opts[i];
+                if(cmp.isInstanceOf("ui:inputSelectOptionGroup")){
         			var groupBody = cmp.get("v.body");
         			if (!$A.util.isEmpty(groupBody)) {
-        				$A.util.forEach(groupBody, function(groupBodyCmp) {
-        					var descriptor = groupBodyCmp.getDef().getDescriptor();
-        					if ((descriptor.getNamespace() + ":" + descriptor.getName()) === "ui:inputSelectOption") {
+        				for(var j=0;j<groupBody.length;j++){
+                            var groupBodyCmp=groupBody[j];
+        					if (groupBodyCmp.isInstanceOf("ui:inputSelectOption")) {
         						op(groupBodyCmp, result, newValues);
         					}
-        				}, this);
+        				}
         			}
-        		} else if (cmpName === "ui:inputSelectOption") {
+        		} else if (cmp.isInstanceOf("ui:inputSelectOption")) {
     				op(cmp, result, newValues);
     			} else {
+                    var descriptor = cmp.getDef().getDescriptor();
+                    var cmpName = descriptor.getNamespace() + ":" + descriptor.getName();
     				$A.warning("<" + cmpName + "> is currently not supported inside <ui:inputSelect> since it does not properly " +
     						   "attach the options to the component. This will lead to undefined behavior. Please " +
     						   "use 'v.options' to insert your option objects instead.");
     			}
-        	}, this);
+        	}
         },
         // Helper function for updateOptions
         // Update optionCmp if it exists in newValues; passes result back in result object
         updateOption : function(optionCmp, result, newValues) {
         	var text = optionCmp.get("v.text");
 			var selectOption = (newValues.length > 1 && aura.util.arrayIndexOf(newValues, text) > -1) || newValues[0] === text;
-			
+
 			result.found = result.found || selectOption;
 			optionCmp.set("v.value", selectOption);
 
@@ -246,10 +249,10 @@
 			}
 		}
     },
-    
+
     /**
      * Render the options directly to the DOM for performance
-     * 
+     *
      * Expected option structure:
      * {
      *     value 				: // value for the option
@@ -263,24 +266,24 @@
     	var options = cmp.getConcreteComponent().get("v.options"),
 			select = cmp.find("select").getElement(),
 			optFrag, option, internalText;
-		
+
 		if ($A.util.isEmpty(options)) {
 			return;
 		}
-		
+
     	optFrag = document.createDocumentFragment();
     	for (var i = 0; i < options.length; i++) {
     		option = document.createElement("option");
     		internalText = ($A.util.isEmpty(options[i].label) ? options[i].value : options[i].label) || "";
-    		
+
     		option.label = options[i].label || internalText;
-    		
+
     		if (!$A.util.isUndefined(options[i].value)) {
     			option.value = options[i].value;
     		} else {
     			$A.warning("Option at index " + i + " in select component " + cmp.getGlobalId() + " has an undefined value.");
     		}
-    		
+
     		if (options[i]["class"]) {
     			option.setAttribute("class", options[i]["class"]);
     		}
@@ -288,20 +291,20 @@
     		if (options[i].selected) {
     			option.selected = "selected";
     		}
-    		
+
     		if (options[i].disabled) {
     			option.disabled = "disabled";
     		}
-    		
+
     		option.appendChild(document.createTextNode(internalText));
-    		
+
     		optFrag.appendChild(option);
     	}
-    	
+
     	while (select.firstChild) {
     		select.removeChild(select.firstChild);
     	}
     	select.appendChild(optFrag);
     }
-    
+
 })

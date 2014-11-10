@@ -15,8 +15,14 @@
  */
 package org.auraframework.test;
 
-import java.io.*;
-import java.lang.annotation.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.PrintWriter;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 import java.net.*;
 import java.util.*;
@@ -788,7 +794,7 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
             }
 
             logger.info(String.format("Requesting: %s", capabilities));
-            currentDriver = provider.get(capabilities);
+            setCurrentDriver(provider.get(capabilities));
             if (currentDriver == null) {
                 fail("Failed to get webdriver for " + currentBrowserType);
             }
@@ -803,10 +809,18 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
             }
             logger.info(driverInfo);
 
-            auraUITestingUtil = new AuraUITestingUtil(currentDriver);
+            setAuraUITestingUtil();//auraUITestingUtil = new AuraUITestingUtil(currentDriver);
             perfWebDriverUtil = new PerfWebDriverUtil(currentDriver, auraUITestingUtil);
         }
         return currentDriver;
+    }
+    
+    protected void setCurrentDriver(WebDriver currentDriver) {
+		this.currentDriver = currentDriver;
+    }
+    
+    protected void setAuraUITestingUtil() {
+    	this.auraUITestingUtil = new AuraUITestingUtil(currentDriver);
     }
 
     /**
@@ -823,7 +837,7 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
             } catch (Exception e) {
                 Log.warn(currentDriver.toString(), e);
             }
-            currentDriver = null;
+            setCurrentDriver(null);
         }
     }
 
@@ -836,7 +850,7 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
      */
     private String addBrowserNonce(String url) {
         if (!url.startsWith("about:blank")) {
-            Map<String, String> params = new HashMap<String, String>();
+            Map<String, String> params = new HashMap<>();
             params.put("browser.nonce", String.valueOf(System.currentTimeMillis()));
             url = addUrlParams(url, params);
         }
@@ -908,7 +922,7 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
     }
 
     protected void open(String url, Mode mode, boolean waitForInit) throws MalformedURLException, URISyntaxException {
-        Map<String, String> params = new HashMap<String, String>();
+        Map<String, String> params = new HashMap<>();
         params.put("aura.mode", mode.name());
         params.put("aura.test", getQualifiedName());
         url = addUrlParams(url, params);

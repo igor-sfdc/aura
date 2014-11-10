@@ -40,6 +40,8 @@ import aQute.bnd.annotation.component.Component;
 
 import com.google.common.collect.Maps;
 
+import aQute.bnd.annotation.component.Component;
+
 /**
  * the basics
  */

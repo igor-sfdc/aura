@@ -24,6 +24,7 @@ import java.io.Writer;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import javax.annotation.concurrent.ThreadSafe;
 
 import org.auraframework.Aura;
@@ -32,7 +33,6 @@ import org.auraframework.def.ComponentDef;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.StyleDef;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
-import org.auraframework.http.AuraResourceServlet;
 import org.auraframework.http.AuraServlet;
 import org.auraframework.instance.Application;
 import org.auraframework.instance.Component;

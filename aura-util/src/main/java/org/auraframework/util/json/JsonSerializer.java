@@ -18,8 +18,8 @@ package org.auraframework.util.json;
 import java.io.IOException;
 
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
-import org.auraframework.util.json.Json.Serialization.ReferenceType;
 import org.auraframework.util.json.Json.Serialization.ReferenceScope;
+import org.auraframework.util.json.Json.Serialization.ReferenceType;
 
 /**
  * serialize some thing

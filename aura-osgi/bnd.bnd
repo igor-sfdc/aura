@@ -54,6 +54,7 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.impl.css,\
     org.auraframework.impl.css.parser,\
     org.auraframework.impl.css.style,\
+    org.auraframework.impl.design,\
     org.auraframework.impl.documentation,\
     org.auraframework.impl.error,\
     org.auraframework.impl.expression,\

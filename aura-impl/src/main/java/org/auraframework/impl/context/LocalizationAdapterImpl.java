@@ -15,20 +15,21 @@
  */
 package org.auraframework.impl.context;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.TimeZone;
 
 import org.auraframework.Aura;
 import org.auraframework.adapter.LocalizationAdapter;
-import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.impl.util.AuraLocaleImpl;
 import org.auraframework.system.AuraContext;
 import org.auraframework.util.AuraLocale;
 
-import aQute.bnd.annotation.component.Component;
-
 /**
  */
-@Component (provide=AuraServiceProvider.class)
+// This is not a @Component. Instead it is instantiated by its parent {@link #LocalizationAdapterDelegate} 
 public class LocalizationAdapterImpl implements LocalizationAdapter {
 
     /**

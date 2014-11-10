@@ -17,6 +17,7 @@ package org.auraframework.service;
 
 import java.io.Serializable;
 
+import org.auraframework.Aura;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
 
 /**

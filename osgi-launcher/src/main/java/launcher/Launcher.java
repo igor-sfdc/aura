@@ -160,6 +160,12 @@ public class Launcher {
             config.put("osgi.noShutdown", TRUE_STRING_VALUE);
             config.put("osgi.install.area", launcherHomeAbsolutePath);
             config.put(Constants.FRAMEWORK_SYSTEMPACKAGES_EXTRA, "sun.reflect, sun.misc");
+            // Enable when troubleshooting is needed
+//            config.put("osgi.debug", "true");
+//            config.put("eclipse.consoleLog", "true");
+//            config.put("org.eclipse.equinox.http.jetty.log.stderr.threshold", "debug");
+//            config.put("equinox.ds.debug", "true");
+//            config.put("equinox.ds.print", "true");
             
             framework = frameworkFactory.newFramework(config);
             framework.start();
@@ -269,7 +275,7 @@ public class Launcher {
             }
             
             if (bundlesToStart.size() > 0) {
-                throw new RuntimeException("Warning: " + bundlesToStart.size() + " bundle(s) failed to start");
+                System.out.println("Warning: " + bundlesToStart.size() + " bundle(s) failed to start");
             }
         }
     }

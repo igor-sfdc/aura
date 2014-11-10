@@ -41,7 +41,7 @@ import org.auraframework.util.json.Json;
 public class AuraFormatsHttpTest extends AuraHttpTestCase {
     private final String componentTag = "&aura.tag=auratest:test_TokenValidation";
     private final String quickFixComponentTag = "&aura.tag=foo:bar";
-    private static Map<Format, String> FORMAT_CONTENTTYPE = new HashMap<Format, String>();
+    private static Map<Format, String> FORMAT_CONTENTTYPE = new HashMap<>();
     static {
         FORMAT_CONTENTTYPE.put(Format.JSON, Json.MIME_TYPE + ";charset=" + AuraBaseServlet.UTF_ENCODING);
         FORMAT_CONTENTTYPE.put(Format.JS, "text/javascript;charset=" + AuraBaseServlet.UTF_ENCODING);
@@ -54,33 +54,34 @@ public class AuraFormatsHttpTest extends AuraHttpTestCase {
         super(name);
     }
 
-    private void requestAndAssertContentType(HttpRequestBase method, String url, Format format) throws Exception {
+    private void requestAndAssertContentType(HttpRequestBase method, String url, Format format, boolean expectHeaders)
+            throws Exception {
 
         HttpResponse response = perform(method);
-        assertAntiClickjacking(response);
         String contentType = response.getFirstHeader(HttpHeaders.CONTENT_TYPE).getValue();
         // Eliminate the spaces separating the content Type specification
         contentType = AuraTextUtil.arrayToString(contentType.split(";\\s+"), ";", -1, false);
         assertEquals(String.format(
                 "Received wrong Content-Type header%nURL(or Action): %s%nContent:%s%nRequest type:%s", url,
                 getResponseBody(response), method.getMethod()), FORMAT_CONTENTTYPE.get(format), contentType);
+        assertDefaultAntiClickjacking(response, expectHeaders, false);
     }
 
     private void getOnAuraServlet(Format f, String tag) throws Exception {
         String url = String.format("/aura?%s&aura.mode=FTEST&aura.format=%s", tag, f.toString());
         HttpGet get = obtainGetMethod(url);
-        requestAndAssertContentType(get, url, f);
+        requestAndAssertContentType(get, url, f, tag.length() > 0);
     }
 
     private void postOnAuraServlet(Format f, Boolean causeException) throws Exception {
-        Map<String, Object> message = new HashMap<String, Object>();
-        Map<String, Object> actionInstance = new HashMap<String, Object>();
+        Map<String, Object> message = new HashMap<>();
+        Map<String, Object> actionInstance = new HashMap<>();
         actionInstance.put("descriptor",
                 "java://org.auraframework.impl.java.controller.JavaTestController/ACTION$getString");
         Map<?, ?>[] actions = { actionInstance };
         message.put("actions", actions);
         String jsonMessage = Json.serialize(message);
-        Map<String, String> params = new HashMap<String, String>();
+        Map<String, String> params = new HashMap<>();
         params.put("message", jsonMessage);
         if (!causeException) {
             params.put("aura.token", getCsrfToken());
@@ -90,7 +91,8 @@ public class AuraFormatsHttpTest extends AuraHttpTestCase {
         params.put("aura.format", "JSON");
         HttpPost post = obtainPostMethod("/aura", params);
         requestAndAssertContentType(post,
-                "java://org.auraframework.impl.java.controller.JavaTestController/ACTION$getString", f);
+                "java://org.auraframework.impl.java.controller.JavaTestController/ACTION$getString", f,
+                !causeException);
     }
 
     /**
@@ -128,7 +130,7 @@ public class AuraFormatsHttpTest extends AuraHttpTestCase {
 
     private void getOnAuraResourceServlet(Format f, String url) throws Exception {
         HttpGet get = obtainGetMethod(url);
-        requestAndAssertContentType(get, url, f);
+        requestAndAssertContentType(get, url, f, true);
     }
 
     /**

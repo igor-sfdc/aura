@@ -15,13 +15,17 @@
  */
 package org.auraframework.impl.adapter;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
-import org.auraframework.Aura;
-import org.auraframework.adapter.MockConfigAdapter;
-import org.auraframework.ds.serviceloader.AuraServiceProvider;
+import javax.servlet.http.HttpServletRequest;
 
-import aQute.bnd.annotation.component.Component;
+import org.auraframework.Aura;
+import org.auraframework.adapter.ContentSecurityPolicy;
+import org.auraframework.adapter.DefaultContentSecurityPolicy;
+import org.auraframework.adapter.MockConfigAdapter;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.Definition;
 import org.auraframework.impl.source.StringSourceLoader;
@@ -32,27 +36,104 @@ import com.google.common.collect.ImmutableSortedSet;
 
 /**
  * ConfigAdapter for Aura tests.
- *
- *
+ * 
+ * 
  * @since 0.0.178
  */
 public class MockConfigAdapterImpl extends ConfigAdapterImpl implements MockConfigAdapter {
-    private static final Set<String> SYSTEM_TEST_NAMESPACES = new ImmutableSortedSet.Builder<String>(String.CASE_INSENSITIVE_ORDER).add(
-    		"auratest", "actionsTest", "attributesTest", "auraStorageTest", "gvpTest", "preloadTest", "clientLibraryTest", "clientApiTest",
-    	"clientServiceTest", "componentTest", "docstest", "expressionTest", "forEachDefTest", "forEachTest", "handleEventTest", "ifTest", "iterationTest",
+
+    /**
+     * An extension of a ContentSecurityPolicy that adds "odd" test requirements.
+     */
+    public static class DefaultTestSecurityPolicy implements ContentSecurityPolicy {
+
+        private ContentSecurityPolicy baseline;
+
+        public DefaultTestSecurityPolicy(ContentSecurityPolicy baseline) {
+            this.baseline = baseline;
+        }
+
+        @Override
+        public String getReportUrl() {
+            return baseline.getReportUrl();
+        }
+
+        @Override
+        public Collection<String> getFrameAncestors() {
+            return baseline.getFrameAncestors();
+        }
+
+        @Override
+        public Collection<String> getFrameSources() {
+            return baseline.getFrameAncestors();
+        }
+
+        @Override
+        public Collection<String> getScriptSources() {
+            return baseline.getScriptSources();
+        }
+
+        @Override
+        public Collection<String> getStyleSources() {
+            return baseline.getStyleSources();
+        }
+
+        @Override
+        public Collection<String> getFontSources() {
+            return baseline.getFontSources();
+        }
+
+        @Override
+        public Collection<String> getConnectSources() {
+            List<String> list = new ArrayList<String>(baseline.getConnectSources());
+            // Various tests expect extra connect permission
+            list.add("http://invalid.salesforce.com");
+            return list;
+        }
+
+        @Override
+        public Collection<String> getDefaultSources() {
+            return baseline.getDefaultSources();
+        }
+
+        @Override
+        public Collection<String> getObjectSources() {
+            return baseline.getObjectSources();
+        }
+
+        @Override
+        public Collection<String> getImageSources() {
+            return baseline.getImageSources();
+        }
+
+        @Override
+        public Collection<String> getMediaSources() {
+            return baseline.getMediaSources();
+        }
+
+        @Override
+        public String getCspHeaderValue() {
+            return DefaultContentSecurityPolicy.buildHeaderNormally(this);
+        }
+    }
+
+    private static final Set<String> SYSTEM_TEST_NAMESPACES = new ImmutableSortedSet.Builder<>(String.CASE_INSENSITIVE_ORDER).add(
+    		"auratest", "actionsTest", "attributesTest", "auraStorageTest", "gvpTest", "preloadTest", "clientLibraryTest", "clientApiTest", 
+    	"clientServiceTest", "componentTest", "docstest", "expressionTest", "forEachDefTest", "forEachTest", "handleEventTest", "ifTest", "iterationTest", 
     	"layoutServiceTest", "listTest", "loadLevelTest", "perfTest", "performanceTest", "renderingTest", "setAttributesTest", "test", "themeSanityTest", "uitest", "utilTest",
     	"updateTest", "whitespaceBehaviorTest", "appCache").build();
 
-
+    
     private Boolean isClientAppcacheEnabled = null;
     private Boolean isProduction = null;
     private Boolean isAuraJSStatic = null;
     private Boolean validateCss = null;
+    private ContentSecurityPolicy csp;
 
     public MockConfigAdapterImpl() {
         super();
     }
-
+    
     public MockConfigAdapterImpl(String resourceCacheDir) {
         super(resourceCacheDir);
     }
@@ -105,12 +186,26 @@ public class MockConfigAdapterImpl extends ConfigAdapterImpl implements MockConf
         return (validateCss == null) ? super.validateCss() : validateCss;
     }
 
+    @Override
+    public void setContentSecurityPolicy(ContentSecurityPolicy csp) {
+        this.csp = csp;
+    }
+
+    @Override
+    public ContentSecurityPolicy getContentSecurityPolicy(String app, HttpServletRequest request) {
+        if (csp != null) {
+            return csp;
+        }
+        ContentSecurityPolicy baseline = super.getContentSecurityPolicy(app, request);
+        return new DefaultTestSecurityPolicy(baseline);
+    }
+    
 	@Override
 	public boolean isPrivilegedNamespace(String namespace) {
 		if (StringSourceLoader.getInstance().isPrivilegedNamespace(namespace) || SYSTEM_TEST_NAMESPACES.contains(namespace) || super.isPrivilegedNamespace(namespace)) {
 			return true;
 		}
-
+		
         // Check for any local defs with this namespace and consider that as an indicator that we have a privileged
         // namespace
         if (namespace != null) {
@@ -131,10 +226,10 @@ public class MockConfigAdapterImpl extends ConfigAdapterImpl implements MockConf
                 }
             }
         }
-
+        
         return false;
 	}
-
+	
 	@Override
 	public boolean isUnsecuredNamespace(String namespace) {
 		return super.isUnsecuredNamespace(namespace) || SYSTEM_TEST_NAMESPACES.contains(namespace);

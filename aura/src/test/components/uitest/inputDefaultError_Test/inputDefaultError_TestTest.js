@@ -34,11 +34,11 @@
      * Verify that the component actually is how we expect it to be
      */
     verifyInputDefaultStructure : function(input, ul, ulLength, childLength, ulIndex2Use){
-    	 $A.test.assertEquals(ul.length, ulLength, "uiInputDefaultError unordered list was not found");
+    	 $A.test.assertEquals(ulLength, ul.length, "uiInputDefaultError unordered list was not found");
          
          //Grab the uls children and verify that there are three
          var chlds = ul[ulIndex2Use].children;
-         $A.test.assertEquals(chlds.length, childLength, "The amount of children is incorrect");
+         $A.test.assertEquals(childLength, chlds.length, "The amount of children is incorrect");
          
        //Verify aria-describedby value on the input tags matches the ul of inputDefaultError
  		this.verifyAriaIdCorrect(ul[ulIndex2Use], input)
@@ -48,8 +48,6 @@
      * Code that happens multiple places, fires, grabs necessary data, then validates
      */
     validateBasic : function(cmp, auraId){  	
-    	this.fireErrorValidation(cmp.find("validate"), false);
-    	
     	var ul = $A.test.getElementByClass("uiInputDefaultError");
 		var input = cmp.find(auraId).getElement();
 		
@@ -161,11 +159,11 @@
 		    
     		//Make the component have errors again
         	this.fireErrorValidation(cmp.find("validate"), false);
+        }, function(cmp){
     		var ul = $A.test.getElementByClass("uiInputDefaultError");
     		var input = cmp.find("defaultInvalid").getElement();
     		//Verify IDS match and the amount of errors match
     		this.verifyInputDefaultStructure(input, ul, 1, 3, 0);
-    		
     	}]
     },
     
@@ -199,43 +197,55 @@
     
     testCmpWithInputSelect : {
     	attributes: { "caseToRender" : "select"},
-    	test : function(cmp) {  		
+    	test : [function(cmp) {
+    		this.fireErrorValidation(cmp.find("validate"), false);
+    	}, function(cmp) {
     		this.validateBasic(cmp,"select"+this.IDENTIFIER);
-    	}
+    	}]
     },
     
     testCmpWithInputText : {
     	attributes: { "caseToRender" : "text"},
-    	test : function(cmp) {
+    	test : [function(cmp) {
+    		this.fireErrorValidation(cmp.find("validate"), false);
+    	}, function(cmp) {
     		this.validateBasic(cmp,"text"+this.IDENTIFIER);
-    	}
+    	}]
     },
     testCmpWithInputSearch : {
     	attributes: { "caseToRender" : "search"},
-    	test : function(cmp) {
+    	test : [function(cmp) {
+    		this.fireErrorValidation(cmp.find("validate"), false);
+    	}, function(cmp) {
     		this.validateBasic(cmp,"search"+this.IDENTIFIER);
-    	}
+    	}]
     },
     testCmpWithInputTextArea : {
     	attributes: { "caseToRender" : "textArea"},
-    	test : function(cmp) {
+    	test : [function(cmp) {
+    		this.fireErrorValidation(cmp.find("validate"), false);
+    		debugger;
+    	}, function(cmp) {
+    		debugger;
     		this.validateBasic(cmp,"textArea"+this.IDENTIFIER);
     		
-    	}
+    	}]
     },
     testCmpWithInputDate : {
     	attributes: { "caseToRender" : "date"},
-    	test : function(cmp) {  		
+    	test : [function(cmp) {
+    		this.fireErrorValidation(cmp.find("validate"), false);
+    	}, function(cmp) {  		
     		this.validateBasic(cmp,"date"+this.IDENTIFIER);
-    	}
+    	}]
     },
     
     //This component is special because it has two inputDefaultErrors already on page
     testCmpWithInputDateTime : {
     	attributes: { "caseToRender" : "dateTime"},
-    	test : function(cmp) {
+    	test : [function(cmp) {
     		this.fireErrorValidation(cmp.find("validate"), false);
-        	
+    	}, function(cmp) {
         	var ulArray = $A.test.getElementByClass("uiInputDefaultError");
     		var input = cmp.find("dateTime"+this.IDENTIFIER).getElement();
     		var ul = [];
@@ -247,30 +257,38 @@
     		}
     		
     		this.verifyInputDefaultStructure(input, ul, 1, 3, 0); 
-    	}
+    	}]
     },
     testCmpWithInputRadio : {
     	attributes: { "caseToRender" : "radio"},
-    	test : function(cmp) {
+    	test : [function(cmp) {
+    		this.fireErrorValidation(cmp.find("validate"), false);
+    	}, function(cmp) {
     		this.validateBasic(cmp,"radio"+this.IDENTIFIER);
-    	}
+    	}]
     },
     testCmpWithInputRange : {
     	attributes: { "caseToRender" : "range"},
-    	test : function(cmp) {
+    	test : [function(cmp) {
+    		this.fireErrorValidation(cmp.find("validate"), false);
+    	}, function(cmp) {
     		this.validateBasic(cmp,"range"+this.IDENTIFIER);
-    	}
+    	}]
     },
     testCmpWithInputTextAreaForAutoComplete : {
     	attributes: { "caseToRender" : "autoCompleteTextArea"},
-    	test : function(cmp) {
+    	test : [function(cmp) {
+    		this.fireErrorValidation(cmp.find("validate"), false);
+    	}, function(cmp) {
     		this.validateBasic(cmp,"autoCompleteTextArea"+this.IDENTIFIER);
-    	}
+    	}]
     },
     testCmpWithInputTextForAutoComplete : {
     	attributes: { "caseToRender" : "autoCompleteText"},
-    	test : function(cmp) {
+    	test : [function(cmp) {
+    		this.fireErrorValidation(cmp.find("validate"), false);
+    	}, function(cmp) {
     		this.validateBasic(cmp,"autoCompleteText"+this.IDENTIFIER);
-    	}
+    	}]
     }
 })

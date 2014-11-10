@@ -28,7 +28,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
-import org.auraframework.Aura;
 import org.auraframework.adapter.ComponentLocationAdapter;
 import org.auraframework.adapter.RegistryAdapter;
 import org.auraframework.def.ControllerDef;
@@ -74,11 +73,11 @@ import org.auraframework.system.SourceLoader;
 import org.auraframework.throwable.AuraRuntimeException;
 import org.auraframework.util.ServiceLocator;
 
-import aQute.bnd.annotation.component.Component;
-
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+
+import aQute.bnd.annotation.component.Component;
 
 @Component (provide=AuraServiceProvider.class)
 public class AuraRegistryProviderImpl implements RegistryAdapter, SourceListener {
@@ -92,7 +91,7 @@ public class AuraRegistryProviderImpl implements RegistryAdapter, SourceListener
     private static final Set<String> rootPrefixes = ImmutableSet.of(DefDescriptor.MARKUP_PREFIX);
     private static final Set<DefType> rootDefTypes = EnumSet.of(DefType.APPLICATION, DefType.COMPONENT,
             DefType.INTERFACE, DefType.EVENT, DefType.LIBRARY, DefType.LAYOUTS, DefType.NAMESPACE, DefType.THEME,
-            DefType.DOCUMENTATION, DefType.INCLUDE);
+            DefType.DOCUMENTATION, DefType.INCLUDE, DefType.DESIGN);
 
     private static class SourceLocationInfo {
         public final List<DefRegistry<?>> staticLocationRegistries;
@@ -125,8 +124,21 @@ public class AuraRegistryProviderImpl implements RegistryAdapter, SourceListener
     };
 
     public AuraRegistryProviderImpl() {
-        Aura.getDefinitionService().subscribeToChangeNotification(this);
+        System.out.println("############# " + getClass().getName() + " Instantiated");
     }
+    
+    // TODO: osgi - disabled change notification b/c of component startup concurrency issues
+//    private DefinitionService definitionService;
+//    @Reference
+//    protected void setDefinitionService(DefinitionService definitionService) {
+//    	this.definitionService = definitionService;
+//    }
+//    
+//    @Activate
+//    protected void activate() {
+//        System.out.println("############# " + getClass().getName() + " Activated");
+//    	definitionService.subscribeToChangeNotification(this);
+//    }
 
     /**
      * Get an input stream from a file name.

@@ -51,11 +51,12 @@ function Action(def, suffix, method, paramDefs, background, cmp, caboose) {
     this.groups = [];
     this.components = null;
     this.actionId = Action.prototype.nextActionId++;
-    this.id = this.actionId + "." + suffix;
+    this.id = this.actionId + ";" + suffix;
     this.originalResponse = undefined;
     this.storable = false;
     this.caboose = caboose;
     this.allAboardCallback = undefined;
+    this.abortable = undefined;
 
     this.pathStack = [];
     this.canCreate = true;
@@ -82,8 +83,8 @@ Action.prototype.auraType = "Action";
 /**
  * Gets the Action Id.
  *
- * @private
  * @returns {string}
+ * @private
  */
 Action.prototype.getId = function() {
     return this.id;
@@ -91,9 +92,9 @@ Action.prototype.getId = function() {
 
 /**
  * Gets the next action scoped Id.
- *
- * @private
+ * 
  * @returns {string}
+ * @private
  */
 Action.prototype.getNextGlobalId = function() {
     if (!this.nextGlobalId) {
@@ -120,8 +121,8 @@ Action.prototype.reactivatePath = function() {
  * to the one supplied. A warning is emitted if the path mismatches but only
  * if it is not the top level.
  *
- * @private
  * @param {string} path the path to force
+ * @private
  */
 Action.prototype.forceCreationPath = function(path) {
     var absPath = "(empty)";
@@ -158,9 +159,9 @@ Action.prototype.forceCreationPath = function(path) {
  * This is the mirrored call to 'forceCreationPath' that releases the 'force'.
  * The path must match the call to forceCreationPath, and the path must have
  * been forced.
- * 
- * @private
+ *
  * @param {string} path the path to release.
+ * @private
  */
 Action.prototype.releaseCreationPath = function(path) {
     var last;
@@ -168,7 +169,7 @@ Action.prototype.releaseCreationPath = function(path) {
         last = this.pathStack[this.pathStack.length - 1];
     }
     if (!last || last.absPath !== path) {
-        $A.assert(false, "unexpected unwinding of pathStack.  found "
+        $A.warning("unexpected unwinding of pathStack.  found "
             + (last ? (last.absPath + " idx " + last.idx  ) : "empty") + " expected "  + path);
     }
     if (last && last.relPath === "~FORCED~") {
@@ -180,18 +181,18 @@ Action.prototype.releaseCreationPath = function(path) {
 /**
  * push a new part on the creation path.
  *
- * @private
  * @param {string} pathPart the new path part to insert.
+ * @private
  */
 Action.prototype.pushCreationPath = function(pathPart) {
-    var addedPath;
     this.canCreate = true;
+
     switch (pathPart) {
-    case "body" : pathPart = "*"; break;
-    case "realbody" : pathPart = "+"; break;
-    case "super" : pathPart = "$"; break;
+	    case "body" : pathPart = "*"; break;
+	    case "super" : pathPart = "$"; break;
     }
-    addedPath = "/"+pathPart;
+
+    var addedPath = "/" + pathPart;
     var newPath = this.topPath() + addedPath;
     var pathEntry = { relPath: addedPath, absPath:newPath, idx: undefined, startIdx: undefined };
     this.pathStack.push(pathEntry);
@@ -200,21 +201,22 @@ Action.prototype.pushCreationPath = function(pathPart) {
 /**
  * pop off the path part that was previously pushed.
  *
- * @private
  * @param {string} pathPart the path part previously pushed.
+ * @private
  */
 Action.prototype.popCreationPath = function(pathPart) {
     var addedPath;
     this.canCreate = false;
     switch (pathPart) {
     case "body" : pathPart = "*"; break;
-    case "realbody" : pathPart = "+"; break;
+// JBUCH: HALO: TODO: DELETE WHEN READY
+//    case "realbody" : pathPart = "+"; break;
     case "super" : pathPart = "$"; break;
     }
     addedPath = "/"+pathPart;
     var last = this.pathStack.pop();
     if (!last || last.relPath !== addedPath /*|| last.idx !== undefined*/) {
-        $A.assert(false, "unexpected unwinding of pathStack.  found "
+        $A.warning("unexpected unwinding of pathStack.  found "
             + (last ? (last.relPath + " idx " + last.idx  ) : "empty") + " expected "  + addedPath);
     }
     return last;
@@ -223,8 +225,8 @@ Action.prototype.popCreationPath = function(pathPart) {
 /**
  * get the path for the top entry of the path stack.
  *
- * @private
  * @return {string} the top level path.
+ * @private
  */
 Action.prototype.topPath = function() {
     if (this.pathStack.length === 0) {
@@ -237,8 +239,8 @@ Action.prototype.topPath = function() {
 /**
  * set the path index.
  *
- * @private
  * @param {number} the index to set.
+ * @private
  */
 Action.prototype.setCreationPathIndex = function(idx) {
     this.canCreate = true;
@@ -262,12 +264,12 @@ Action.prototype.setCreationPathIndex = function(idx) {
 /**
  * Gets the current creatorPath from the top of the pathStack
  *
- * @private
  * @returns {String}
+ * @private
  */
 Action.prototype.getCurrentPath = function() {
     if (!this.canCreate) {
-        $A.warning("Not ready to create. path: " + this.topPath());
+        //$A.warning("Not ready to create. path: " + this.topPath());
     }
     this.canCreate = false; // this will cause next call to getCurrentPath to fail if not popped
     return this.topPath();
@@ -291,9 +293,9 @@ Action.prototype.getDef = function() {
  *
  * If this action is already completed, <code>completeAction()</code> is called.
  *
- * @private
  * @param {CallbackGroup} group
  *      the group to add
+ * @private
  */
 Action.prototype.addCallbackGroup = function(group) {
     if (this.state === "NEW") {
@@ -373,8 +375,8 @@ Action.prototype.getParams = function() {
 /**
  * Gets the component for this Action.
  *
- * @private
  * @returns {Component} the component, if any.
+ * @private
  */
 Action.prototype.getComponent = function() {
     return this.cmp;
@@ -389,7 +391,7 @@ Action.prototype.getComponent = function() {
  *            scope The scope in which the function is executed.
  * @param {function}
  *            callback The callback function to run for each controller.
- * @param {string*}
+ * @param {String}
  *            name The action state for which the callback is to be associated with.
  */
 Action.prototype.setCallback = function(scope, callback, name) {
@@ -443,7 +445,7 @@ Action.prototype.setAllAboardCallback = function(scope, callback) {
         return;
     }
     var that = this;
-    
+
     /**
      * @private
      */
@@ -469,11 +471,11 @@ Action.prototype.callAllAboardCallback = function () {
  * This can be used to add additional functionality to the already existing callbacks, allowing the user to effectively
  * 'append' a function to the current one.
  *
- * @private
  * @param {Object}
  *            scope the scope in which the new function should be called.
  * @param {Function}
  *            callback the callback to call after the current callback is executed.
+ * @private
  */
 Action.prototype.wrapCallback = function(scope, callback) {
     var nestedCallbacks = this.callbacks;
@@ -484,7 +486,7 @@ Action.prototype.wrapCallback = function(scope, callback) {
     this.setCallback(this, function(action, cmp) {
         var cb = nestedCallbacks[this.getState()];
         if (cb && cb.fn) {
-            cb.fn.call(cb.s, this, cmp);
+            cb.fn.call(cb.s, action, cmp);
         }
         outerCallback.call(outerScope, this, cmp);
         this.callbacks = nestedCallbacks;
@@ -558,9 +560,9 @@ Action.prototype.runDeprecated = function(evt) {
  * @public
  * @returns {string} The possible action states are:
  *   "NEW": The action was created but is not in progress yet
- *   "RUNNING": The action is in progress    
+ *   "RUNNING": The action is in progress
  *   "SUCCESS": The action executed successfully
- *   "FAILURE": Deprecated. ERROR is returned instead. The action failed. This state is only valid for client-side actions. 
+ *   "FAILURE": Deprecated. ERROR is returned instead. The action failed. This state is only valid for client-side actions.
  *   "ERROR": The server returned an error
  *   "INCOMPLETE": The server didn't return a response. The server might be down or the client might be offline.
  *   "ABORTED": The action was aborted
@@ -583,7 +585,7 @@ Action.prototype.getReturnValue = function() {
  * Each error object has a message field.
  * In any mode except PROD mode, each object also has a stack field, which is a list
  * describing the execution stack when the error occurred.
- * 
+ *
  * For example, to log any errors:
  * <pre><code>
  * var errors = a.getError();
@@ -644,10 +646,10 @@ Action.prototype.runAfter = function(action) {
 /**
  * Update the fields from a response.
  *
- * @private
  * @param {Object}
  *            response The response from the server.
  * @return {Boolean} Returns true if the response differs from the original response
+ * @private
  */
 Action.prototype.updateFromResponse = function(response) {
     this.state = response["state"];
@@ -708,9 +710,9 @@ Action.prototype.updateFromResponse = function(response) {
  *
  * WARNING: Use after finishAction() since getStored() modifies <code>this.components</code>.
  *
- * @private
  * @param {string}
  *            storageName the name of the storage to use.
+ * @private
  */
 Action.prototype.getStored = function(storageName) {
     if (this.storable && this.responseState === "SUCCESS") {
@@ -737,8 +739,8 @@ Action.prototype.getStorageErrorHandler = function() {
 /**
  * Calls callbacks and fires events upon completion of the action.
  *
- * @private
  * @param {AuraContext} context the context for pushing and popping the current action.
+ * @private
  */
 Action.prototype.finishAction = function(context) {
     var previous = context.setCurrentAction(this);
@@ -791,12 +793,32 @@ Action.prototype.abort = function() {
 };
 
 /**
- * Marks the Action as abortable. For server-side Actions only.
+ * Marks the Action as abortable. For server-side Actions only. Optionally set its abortable key. The key is used
+ * to determine which abortable actions to clear when enqueued. Passing undefined or null will enable abortable and
+ * set to default "".
  *
  * @public
+ *
+ * @param {String|Boolean} [key] abortable key or boolean to disable or enable default key of ""
  */
-Action.prototype.setAbortable = function() {
-    this.abortable = true;
+Action.prototype.setAbortable = function(key) {
+    if (key !== false) {
+        // set key to default "" otherwise, string value of key
+        this.abortable = ($A.util.isUndefinedOrNull(key) || key === true) ? "" : key + "";
+    } else {
+        this.abortable = undefined;
+    }
+};
+
+/**
+ * Returns abortable key
+ *
+ * @public
+ *
+ * @returns {String} abortable key
+ */
+Action.prototype.getAbortableKey = function() {
+    return this.abortable;
 };
 
 /**
@@ -815,7 +837,7 @@ Action.prototype.isRefreshAction = function() {
  * @returns {Boolean} The function is abortable (true), or false otherwise.
  */
 Action.prototype.isAbortable = function() {
-    return this.abortable || false;
+    return !$A.util.isUndefinedOrNull(this.abortable);
 };
 
 /**
@@ -940,8 +962,8 @@ Action.prototype.setChained = function() {
 /**
  * Returns true if a given function is chained, or false otherwise. For server-side Actions only.
  *
- * @private
  * @returns {Boolean}
+ * @private
  */
 Action.prototype.isChained = function() {
     return this.chained || false;
@@ -1019,8 +1041,8 @@ Action.prototype.getRefreshAction = function(originalResponse) {
 /**
  * Gets the Action storage.
  *
- * @private
  * @returns {Storage}
+ * @private
  */
 Action.prototype.getStorage = function() {
     return Action.getStorage();
@@ -1058,13 +1080,14 @@ Action.prototype.parseAndFireEvent = function(evtObj) {
  *
  * @private
  */
-Action.prototype.fireRefreshEvent = function(event) {
+Action.prototype.fireRefreshEvent = function(event, responseUpdated) {
     // storageService.log("Action.refresh(): auto refresh: "+event+" for "+this.actionId);
     if (this.cmp && this.cmp.isValid()) {
         var isRefreshObserver = this.cmp.isInstanceOf("auraStorage:refreshObserver");
         if (isRefreshObserver) {
             this.cmp.getEvent(event).setParams({
-                    "action" : this
+                    "action" : this,
+                    "responseUpdated": responseUpdated
             }).fire();
         }
     }

@@ -26,7 +26,7 @@ import org.auraframework.throwable.quickfix.QuickFixException;
 /**
  * Service for client libraries
  */
-public interface ClientLibraryService   extends AuraServiceProvider {
+public interface ClientLibraryService extends AuraServiceProvider {
     /**
      *
      * Resolves url for client library that didn't specify url.

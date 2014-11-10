@@ -39,13 +39,13 @@ import org.auraframework.throwable.quickfix.ClientLibraryException;
 import org.auraframework.throwable.quickfix.QuickFixException;
 import org.auraframework.util.AuraTextUtil;
 
-import aQute.bnd.annotation.component.Activate;
-import aQute.bnd.annotation.component.Component;
-
 //import com.google.common.cache.Cache;
 //import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+
+import aQute.bnd.annotation.component.Activate;
+import aQute.bnd.annotation.component.Component;
 
 /**
  * Service for including external client libraries (CSS or JS)
@@ -380,7 +380,7 @@ public class ClientLibraryServiceImpl implements ClientLibraryService {
         return combinable;
     }
 
-    // TODO: aura->osgi move this to a separate class (see SourceNotifier in the same package) 
+    // TODO: osgi - disabling b/c of startup concurrency problems 
 //
 //    /**
 //     * Invalidate caches on source changes

@@ -30,6 +30,8 @@ import aQute.bnd.annotation.component.Component;
 
 import com.google.common.collect.Maps;
 
+import aQute.bnd.annotation.component.Component;
+
 @ThreadSafe
 @Component (provide=AuraServiceProvider.class)
 public class ClientSideEventExceptionJSONFormatAdapter extends JSONFormatAdapter<ClientSideEventException> {

@@ -19,11 +19,14 @@ import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.apache.http.Header;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -31,11 +34,16 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.util.EntityUtils;
 import org.auraframework.Aura;
+import org.auraframework.adapter.ContentSecurityPolicy;
+import org.auraframework.adapter.DefaultContentSecurityPolicy;
+import org.auraframework.adapter.MockConfigAdapter;
 import org.auraframework.def.ApplicationDef;
 import org.auraframework.def.ComponentDef;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.system.AuraContext.Format;
 import org.auraframework.test.AuraHttpTestCase;
+import org.auraframework.test.ServiceLocatorMocker;
+import org.auraframework.test.annotation.ThreadHostileTest;
 import org.auraframework.test.client.UserAgent;
 import org.auraframework.util.json.JsFunction;
 import org.auraframework.util.json.Json;
@@ -59,7 +67,7 @@ public class AuraServletHttpTest extends AuraHttpTestCase {
      * context before actions, now it's the opposite
      */
     public void testPostRawResponseSimpleAction() throws Exception {
-        Map<String, Object> actionParams = new HashMap<String, Object>();
+        Map<String, Object> actionParams = new HashMap<>();
         actionParams.put("param", "some string");
         ServerAction a = new ServerAction(
                 "java://org.auraframework.impl.java.controller.JavaTestController/ACTION$getString",
@@ -72,15 +80,15 @@ public class AuraServletHttpTest extends AuraHttpTestCase {
     }
     
     public void testMulitpleActionsInOnePost() {
-    	ArrayList<String> qNameList = new ArrayList<String>();
-    	ArrayList<Map<String,Object>> actionParamsArrayList = new ArrayList<Map<String,Object>>();
+    	ArrayList<String> qNameList = new ArrayList<>();
+    	ArrayList<Map<String,Object>> actionParamsArrayList = new ArrayList<>();
 
-		Map<String, Object> actionParams = new HashMap<String, Object>();
+		Map<String, Object> actionParams = new HashMap<>();
         actionParams.put("param", "some string");
         qNameList.add("java://org.auraframework.impl.java.controller.JavaTestController/ACTION$getString");
         actionParamsArrayList.add(actionParams);
         
-        Map<String, Object> actionParams1 = new HashMap<String, Object>();
+        Map<String, Object> actionParams1 = new HashMap<>();
         actionParams1.put("param", 6);
         qNameList.add("java://org.auraframework.impl.java.controller.JavaTestController/ACTION$getInt");
         actionParamsArrayList.add(actionParams1);
@@ -96,11 +104,11 @@ public class AuraServletHttpTest extends AuraHttpTestCase {
      * Check a post context.
      */
     public void testPostContext() throws Exception {
-        Map<String, Object> message = new HashMap<String, Object>();
-        Map<String, Object> actionInstance = new HashMap<String, Object>();
+        Map<String, Object> message = new HashMap<>();
+        Map<String, Object> actionInstance = new HashMap<>();
         actionInstance.put("descriptor",
                 "java://org.auraframework.impl.java.controller.JavaTestController/ACTION$getString");
-        Map<String, Object> actionParams = new HashMap<String, Object>();
+        Map<String, Object> actionParams = new HashMap<>();
         actionParams.put("param", "some string");
         actionInstance.put("params", actionParams);
         @SuppressWarnings("rawtypes")
@@ -109,7 +117,7 @@ public class AuraServletHttpTest extends AuraHttpTestCase {
 
         String jsonMessage = Json.serialize(message);
 
-        Map<String, String> params = new HashMap<String, String>();
+        Map<String, String> params = new HashMap<>();
         params.put("message", jsonMessage);
         params.put("aura.token", getCsrfToken());
         params.put("aura.context", getSimpleContext(Format.JSON, false));
@@ -133,11 +141,11 @@ public class AuraServletHttpTest extends AuraHttpTestCase {
      * 
      */
     public void testPostWithOldLastMod() throws Exception {
-        Map<String, Object> message = new HashMap<String, Object>();
-        Map<String, Object> actionInstance = new HashMap<String, Object>();
+        Map<String, Object> message = new HashMap<>();
+        Map<String, Object> actionInstance = new HashMap<>();
         actionInstance.put("descriptor",
                 "java://org.auraframework.impl.java.controller.JavaTestController/ACTION$getString");
-        Map<String, Object> actionParams = new HashMap<String, Object>();
+        Map<String, Object> actionParams = new HashMap<>();
         actionParams.put("param", "some string");
         actionInstance.put("params", actionParams);
         @SuppressWarnings("rawtypes")
@@ -146,7 +154,7 @@ public class AuraServletHttpTest extends AuraHttpTestCase {
 
         String jsonMessage = Json.serialize(message);
 
-        Map<String, String> params = new HashMap<String, String>();
+        Map<String, String> params = new HashMap<>();
         params.put("message", jsonMessage);
         params.put("aura.token", getCsrfToken());
         params.put("aura.context", getSimpleContext(Format.JSON, true));
@@ -188,7 +196,7 @@ public class AuraServletHttpTest extends AuraHttpTestCase {
         assertEquals(expectedRedirect, response.getFirstHeader(HttpHeaders.LOCATION).getValue());
         assertEquals("no-cache, no-store", response.getFirstHeader(HttpHeaders.CACHE_CONTROL).getValue());
         assertEquals("no-cache", response.getFirstHeader(HttpHeaders.PRAGMA).getValue());
-        assertAntiClickjacking(response);
+        assertDefaultAntiClickjacking(response, false, false);  // Redirects don't have XFO/CSP guarding
     }
 
     /**
@@ -250,6 +258,120 @@ public class AuraServletHttpTest extends AuraHttpTestCase {
         assertResponseSetToLongCache(String.format("/%s/%s.cmp", cmpDesc.getNamespace(), cmpDesc.getName()));
     }
 
+    @ThreadHostileTest("swaps config adapter")
+    public void testSpecialCsp() throws Exception {
+        ContentSecurityPolicy mockCsp = new ContentSecurityPolicy() {
+
+            @Override
+            public String getCspHeaderValue() {
+                return DefaultContentSecurityPolicy.buildHeaderNormally(this);
+            }
+
+            @Override
+            public Collection<String> getFrameAncestors() {
+                List<String> list = new ArrayList<String>(3);
+                list.add(null);
+                list.add("www.itrustu.com/frame");
+                list.add("www.also.com/other");
+                return list;
+            }
+
+            @Override
+            public Collection<String> getFrameSources() {
+                return new ArrayList<String>(0);
+            }
+
+            @Override
+            public Collection<String> getScriptSources() {
+                List<String> list = new ArrayList<String>(1);
+                list.add(null);
+                return list;
+            }
+
+            @Override
+            public Collection<String> getStyleSources() {
+                List<String> list = new ArrayList<String>(1);
+                list.add(null);
+                return list;
+            }
+
+            @Override
+            public Collection<String> getConnectSources() {
+                List<String> list = new ArrayList<String>(2);
+                list.add("www.itrustu.com/");
+                list.add("www.also.com/other");
+                return list;
+            }
+
+            @Override
+            public Collection<String> getFontSources() {
+                return null;
+            }
+
+            @Override
+            public Collection<String> getDefaultSources() {
+                List<String> list = new ArrayList<String>(1);
+                list.add(null);
+                return list;
+            }
+
+            @Override
+            public Collection<String> getImageSources() {
+                return null;
+            }
+
+            @Override
+            public Collection<String> getObjectSources() {
+                return new ArrayList<String>(0);
+            }
+
+            @Override
+            public Collection<String> getMediaSources() {
+                return null;
+            }
+
+            @Override
+            public String getReportUrl() {
+                return "http://doesnt.matter.com/";
+            }
+        };
+
+        MockConfigAdapter mci = getMockConfigAdapter();
+
+        try {
+            mci.setContentSecurityPolicy(mockCsp);
+
+            // An application with isOnePageApp set to true
+            DefDescriptor<ApplicationDef> desc = addSourceAutoCleanup(ApplicationDef.class,
+                    "<aura:application isOnePageApp='true'></aura:application>");
+
+            HttpGet get = obtainGetMethod(String.format("/%s/%s.app", desc.getNamespace(), desc.getName()));
+            HttpResponse response = perform(get);
+
+            // Check X-FRAME-OPTIONS
+            Header[] headers = response.getHeaders("X-FRAME-OPTIONS");
+            assertEquals("wrong number of X-FRAME-OPTIONS header lines", 3, headers.length);
+            assertEquals("SAMEORIGIN", headers[0].getValue());
+            assertEquals("www.itrustu.com/frame", headers[1].getValue());
+            assertEquals("www.also.com/other", headers[2].getValue());
+            // And CSP
+            Map<String, String> csp = getCSP(response);
+            assertEquals("frame-ancestors is wrong", "'self' www.itrustu.com/frame www.also.com/other", csp.get("frame-ancestors"));
+            assertEquals("script-src is wrong", "'self'", csp.get("script-src"));
+            assertEquals("style-src is wrong", "'self'", csp.get("style-src"));
+            assertEquals("connect-src is wrong", "www.itrustu.com/ www.also.com/other", csp.get("connect-src"));
+            assertEquals("font-src is wrong", "*", csp.get("font-src"));
+            assertEquals("img-src is wrong", "*", csp.get("img-src"));
+            assertEquals("object-src is wrong", "'none'", csp.get("object-src"));
+            assertEquals("media-src is wrong", "*", csp.get("media-src"));
+            assertEquals("default-src is wrong", "'self'", csp.get("default-src"));
+
+        } finally {
+            mci.setContentSecurityPolicy(null);
+            ServiceLocatorMocker.unmockServiceLocator();
+        }
+    }
+
     public void testHTMLTemplateCachingWhenAppCacheIsEnable() throws Exception {
         setHttpUserAgent(UserAgent.GOOGLE_CHROME.getUserAgentString());
 
@@ -301,7 +423,7 @@ public class AuraServletHttpTest extends AuraHttpTestCase {
         assertEquals("Expected response to be marked for long cache",
                 String.format("max-age=%s, public", AuraBaseServlet.LONG_EXPIRE / 1000),
                 response.getFirstHeader(HttpHeaders.CACHE_CONTROL).getValue());
-        assertAntiClickjacking(response);
+        assertDefaultAntiClickjacking(response, true, true);
         String expiresHdr = response.getFirstHeader(HttpHeaders.EXPIRES).getValue();
         Date expires = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.ENGLISH).parse(expiresHdr);
         //
@@ -329,8 +451,8 @@ public class AuraServletHttpTest extends AuraHttpTestCase {
         assertEquals("Expected response to be marked for no-cache", "no-cache, no-store",
                 response.getFirstHeader(HttpHeaders.CACHE_CONTROL).getValue());
         assertEquals("no-cache", response.getFirstHeader(HttpHeaders.PRAGMA).getValue());
-        assertAntiClickjacking(response);
-        
+        assertDefaultAntiClickjacking(response, true, true);
+
         String expiresHdr = response.getFirstHeader(HttpHeaders.EXPIRES).getValue();
         Date expires = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.ENGLISH).parse(expiresHdr);
         //
@@ -363,6 +485,7 @@ public class AuraServletHttpTest extends AuraHttpTestCase {
         assertTrue("Expected Aura FW Script tag not found. Expected to see: " + scriptTag,
                 getResponseBody(response).contains(scriptTag));
 
+        assertDefaultAntiClickjacking(response, true, true);
         get.releaseConnection();
     }
 

@@ -15,7 +15,7 @@
  */
 /*jslint sub: true */
 /**
- * @namespace Creates a new AttributeDefSet instance.
+ * @description Creates a new AttributeDefSet instance.
  * @param {Object} configs For each configs object provided, a new AttributeDef instance is added
  * @constructor
  * @protected
@@ -27,7 +27,7 @@ function AttributeDefSet(configs) {
         this.valuesOrder = [];
         for (var i = 0; i < configs.length; i++) {
             var attributeDef = new AttributeDef(configs[i]);
-            var qname = attributeDef.getDescriptor().getQualifiedName().toLowerCase();
+            var qname = attributeDef.getDescriptor().getQualifiedName();
             this.values[qname] = attributeDef;
             this.valuesOrder.push(qname);
         }
@@ -58,7 +58,7 @@ AttributeDefSet.prototype.each = function(f) {
 AttributeDefSet.prototype.getDef = function(name) {
     var values = this.values;
     if (values) {
-        return values[name.toLowerCase()];
+        return values[name];
     }
     return null;
 };

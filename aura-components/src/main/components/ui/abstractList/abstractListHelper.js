@@ -75,15 +75,16 @@
         for (var i=0, len=facets.length; i<len; i++) {
             var facet = facets[i];
 
-            facet.each(function(facet) {
-                if (facet.getDef().getDescriptor().getQualifiedName() != "markup://aura:unescapedHtml") {
-                    if (facet.isInstanceOf("ui:pager")) {
-                        pagers.push(facet);
+            for (var n = 0; n < facet.len; n++) {
+                var c = facet[n];
+                if (c.getDef().getDescriptor().getQualifiedName() != "markup://aura:unescapedHtml") {
+                    if (c.isInstanceOf("ui:pager")) {
+                        pagers.push(c);
                     } else {
-                        pagers = pagers.concat(facet.find({instancesOf:"ui:pager"}));
+                        pagers = pagers.concat(c.find({instancesOf:"ui:pager"}));
                     }
                 }
-            });
+            }
         }
 
         // wireup handlers and values
@@ -143,12 +144,11 @@
 	},
     
     showLoading:function (component, visible) {
-        $A.util[visible ? "addClass" : "removeClass"](component.getElement(), "loading");
+        $A.util[visible ? "addClass" : "removeClass"](component, "loading");
     },
 
     triggerDataProvider: function(component, index) {
         this.showLoading(component, true);
-        
         if (!index) {
             index = 0;
         }

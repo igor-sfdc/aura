@@ -23,12 +23,12 @@
     },
 
     getComponent: function(component, componentName){
-        var body = component.getConcreteComponent().getValue("v.body"),
+        var body = component.getConcreteComponent().get("v.body"),
             child;
 
         if (!$A.util.isUndefinedOrNull(componentName)) {
-            for (var i = 0; i < body.getLength(); i++) {
-                child = body.getValue(i);
+            for (var i = 0; i < body.length; i++) {
+                child = body[i];
 
                 if (child.isInstanceOf('ui:scroller')) {
                     return this.getComponent(child, componentName);
@@ -61,14 +61,6 @@
         target.set("v.visible", visible);
     },
 
-    callTriggerAction: function(component, event, action) {
-        var concreteHelper = component.getConcreteComponent().getDef().getHelper();
-
-        if (typeof concreteHelper[action] === "function") {
-            concreteHelper[action](component, event);
-        }
-    },
-
     delegateEventToTarget: function(component, event, eventName) {
         var target = this.getTargetComponent(component),
             targetEvent = target.get(eventName);
@@ -80,20 +72,52 @@
     },
 
     setEventHandlersOnChildren : function(component) {
-        var body = component.getConcreteComponent().getValue("v.body"),
+        var body = component.getConcreteComponent().get("v.body"),
             child;
 
-        for (var i = 0, l = body.getLength(); i < l; i++) {
-            child = body.getValue(i);
+        for (var i = 0, l = body.length; i < l; i++) {
+            child = body[i];
             if (child.isInstanceOf("ui:popupTrigger")) {
-            	child.addHandler("popupTriggerPress", component, "c.onTriggerPress");
-            	child.addHandler("popupTargetShow", component, "c.onTargetShow");
-            	child.addHandler("popupTargetHide", component, "c.onTargetHide");
+                this.setTriggerEventHandlers(component, child);
             }
             
             if (child.isInstanceOf("ui:popupTarget")) {
-            	child.addHandler("doClose", component, "c.onTargetHide");
+                this.setTargetEventHandlers(component, child);
             }
         }
+    },
+
+    setTriggerEventHandlers : function(component, childComponent) {
+        childComponent.addHandler("popupTriggerPress", component, "c.onTriggerPress");
+        childComponent.addHandler("popupTargetShow", component, "c.onTargetShow");
+        childComponent.addHandler("popupTargetHide", component, "c.onTargetHide");
+        childComponent.addHandler("popupKeyboardEvent", component, "c.onKeyboardEvent");
+    },
+
+    setTargetEventHandlers : function(component, targetComponent) {
+        this.addCloseHandler(component, targetComponent);
+    },
+
+    addCloseHandler : function(component, childComponent) {
+        childComponent.addHandler("doClose", component, "c.onTargetHide");
+    },
+
+    handleRefresh: function(component) {
+        this.setEventHandlersOnChildren(component);
+    },
+
+    findElement: function(component, localId) {
+        var cmp = component.getConcreteComponent();
+        var retCmp = null;
+        while (cmp) {
+            retCmp = cmp.find(localId);
+            if (retCmp) {
+                break;
+            }
+            cmp = cmp.getSuper();
+        }
+        var elem = retCmp ? retCmp.getElement() : null;
+
+        return elem;
     }
 })

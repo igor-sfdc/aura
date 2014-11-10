@@ -142,7 +142,8 @@ public class DefDescriptorImpl<T extends Definition> implements DefDescriptor<T>
                         }
                     }
                 } else {
-                    throw new AuraRuntimeException(String.format("Invalid Descriptor Format: %s[%s]", qualifiedName, defType.toString()));
+                    throw new AuraRuntimeException(String.format("Invalid Descriptor Format: %s[%s]", qualifiedName,
+                            defType.toString()));
                 }
 
                 break;
@@ -157,6 +158,9 @@ public class DefDescriptorImpl<T extends Definition> implements DefDescriptor<T>
             case TESTCASE:
             case VAR:
             case THEME_DEF_REF:
+            case ATTRIBUTE_DESIGN:
+            case DESIGN_TEMPLATE:
+            case DESIGN_TEMPLATE_REGION:
                 name = qualifiedName;
                 break;
             case APPLICATION:
@@ -169,6 +173,7 @@ public class DefDescriptorImpl<T extends Definition> implements DefDescriptor<T>
             case LAYOUTS:
             case NAMESPACE:
             case THEME:
+            case DESIGN:
                 Matcher tagMatcher = TAG_PATTERN.matcher(qualifiedName);
                 if (tagMatcher.matches()) {
                     prefix = tagMatcher.group(1);
@@ -183,7 +188,8 @@ public class DefDescriptorImpl<T extends Definition> implements DefDescriptor<T>
                     }
                     qualifiedName = buildQualifiedName(prefix, namespace, name);
                 } else {
-                    throw new AuraRuntimeException(String.format("Invalid Descriptor Format: %s[%s]", qualifiedName, defType.toString()));
+                    throw new AuraRuntimeException(String.format("Invalid Descriptor Format: %s[%s]", qualifiedName,
+                            defType.toString()));
                 }
 
                 break;
@@ -218,7 +224,8 @@ public class DefDescriptorImpl<T extends Definition> implements DefDescriptor<T>
     }
 
     private int createHashCode() {
-        return (bundle == null?0:bundle.hashCode())+AuraUtil.hashCodeLowerCase(name, namespace, prefix, defType.ordinal());
+        return (bundle == null ? 0 : bundle.hashCode())
+                + AuraUtil.hashCodeLowerCase(name, namespace, prefix, defType.ordinal());
     }
 
     @Override
@@ -267,7 +274,7 @@ public class DefDescriptorImpl<T extends Definition> implements DefDescriptor<T>
             DefDescriptor<?> e = (DefDescriptor<?>) o;
             return (bundle == e.getBundle() || (bundle != null && bundle.equals(e.getBundle())))
                     && getDefType() == e.getDefType() && name.equalsIgnoreCase(e.getName())
-                    && (namespace == null ? e.getNamespace() == null:namespace.equalsIgnoreCase(e.getNamespace()))
+                    && (namespace == null ? e.getNamespace() == null : namespace.equalsIgnoreCase(e.getNamespace()))
                     && (prefix == null ? e.getPrefix() == null : prefix.equalsIgnoreCase(e.getPrefix()));
         }
         return false;

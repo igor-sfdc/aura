@@ -20,11 +20,13 @@ import java.util.ArrayList;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.util.type.Converter;
 
+import aQute.bnd.annotation.component.Component;
+
 /**
  * Used by aura.util.type.TypeUtil
  */
 @SuppressWarnings("rawtypes")
-@aQute.bnd.annotation.component.Component (provide=AuraServiceProvider.class)
+@Component (provide=AuraServiceProvider.class)
 public class ArrayListToBooleanArrayConverter implements Converter<ArrayList, Boolean[]> {
 
     @SuppressWarnings("unchecked")

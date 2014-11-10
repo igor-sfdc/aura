@@ -35,6 +35,8 @@ import aQute.bnd.annotation.component.Component;
 
 import com.google.common.collect.Lists;
 
+import aQute.bnd.annotation.component.Component;
+
 /**
  */
 @Component (provide=AuraServiceProvider.class)

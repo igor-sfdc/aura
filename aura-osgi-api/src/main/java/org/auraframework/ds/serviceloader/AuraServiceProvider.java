@@ -17,8 +17,6 @@ package org.auraframework.ds.serviceloader;
 
 /**
  * Aura declarative service provider marker interface
- * 
- *
  *
  */
 public interface AuraServiceProvider {

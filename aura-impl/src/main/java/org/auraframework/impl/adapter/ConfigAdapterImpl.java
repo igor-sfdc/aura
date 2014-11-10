@@ -32,9 +32,13 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.TimeZone;
 
+import javax.servlet.http.HttpServletRequest;
+
 import org.apache.log4j.Logger;
 import org.auraframework.Aura;
 import org.auraframework.adapter.ConfigAdapter;
+import org.auraframework.adapter.ContentSecurityPolicy;
+import org.auraframework.adapter.DefaultContentSecurityPolicy;
 import org.auraframework.ds.resourceloader.BundleResourceAccessor;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.impl.javascript.AuraJavascriptGroup;
@@ -55,15 +59,14 @@ import org.auraframework.util.resource.FileGroup;
 import org.auraframework.util.resource.ResourceLoader;
 import org.auraframework.util.text.Hash;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+
 import aQute.bnd.annotation.component.Activate;
 import aQute.bnd.annotation.component.Component;
 import aQute.bnd.annotation.component.Reference;
-
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSortedSet;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 @Component (provide=AuraServiceProvider.class)
 public class ConfigAdapterImpl implements ConfigAdapter {
@@ -256,6 +259,13 @@ public class ConfigAdapterImpl implements ConfigAdapter {
         String nonce = Aura.getContextService().getCurrentContext().getFrameworkUID();
         String contextPath = Aura.getContextService().getCurrentContext().getContextPath();
         return String.format("%s/auraFW/resources/%s/moment/moment.js", contextPath, nonce);
+    }
+
+    @Override
+    public String getFastClickJSURL() {
+        String nonce = Aura.getContextService().getCurrentContext().getFrameworkUID();
+        String contextPath = Aura.getContextService().getCurrentContext().getContextPath();
+        return String.format("%s/auraFW/resources/%s/fastclick/fastclick.js", contextPath, nonce);
     }
 
     @Override
@@ -489,5 +499,24 @@ public class ConfigAdapterImpl implements ConfigAdapter {
     @Override
     public boolean isCacheablePrefix(String prefix) {
         return CACHEABLE_PREFIXES.contains(prefix);
+    }
+
+    /**
+     * This default implementation of {@link ConfigAdapter#getContentSecurityPolicy(String)}
+     * will return a default ContentSecurityPolicy object.
+     */
+    @Override
+    public ContentSecurityPolicy getContentSecurityPolicy(String app, HttpServletRequest request) {
+        // For some (too many!) URIs, we allow inline style.  Note that the request has already gone
+        // through {@link AuraRewriteFilter}, so its URI may be surprising.
+        boolean inlineStyle = false;  // unless we know we should, we don't want inlines
+        String format = request.getParameter("aura.format");
+        if ("HTML".equals(format)) {
+            String defType = request.getParameter("aura.deftype");
+            if ("APPLICATION".equals(defType) || "COMPONENT".equals(defType)) {
+                inlineStyle = true;  // apps and components allow inlines.  Sigh.
+            }
+        }
+        return new DefaultContentSecurityPolicy(inlineStyle);
     }
 }

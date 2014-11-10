@@ -15,7 +15,7 @@
  */
 /*jslint sub: true, evil : true */
 /**
- * @namespace Creates a RendererDef instance.
+ * @description Creates a RendererDef instance.
  * @constructor
  * @protected
  */
@@ -101,12 +101,12 @@ RendererDef.prototype.unrender = function RendererDef$Unrender(component) {
         renderer["superUnrender"]();
     } else {
         // TODO: iterate over components attributes and recursively unrender facets
-
         var elements = component.getElements();
-        for (var name in elements){
-            var el = elements[name];
-            delete elements[name];
-            aura.util.removeElement(el);
+        if(elements) {
+            while(elements.length){
+                $A.util.removeElement(elements.pop());
+            }
         }
+        component.disassociateElements();
     }
 };

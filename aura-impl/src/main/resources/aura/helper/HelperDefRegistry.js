@@ -15,7 +15,7 @@
  */
 /*jslint sub: true */
 /**
- * @namespace A registry for HelperDefs.
+ * @description A registry for HelperDefs.
  * @constructor
  */
 function HelperDefRegistry(){
@@ -38,9 +38,9 @@ HelperDefRegistry.prototype.getDef = function(componentDefDescriptor, config, co
     var ret = this.helperDefs[componentDefDescriptor];
     if(!ret && componentDef){
         var superHelper;
-        var zuper = componentDef.getSuperDef();
-        if(zuper){
-            superHelper = zuper.getHelper();
+        var superComponent = componentDef.getSuperDef();
+        if(superComponent){
+            superHelper = superComponent.getHelper();
         }
         if (config || superHelper) {
             ret = new HelperDef(config || {}, superHelper, libraries);
