@@ -119,11 +119,6 @@
         <dependencies>
             <dependency>
                 <groupId>org.auraframework</groupId>
-                <artifactId>aura-osgi-api</artifactId>
-                <version>0.1530-SNAPSHOT</version>
-            </dependency>
-            <dependency>
-                <groupId>org.auraframework</groupId>
                 <artifactId>aura-osgi-extensions</artifactId>
                 <version>0.1530-SNAPSHOT</version>
             </dependency>
@@ -201,6 +196,11 @@
                 <groupId>org.auraframework</groupId>
                 <artifactId>auradocs-integration-test</artifactId>
                 <type>test-jar</type>
+                <version>0.1530-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>org.auraframework</groupId>
+                <artifactId>aura-osgi-api</artifactId>
                 <version>0.1530-SNAPSHOT</version>
             </dependency>
             <dependency>
@@ -817,7 +817,7 @@
                                             <include name="**/*.css" />
                                             <include name="**/*.theme" />
                                             <include name="**/*Test.js" />
-											<include name="**/*.auradoc" />
+                                            <include name="**/*.auradoc" />
                                         </fileset>
                                     </path>
                                     <pathconvert property="definitionList" refid="definitions" pathsep=",">
