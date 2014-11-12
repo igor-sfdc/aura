@@ -40,7 +40,6 @@ import org.auraframework.adapter.ConfigAdapter;
 import org.auraframework.adapter.ContentSecurityPolicy;
 import org.auraframework.adapter.DefaultContentSecurityPolicy;
 import org.auraframework.ds.resourceloader.BundleResourceAccessor;
-import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.impl.javascript.AuraJavascriptGroup;
 import org.auraframework.impl.source.AuraResourcesHashingGroup;
 import org.auraframework.impl.source.file.AuraFileMonitor;
@@ -68,7 +67,7 @@ import aQute.bnd.annotation.component.Activate;
 import aQute.bnd.annotation.component.Component;
 import aQute.bnd.annotation.component.Reference;
 
-@Component (provide=AuraServiceProvider.class)
+@Component (name="DefaultConfigAdapter", provide=ConfigAdapter.class)
 public class ConfigAdapterImpl implements ConfigAdapter {
 
     private static final String TIMESTAMP_FORMAT_PROPERTY = "aura.build.timestamp.format";
