@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.auraframework.adapter.LocalizationAdapter;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.util.AuraLocale;
+import org.osgi.service.component.ComponentConstants;
 
 import aQute.bnd.annotation.component.Activate;
 import aQute.bnd.annotation.component.Component;
@@ -33,7 +34,7 @@ import aQute.bnd.annotation.component.Reference;
 public class LocalizationAdapterDelegate implements LocalizationAdapter {
 	
 	private final AtomicReference<LocalizationAdapter> localizationAdapterDelegate = new AtomicReference<>();
-	@Reference (name="ExternalAuraLocalizationAdapter", optional=true, dynamic=true)
+	@Reference(target = "("+ComponentConstants.COMPONENT_NAME+"=ExternalAuraLocalizationAdapter)", dynamic=true, optional=true)
 	protected void setExternalLocalizationAdapter(LocalizationAdapter externalLocalizationAdapter) {
 		localizationAdapterDelegate.set(externalLocalizationAdapter);
 	}

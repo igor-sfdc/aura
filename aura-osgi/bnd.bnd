@@ -177,6 +177,7 @@ Export-Package: org.auraframework.ds.serviceloader,\
     org.auraframework.instance,\
     org.auraframework.service,\
     org.auraframework.util,\
+    org.auraframework.util.resource,\
     org.auraframework.def,\
     org.auraframework.adapter,\
     org.auraframework,\

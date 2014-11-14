@@ -26,6 +26,7 @@ import org.auraframework.adapter.ContentSecurityPolicy;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.system.AuraContext.Mode;
 import org.auraframework.util.resource.ResourceLoader;
+import org.osgi.service.component.ComponentConstants;
 
 import aQute.bnd.annotation.component.Activate;
 import aQute.bnd.annotation.component.Component;
@@ -37,12 +38,12 @@ public class ConfigAdapterDelegate implements ConfigAdapter {
 	private final AtomicReference<ConfigAdapter> configAdapterDelegate = new AtomicReference<>();
 	
 	private ConfigAdapter defaultConfigAdapter;
-	@Reference(name="DefaultConfigAdapter")
+	@Reference(target = "("+ComponentConstants.COMPONENT_NAME+"=DefaultConfigAdapter)")
 	protected void setDefaultConfigAdapter(ConfigAdapter defaultConfigAdapter) {
 		this.defaultConfigAdapter = defaultConfigAdapter;
 	}
 	
-	@Reference(name="ExternalConfigAdapter", dynamic=true, optional=true)
+	@Reference(target = "("+ComponentConstants.COMPONENT_NAME+"=ExternalConfigAdapter)", dynamic=true, optional=true)
 	protected void setExternalConfigAdapter(ConfigAdapter externalConfigAdapter) {
 		// Use external config adapter whenever available
 		configAdapterDelegate.set(externalConfigAdapter);
