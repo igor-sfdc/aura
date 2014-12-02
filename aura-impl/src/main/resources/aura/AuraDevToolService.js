@@ -392,7 +392,6 @@ var AuraDevToolService = function() {
                 for(var i = 0; i< panels.length; i++){
                     panel = panels[i];
                     hiddenValue = $A.util.getElementAttributeValue(panel, "aria-hidden");
-                    
                     //Panel is not the top element
                     if($A.util.hasClass(panel, "panelSlide")){                       
                         //If there is a top element, make sure that it has its aria-hidden attribute set to true
@@ -1223,8 +1222,8 @@ var AuraDevToolService = function() {
                      var accessAideFuncs = aura.devToolService.accessbilityAide;
                      var errorMsg = "[A11Y_DOM_12] Base and top panels should have proper aria-hidden properties.\n  More info http://sfdc.co/a11y_dom_12";
                      
-                     var modalOverlay = "div.uiModalOverlay";
-                     var panelOverlay = "div.uiPanelOverlay";
+                     var modalOverlay = "div.uiPanelDialog";
+                     var panelOverlay = "div.forcePanelOverlay";
                      var panelSlide   = "section.stage.panelSlide";
                      
                      //Get all panels

@@ -37,8 +37,6 @@ import com.ibm.icu.text.DecimalFormat;
 import com.ibm.icu.text.NumberFormat;
 import com.ibm.icu.util.Currency;
 
-import aQute.bnd.annotation.component.Component;
-
 /**
  * Default implementation for the Localization Service
  */

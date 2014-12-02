@@ -15,6 +15,9 @@
  */
 package org.auraframework.impl.adapter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.auraframework.Aura;
 import org.auraframework.adapter.StyleAdapter;
 import org.auraframework.css.ThemeList;
@@ -23,15 +26,19 @@ import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.StyleDef;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.impl.css.ThemeValueProviderImpl;
+import org.auraframework.impl.css.parser.DuplicateFontFacePlugin;
 import org.auraframework.throwable.quickfix.QuickFixException;
+
+import com.google.common.collect.ImmutableList;
+import com.salesforce.omakase.plugin.Plugin;
 
 import aQute.bnd.annotation.component.Component;
 
 @Component (provide=AuraServiceProvider.class)
-public final class StyleAdapterImpl implements StyleAdapter {
+public class StyleAdapterImpl implements StyleAdapter {
     @Override
     public ThemeValueProvider getThemeValueProvider(DefDescriptor<StyleDef> descriptor) throws QuickFixException {
-        return getThemeValueProvider(descriptor, overrides());
+        return getThemeValueProvider(descriptor, Aura.getContextService().getCurrentContext().getThemeList());
     }
 
     @Override
@@ -46,7 +53,24 @@ public final class StyleAdapterImpl implements StyleAdapter {
         return new ThemeValueProviderImpl(descriptor, null);
     }
 
-    private static ThemeList overrides() throws QuickFixException {
-        return Aura.getContextService().getCurrentContext().getThemeList();
+    @Override
+    public List<Plugin> getCompilationPlugins() {
+        return ImmutableList.<Plugin>of();
+    }
+
+    @Override
+    public List<Plugin> getRuntimePlugins() {
+        return ImmutableList.<Plugin>of();
+    }
+
+    @Override
+    public List<Plugin> getContextualRuntimePlugins() {
+        List<Plugin> plugins = new ArrayList<>(1);
+
+        // when pre-compilation is ready, this should probably be there instead
+        // also when we move to multiple app.css files, need to revisit this
+        plugins.add(new DuplicateFontFacePlugin());
+
+        return plugins;
     }
 }

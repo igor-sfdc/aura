@@ -17,10 +17,6 @@ package org.auraframework.util.type;
 
 import java.util.ArrayList;
 
-import org.auraframework.ds.serviceloader.AuraServiceProvider;
-
-import aQute.bnd.annotation.component.Component;
-
 public class StringToCustomPairArrayConverter implements Converter<String, CustomPairType[]> {
 
     @Override

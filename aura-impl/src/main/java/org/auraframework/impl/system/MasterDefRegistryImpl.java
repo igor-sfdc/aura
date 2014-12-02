@@ -261,6 +261,7 @@ public class MasterDefRegistryImpl implements MasterDefRegistry {
             case RESOURCE:
             case PROVIDER:
             case THEME_PROVIDER:
+            case INCLUDE:
             case THEME_MAP_PROVIDER:
                 qualifiedNamePattern = "%s://%s.%s";
                 break;
@@ -283,12 +284,13 @@ public class MasterDefRegistryImpl implements MasterDefRegistry {
             case ATTRIBUTE_DESIGN:
             case DESIGN_TEMPLATE:
             case DESIGN_TEMPLATE_REGION:
+            case SVG:
                 qualifiedNamePattern = "%s://%s:%s";
                 break;
             case ACTION:
             case DESCRIPTION:
             case EXAMPLE:
-            case INCLUDE:
+            case INCLUDE_REF:
                 // TODO: FIXME
                 throw new AuraRuntimeException(String.format("Find on %s defs not supported.", matcher.getDefType()
                         .name()));
@@ -979,7 +981,7 @@ public class MasterDefRegistryImpl implements MasterDefRegistry {
                 validateHelper(dd);
             }
             for (CompilingDef<?> compiling : currentCC.compiled.values()) {
-                if (!fillCompilingDef(compiling, currentCC.context)) {
+                if (compiling.def == null && !fillCompilingDef(compiling, currentCC.context)) {
                     throw new DefinitionNotFoundException(descriptor);
                 }
             }
@@ -1200,6 +1202,10 @@ public class MasterDefRegistryImpl implements MasterDefRegistry {
 
     <D extends Definition> String hasAccess(DefDescriptor<?> referencingDescriptor, D def,
             Cache<String, String> accessCheckCache) {
+    	if (def == null) {
+    		return null;
+    	}
+    	
         // If the def is access="global" or does not require authentication then anyone can see it
         DefinitionAccess access = def.getAccess();
         if (access.isGlobal() || !access.requiresAuthentication()) {

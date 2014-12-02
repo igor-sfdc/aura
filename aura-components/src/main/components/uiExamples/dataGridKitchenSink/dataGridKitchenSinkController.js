@@ -80,8 +80,14 @@
         var name = evt.getParam('name');
 
         switch (name) {
-            case 'delete': 
-                alert('delete '  + evt.getParam('index'));
+            case 'disable': 
+                hlp.changeRowDisabled(cmp, evt.getParam('index'), true);
+                break;
+            case 'enable':
+            	hlp.changeRowDisabled(cmp, evt.getParam('index'), false);
+            	break;
+            case 'toggleClass':
+            	hlp.changeRowClass(cmp, evt.getParam('index'), "error", "toggle");
         }
     },
     
@@ -92,6 +98,7 @@
 	
 	getSelected : function(cmp, evt, hlp) {
     	var list = cmp.find("grid").get("v.selectedItems");
+    	cmp.set("v.gridSelectedItems", []); // workaround for rerendering issue
 		cmp.set("v.gridSelectedItems", list);
 	},
 	
@@ -108,7 +115,6 @@
 			$A.newCmpAsync(
 					this, 
 					function(newCmp) {
-						columns[5].destroy();
 						columns[5] = newCmp;
 						grid.set("v.columns", columns);
 					},
@@ -125,7 +131,6 @@
 			$A.newCmpAsync(
 					this, 
 					function(newCmp) {
-						columns[5].destroy();
 						columns[5] = newCmp;
 						grid.set("v.columns", columns);
 					},
@@ -139,5 +144,29 @@
 					}
 			);
 		}
+	},
+	
+	/**
+	 * Row Attribute Update Handlers
+	 */
+	
+	disableRow : function(cmp, evt, helper) {
+		helper.changeRowDisabled(cmp, cmp.get("v.rowIndex"), false, true);
+	},
+	
+	enableRow : function(cmp, evt, helper) {
+		helper.changeRowDisabled(cmp, cmp.get("v.rowIndex"), false, false);
+	},
+	
+	addClass : function(cmp, evt, helper) {
+		helper.changeRowClass(cmp, cmp.get("v.rowIndex"), cmp.get("v.className"), "add");
+	},
+	
+	removeClass : function(cmp, evt, helper) {
+		helper.changeRowClass(cmp, cmp.get("v.rowIndex"), cmp.get("v.className"), "remove");
+	},
+	
+	toggleClass : function(cmp, evt, helper) {
+		helper.changeRowClass(cmp, cmp.get("v.rowIndex"), cmp.get("v.className"), "toggle");
 	}
 })

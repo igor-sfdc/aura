@@ -41,6 +41,7 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.impl.adapter.format.html.offline,\
     org.auraframework.impl.adapter.format.js,\
     org.auraframework.impl.adapter.format.json,\
+    org.auraframework.impl.adapter.format.svg,\
     org.auraframework.impl.admin,\
     org.auraframework.impl.cache,\
     org.auraframework.impl.clientlibrary,\
@@ -109,6 +110,8 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.impl.source,\
     org.auraframework.impl.source.file,\
     org.auraframework.impl.source.resource,\
+    org.auraframework.impl.svg,\
+    org.auraframework.impl.svg.parser,\
     org.auraframework.impl.system,\
     org.auraframework.impl.test.util,\
     org.auraframework.impl.type,\

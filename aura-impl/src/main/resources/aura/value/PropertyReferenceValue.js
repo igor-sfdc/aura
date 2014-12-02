@@ -52,10 +52,10 @@ PropertyReferenceValue.prototype.set = function(value) {
 PropertyReferenceValue.prototype.addChangeHandler=function(cmp, key, method) {
     var valueProvider=this.valueProvider;
     var expression = this.expression;
-    while(valueProvider instanceof PassthroughValue){
-    	expression = valueProvider.getExpression(expression);
-        valueProvider=valueProvider.getComponent();
-    }
+    // while(valueProvider instanceof PassthroughValue){
+    // 	expression = valueProvider.getExpression(expression);
+    //     valueProvider=valueProvider.getComponent();
+    // }
     if(valueProvider.addValueHandler&&(valueProvider!==cmp||expression!==key)) {
         if(!method){
             method=function PropertyReferenceValue$changeHandler(event) {
@@ -65,8 +65,12 @@ PropertyReferenceValue.prototype.addChangeHandler=function(cmp, key, method) {
         }
         method.id=cmp.getGlobalId();
         method.key=key;
-        var config={"event": "change", "value": expression, "method": method};
-        valueProvider.addValueHandler(config);
+        var config={"event": "change", "value": expression, "method": method, "cmp": cmp};
+        this.valueProvider.addValueHandler(config);
+
+        // if(this.valueProvider instanceof PassthroughValue) {
+        //     this.valueProvider.addValueHandler({"event": "change", "value": this.expression, "method": method});
+        // }
     }
 };
 
@@ -78,8 +82,8 @@ PropertyReferenceValue.prototype.removeChangeHandler=function(cmp, key){
     	expression = valueProvider.getExpression(expression);
         valueProvider=valueProvider.getComponent();
     }
-    if(valueProvider.removeValueHandler&&(valueProvider!==cmp||this.expression!==key)) {
-        valueProvider.removeValueHandler({"event": "change", "value": this.expression, "id":cmp.getGlobalId(),"key":key});
+    if(this.valueProvider.removeValueHandler&&(valueProvider!==cmp||this.expression!==key)) {
+        this.valueProvider.removeValueHandler({"event": "change", "value": this.expression, "id":cmp.getGlobalId(),"key":key});
     }
 };
 
@@ -95,6 +99,20 @@ PropertyReferenceValue.prototype.isGlobal = function() {
  */
 PropertyReferenceValue.prototype.getExpression = function() {
 	return this.expression;
+};
+
+PropertyReferenceValue.prototype.getReference = function(path) {
+    if(!path) {
+        return this;
+    }
+    
+    var valueProvider=this.valueProvider;
+    var expression = this.expression;
+    while(valueProvider instanceof PassthroughValue){
+        expression = valueProvider.getExpression(expression);
+        valueProvider=valueProvider.getComponent();
+    }
+    return valueProvider.getReference(expression + "." + path);
 };
 
 /**
@@ -114,6 +132,9 @@ PropertyReferenceValue.prototype.equals = function (target){
 PropertyReferenceValue.prototype.isDirty = function() {
 	var valueProvider = this.valueProvider;
     var expression = this.expression;
+
+    // KRIS: HALO: I'm really unsure if I want this here or not, do we check against the component if it's dirty? 
+    // Why would we care if the passthrough value is dirty? I would think the 
 	while(valueProvider instanceof PassthroughValue){
     	expression = valueProvider.getExpression(expression);
         valueProvider=valueProvider.getComponent();
@@ -142,6 +163,8 @@ PropertyReferenceValue.prototype.isExpression = function() {
  * Destroys the path.
  */
 PropertyReferenceValue.prototype.destroy = function() {
+
+
 	// #if {"modes" : ["STATS"]}
 	valueFactory.deIndex(this);
 	// #end

@@ -75,12 +75,6 @@
 
 			concrete._sorting = true;
 			cmp.getSuper().set('v.sortBy', evt);
-
-			// 'Fire' action to reset selection.
-			hlp.handleAction(concrete, {
-				name 	: 'dataGrid:select',
-				value 	: false
-			});
 		}
 	},
 
@@ -98,6 +92,24 @@
 					globalId 	: $A.util.getDataAttribute(evt.target, 'action-global-id')
 				});
 			}
+		}
+	},
+	
+	handleUpdateRowAttrs: function(cmp, evt, hlp) {
+		var params = evt.getParams(),
+			concrete = cmp.getConcreteComponent(),
+			rowData = concrete._rowData[params.index],
+			rowElement, rowData, attr, tbody, classIndex;
+		
+		if (params.className && params.classOp) {
+			tbody = cmp.find("tbody").getElement();
+			rowElement = tbody.rows[params.index];
+			
+			hlp.updateRowClass(cmp, rowData, rowElement, params);
+		}
+		
+		if (params.attributes) {
+			hlp.updateValueProvider(cmp, rowData, params.attributes);
 		}
 	}
 })

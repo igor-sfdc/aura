@@ -39,7 +39,7 @@ public class AuraPrefixDefaultsProviderImpl implements PrefixDefaultsAdapter {
         defaults.put(DefType.NAMESPACE, DefDescriptor.MARKUP_PREFIX);
         defaults.put(DefType.EVENT, DefDescriptor.MARKUP_PREFIX);
         defaults.put(DefType.LIBRARY, DefDescriptor.MARKUP_PREFIX);
-        defaults.put(DefType.INCLUDE, DefDescriptor.JAVA_PREFIX);
+        defaults.put(DefType.INCLUDE, DefDescriptor.JAVASCRIPT_PREFIX);
         defaults.put(DefType.INTERFACE, DefDescriptor.MARKUP_PREFIX);
         defaults.put(DefType.THEME, DefDescriptor.MARKUP_PREFIX);
         defaults.put(DefType.STYLE, DefDescriptor.CSS_PREFIX);
@@ -50,6 +50,7 @@ public class AuraPrefixDefaultsProviderImpl implements PrefixDefaultsAdapter {
         defaults.put(DefType.RESOURCE, DefDescriptor.JAVASCRIPT_PREFIX);
         defaults.put(DefType.DOCUMENTATION, DefDescriptor.MARKUP_PREFIX);
         defaults.put(DefType.DESIGN, DefDescriptor.MARKUP_PREFIX);
+        defaults.put(DefType.SVG, DefDescriptor.MARKUP_PREFIX);
     }
 
     @Override

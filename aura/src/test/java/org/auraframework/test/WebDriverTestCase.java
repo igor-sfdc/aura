@@ -82,7 +82,8 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
 
     protected int timeoutInSecs = Integer.parseInt(System.getProperty("webdriver.timeout", "30"));
     protected WebDriver currentDriver = null;
-    BrowserType currentBrowserType = null;
+    protected BrowserType currentBrowserType = null;
+    //auraUITestingUtil is created here
     protected AuraUITestingUtil auraUITestingUtil;
     protected PerfWebDriverUtil perfWebDriverUtil;
 
@@ -127,7 +128,7 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
         return browserType;
     }
 
-    public void addMocksToTestContextLocalDef(Set<Definition> mocks) throws Throwable {
+    public void addMocksToTestContextLocalDef(Collection<Definition> mocks) throws Throwable {
         if (mocks != null && !mocks.isEmpty()) {
             TestContextAdapter testContextAdapter = Aura.get(TestContextAdapter.class);
             if (testContextAdapter != null) {
@@ -170,7 +171,7 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
 
     public void runTestWithBrowser(BrowserType browserType) throws Throwable {
         currentBrowserType = browserType;
-
+        
         if (isPerfTest()) {
             runPerfTests();
         } else {
@@ -808,8 +809,8 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
                 driverInfo += "\n      running in SauceLabs at " + SauceUtil.getLinkToPublicJobInSauce(currentDriver);
             }
             logger.info(driverInfo);
-
-            setAuraUITestingUtil();//auraUITestingUtil = new AuraUITestingUtil(currentDriver);
+            
+            auraUITestingUtil = new AuraUITestingUtil(currentDriver);
             perfWebDriverUtil = new PerfWebDriverUtil(currentDriver, auraUITestingUtil);
         }
         return currentDriver;
@@ -819,10 +820,6 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
 		this.currentDriver = currentDriver;
     }
     
-    protected void setAuraUITestingUtil() {
-    	this.auraUITestingUtil = new AuraUITestingUtil(currentDriver);
-    }
-
     /**
      * @return non-null to specify a desired window size to be set when a new driver is created
      */
@@ -844,11 +841,11 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
     protected URI getAbsoluteURI(String url) throws MalformedURLException, URISyntaxException {
         return getTestServletConfig().getBaseUrl().toURI().resolve(url);
     }
-
+    
     /**
      * Append a query param to avoid possible browser caching of pages
      */
-    private String addBrowserNonce(String url) {
+    public String addBrowserNonce(String url) {
         if (!url.startsWith("about:blank")) {
             Map<String, String> params = new HashMap<>();
             params.put("browser.nonce", String.valueOf(System.currentTimeMillis()));
@@ -856,6 +853,40 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
         }
         return url;
     }
+    
+	/**
+     * Add additional parameters to the URL. These paremeters will be added after the query string, and before a hash
+     * (if present).
+     */
+    public String addUrlParams(String url, Map<String, String> params) {
+        // save any fragment
+        int hashLoc = url.indexOf('#');
+        String hash = "";
+        if (hashLoc >= 0) {
+            hash = url.substring(hashLoc);
+            url = url.substring(0, hashLoc);
+        }
+
+        // strip query string
+        int qLoc = url.indexOf('?');
+        String qs = "";
+        if (qLoc >= 0) {
+            qs = url.substring(qLoc + 1);
+            url = url.substring(0, qLoc);
+        }
+
+        // add any additional params
+        List<NameValuePair> newParams = Lists.newArrayList();
+        URLEncodedUtils.parse(newParams, new Scanner(qs), "UTF-8");
+        for (String key : params.keySet()) {
+            newParams.add(new BasicNameValuePair(key, params.get(key)));
+        }
+
+        return url + "?" + URLEncodedUtils.format(newParams, "UTF-8") + hash;
+    }
+
+
+    
 
     /**
      * Open a URI without any additional handling. This will, however, add a nonce to the URL to prevent caching of the
@@ -900,14 +931,13 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
     }
 
     /**
-     * Return the default Aura Mode based on the browser type. IPAD and Android browsers return
-     * {@link org.auraframework.system.AuraContext.Mode#CADENCE} in order to disable fast click.
+     * Return the Mode for web-driver test.
      */
-    protected Mode getAuraModeForCurrentBrowser() {
+    public Mode getAuraModeForCurrentBrowser() {
         return Mode.SELENIUM;
     }
 
-    protected void open(DefDescriptor<? extends BaseComponentDef> dd) throws MalformedURLException, URISyntaxException {
+    public void open(DefDescriptor<? extends BaseComponentDef> dd) throws MalformedURLException, URISyntaxException {
         open(getUrl(dd));
     }
 
@@ -938,37 +968,6 @@ public abstract class WebDriverTestCase extends IntegrationTestCase {
                 throw e;
             }
         }
-    }
-
-    /**
-     * Add additional parameters to the URL. These paremeters will be added after the query string, and before a hash
-     * (if present).
-     */
-    protected String addUrlParams(String url, Map<String, String> params) {
-        // save any fragment
-        int hashLoc = url.indexOf('#');
-        String hash = "";
-        if (hashLoc >= 0) {
-            hash = url.substring(hashLoc);
-            url = url.substring(0, hashLoc);
-        }
-
-        // strip query string
-        int qLoc = url.indexOf('?');
-        String qs = "";
-        if (qLoc >= 0) {
-            qs = url.substring(qLoc + 1);
-            url = url.substring(0, qLoc);
-        }
-
-        // add any additional params
-        List<NameValuePair> newParams = Lists.newArrayList();
-        URLEncodedUtils.parse(newParams, new Scanner(qs), "UTF-8");
-        for (String key : params.keySet()) {
-            newParams.add(new BasicNameValuePair(key, params.get(key)));
-        }
-
-        return url + "?" + URLEncodedUtils.format(newParams, "UTF-8") + hash;
     }
 
     private void openAndWait(String url, boolean waitForInit) throws MalformedURLException, URISyntaxException {

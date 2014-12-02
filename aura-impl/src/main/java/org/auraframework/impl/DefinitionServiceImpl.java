@@ -43,7 +43,6 @@ import org.auraframework.throwable.quickfix.QuickFixException;
 
 import com.google.common.collect.Sets;
 
-import aQute.bnd.annotation.component.Activate;
 import aQute.bnd.annotation.component.Component;
 
 /**
@@ -55,21 +54,20 @@ import aQute.bnd.annotation.component.Component;
 @Component (provide=AuraServiceProvider.class)
 public class DefinitionServiceImpl implements DefinitionService {
     private static final long serialVersionUID = -2488984746420077688L;
-    private static final ConcurrentLinkedQueue<WeakReference<SourceListener>> listeners = new ConcurrentLinkedQueue<WeakReference<SourceListener>>();
+    private static final ConcurrentLinkedQueue<WeakReference<SourceListener>> listeners = new ConcurrentLinkedQueue<>();
 
-    @Activate
-    protected void activate() {
-        System.out.println("############# " + getClass().getName() + " Activated");
-    }
-
-    @SuppressWarnings("unchecked")
     @Override
     public <T extends Definition> DefDescriptor<T> getDefDescriptor(String qualifiedName, Class<T> defClass) {
+        return getDefDescriptor(qualifiedName, defClass, null);
+    }
+
+    @Override
+    public <T extends Definition, B extends Definition> DefDescriptor<T> getDefDescriptor(String qualifiedName,
+            Class<T> defClass, DefDescriptor<B> bundle) {
         if (defClass == ActionDef.class) {
-            return (DefDescriptor<T>) SubDefDescriptorImpl.getInstance(qualifiedName, ActionDef.class,
-                    ControllerDef.class);
+            return SubDefDescriptorImpl.getInstance(qualifiedName, defClass, ControllerDef.class);
         }
-        return DefDescriptorImpl.getInstance(qualifiedName, defClass);
+        return DefDescriptorImpl.getInstance(qualifiedName, defClass, bundle);
     }
 
     @Override
@@ -291,7 +289,7 @@ public class DefinitionServiceImpl implements DefinitionService {
 
     @Override
     public void subscribeToChangeNotification(SourceListener listener) {
-        listeners.add(new WeakReference<SourceListener>(listener));
+        listeners.add(new WeakReference<>(listener));
     }
 
     @Override

@@ -26,11 +26,11 @@
  * @constructor
  * @protected
  */
-function AttributeSet(attributes, attributeDefSet, defaultValueProvider) {
+function AttributeSet(attributes, attributeDefSet) {
 	this.values = {};
+    this.shadowValues={};
     this.decorators={};
 	this.attributeDefSet = attributeDefSet;
-//    this.defaultValueProvider=defaultValueProvider;
 
 	// JBUCH: HALO: TODO: Temporary Data Structures
 	this.errors = {};
@@ -93,7 +93,34 @@ AttributeSet.prototype.get = function(key) {
 		value = value.evaluate();
 	}
 
+    if(value instanceof ActionReferenceValue) {
+        value = value.getAction();
+    }
+
+    if(this.shadowValues.hasOwnProperty(key)) {
+        value += this.getShadowValue(key);
+    }
+
 	return value;
+};
+
+AttributeSet.prototype.getShadowValue=function(key){
+    var value = aura.expressionService.resolve(key, this.values, true);
+    if(value instanceof FunctionCallValue){
+        if(this.shadowValues.hasOwnProperty(key)) {
+            return this.shadowValues[key];
+        }
+        return '';
+    }
+    return undefined;
+};
+
+
+AttributeSet.prototype.setShadowValue=function(key,value){
+    var oldValue = aura.expressionService.resolve(key, this.values, true);
+    if(oldValue instanceof FunctionCallValue){
+        this.shadowValues[key]=value;
+    }
 };
 
 /**
@@ -109,8 +136,7 @@ AttributeSet.prototype.get = function(key) {
  *
  */
 AttributeSet.prototype.set = function(key, value) {
-    var target = this.values, nextTarget;
-    var step, nextStep;
+    var target = this.values;
 
     if(!$A.util.isUndefinedOrNull(value) && !this.isValueValidForAttribute(key, value)) {
     	if(this.isTypeOfArray(key)) {
@@ -124,11 +150,11 @@ AttributeSet.prototype.set = function(key, value) {
 
     // Process all keys except last one
     if (key.indexOf('.') >= 0) {
-        path = key.split('.');
-        step = path.shift();
+        var path = key.split('.');
+        var step = path.shift();
         while (path.length > 0) {
-            nextStep = path.shift();
-            nextTarget = target[step];
+            var nextStep = path.shift();
+            var nextTarget = target[step];
             if (nextTarget === undefined) {
                 // Attempt to do the right thing: create an empty object or an array
                 // depending if the next indice is an object or an array.
@@ -150,11 +176,19 @@ AttributeSet.prototype.set = function(key, value) {
         key = step;
     }
 
-    if (target[key] instanceof PropertyReferenceValue) {
+    if (target[key] instanceof PropertyReferenceValue && !target[key].isGlobal()) {
         target[key].set(value);
-    } else {
+    } else if (!(target[key] instanceof FunctionCallValue)) {
+        // HALO: TODO: JBUCH: I DON'T LIKE THIS...
+        // Silently do nothing when you try to set on a FunctionCallValue,
+        // which we need to support legacy old behaviour due to inheritance.
         target[key] = value;
     }
+// #if {"excludeModes" : ["PRODUCTION", "STATS"]}
+    else {
+        $A.warning("AttributeSet.set(): unable to override the value for '" + key + "'. FunctionCallValues declared in markup are constant.");
+    }
+// #end
 };
 
 /**
@@ -302,22 +336,38 @@ AttributeSet.prototype.destroy = function(async) {
         // so we need to do a for( var in ) {} loop
         if(k === "body") {
         	for(var globalId in v) {
-        		for(var j=0,body=v[globalId];j<body.length;j++) {
-        			body[j].destroy(async);
-        		}
+                var body = v[globalId];
+                if(body) {
+            		for(var j=0;j<body.length;j++) {
+            			body[j].destroy(async);
+            		}
+                }
         	}
         	continue;
         }
 
+        // KRIS: HALO:
+        // HTML Elements store their attributes in the HTMLAttributes map.
+        // Since we don't go recursively down the attributes we don't clean these.
+        // We should at least destroy them, PRV's still don't release their references.
+        // if(k === "HTMLAttributes") {
+        //     for(var attribute in v) {
+        //         if(v[attribute] && v[attribute].destroy) {
+        //             v[attribute].destroy(async);
+        //         }
+        //     }
+        // }
 
         if(!$A.util.isArray(v)){
             v=[v];
         }
-        for(var i=0;i<v.length;i++){
-            if($A.util.isExpression(v[i])){
-                expressions[k]=v[i];
-            }else  if (v[i] && v[i].destroy) {
-                v[i].destroy(async);
+
+        for(var i=0,value;i<v.length;i++){
+            value = v[i];
+            if($A.util.isExpression(value)){
+                expressions[k]=value;
+            } else if (value && value.destroy) {
+                value.destroy(async);
             }
         }
     }

@@ -51,6 +51,7 @@ import org.auraframework.def.RegisterEventDef;
 import org.auraframework.def.RendererDef;
 import org.auraframework.def.ResourceDef;
 import org.auraframework.def.RootDefinition;
+import org.auraframework.def.SVGDef;
 import org.auraframework.def.StyleDef;
 import org.auraframework.def.TestSuiteDef;
 import org.auraframework.def.ThemeDef;
@@ -98,6 +99,7 @@ public abstract class BaseComponentDefImpl<T extends BaseComponentDef> extends
     private final DefDescriptor<ControllerDef> compoundControllerDescriptor;
     private final DefDescriptor<ThemeDef> cmpThemeDescriptor;
     private final DefDescriptor<DesignDef> designDefDescriptor;
+    private final DefDescriptor<SVGDef> svgDefDescriptor;
 
     private final Set<DefDescriptor<InterfaceDef>> interfaces;
     private final List<DefDescriptor<ControllerDef>> controllerDescriptors;
@@ -153,6 +155,7 @@ public abstract class BaseComponentDefImpl<T extends BaseComponentDef> extends
         this.whitespaceBehavior = builder.whitespaceBehavior;
         this.cmpThemeDescriptor = builder.cmpThemeDescriptor;
         this.designDefDescriptor = builder.designDefDescriptor;
+        this.svgDefDescriptor = builder.svgDefDescriptor;
 
         this.expressionRefs = AuraUtil.immutableSet(builder.expressionRefs);
         if (getDescriptor() != null) {
@@ -163,7 +166,7 @@ public abstract class BaseComponentDefImpl<T extends BaseComponentDef> extends
         }
         this.hashCode = AuraUtil.hashCode(super.hashCode(), events, controllerDescriptors, modelDefDescriptor,
                 extendsDescriptor, interfaces, rendererDescriptors, helperDescriptors, resourceDescriptors,
-                cmpThemeDescriptor);
+                cmpThemeDescriptor, imports);
     }
 
     /**
@@ -177,6 +180,7 @@ public abstract class BaseComponentDefImpl<T extends BaseComponentDef> extends
         for (DependencyDef def : dependencies) {
             def.validateDefinition();
         }
+        
         for (AttributeDef att : this.attributeDefs.values()) {
             att.validateDefinition();
             if (events.containsKey(att.getName())) {
@@ -185,16 +189,28 @@ public abstract class BaseComponentDefImpl<T extends BaseComponentDef> extends
                         getLocation());
             }
         }
+        
+        MasterDefRegistry mdr = Aura.getDefinitionService().getDefRegistry();
+        if (modelDefDescriptor != null) {
+        	mdr.assertAccess(this.descriptor, modelDefDescriptor.getDef());
+        }
+
+        for (DefDescriptor<ControllerDef> d : controllerDescriptors) {
+            mdr.assertAccess(this.descriptor, d.getDef());
+        }
 
         for (AttributeDefRef facet : this.facets) {
             facet.validateDefinition();
         }
+        
         for (RegisterEventDef def : events.values()) {
             def.validateDefinition();
         }
+        
         for (EventHandlerDef def : eventHandlers) {
             def.validateDefinition();
         }
+        
         for (ImportDef def : imports) {
             def.validateDefinition();
         }
@@ -406,7 +422,8 @@ public abstract class BaseComponentDefImpl<T extends BaseComponentDef> extends
                 if (gvp != null) {
                     PropertyReference stem = e.getStem();
                     if (stem == null) {
-                        throw new InvalidExpressionException("Expression didn't have enough terms: " + e, e.getLocation());
+                        throw new InvalidExpressionException("Expression didn't have enough terms: " + e,
+                                e.getLocation());
                     }
                     gvp.validate(stem);
                 }
@@ -525,6 +542,10 @@ public abstract class BaseComponentDefImpl<T extends BaseComponentDef> extends
 
         if (designDefDescriptor != null) {
             dependencies.add(designDefDescriptor);
+        }
+
+        if (svgDefDescriptor != null) {
+            dependencies.add(svgDefDescriptor);
         }
 
         if (imports != null) {
@@ -669,7 +690,7 @@ public abstract class BaseComponentDefImpl<T extends BaseComponentDef> extends
 
     @Override
     public ControllerDef getDeclaredControllerDef() throws QuickFixException {
-        return compoundControllerDescriptor != null ? compoundControllerDescriptor.getDef() : null;
+        return !this.controllerDescriptors.isEmpty() && compoundControllerDescriptor != null ? compoundControllerDescriptor.getDef() : null;
     }
     
     @Override
@@ -685,6 +706,11 @@ public abstract class BaseComponentDefImpl<T extends BaseComponentDef> extends
     @Override
     public DefDescriptor<DesignDef> getDesignDefDescriptor() {
         return designDefDescriptor;
+    }
+
+    @Override
+    public DefDescriptor<SVGDef> getSVGDefDescriptor() {
+        return svgDefDescriptor;
     }
 
     @Override
@@ -1021,6 +1047,7 @@ public abstract class BaseComponentDefImpl<T extends BaseComponentDef> extends
         public DefDescriptor<StyleDef> styleDescriptor;
         public DefDescriptor<ThemeDef> cmpThemeDescriptor;
         public DefDescriptor<DesignDef> designDefDescriptor;
+        public DefDescriptor<SVGDef> svgDefDescriptor;
         public List<DefDescriptor<RendererDef>> rendererDescriptors;
         public List<DefDescriptor<HelperDef>> helperDescriptors;
         public List<DefDescriptor<ResourceDef>> resourceDescriptors;
@@ -1139,6 +1166,12 @@ public abstract class BaseComponentDefImpl<T extends BaseComponentDef> extends
         @Override
         public Builder<T> setDesignDef(DesignDef designDef) {
             this.designDefDescriptor = designDef.getDescriptor();
+            return this;
+        }
+
+        @Override
+        public Builder<T> setSVGDef(SVGDef svgDef) {
+            this.svgDefDescriptor = svgDef.getDescriptor();
             return this;
         }
 

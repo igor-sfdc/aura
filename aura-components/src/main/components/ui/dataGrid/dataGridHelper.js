@@ -38,10 +38,10 @@
 		concrete._columnNames = [];
 		concrete._columnOrder = {};
 		concrete._columns = {};
-		concrete._selectionColumns = [];
 		concrete._outputComponents = [];
 		concrete._inputComponents = [];
 		concrete._row = [];
+		concrete._selectionData = this.createSelectionData();
 	},
 	
 	/**
@@ -88,7 +88,8 @@
 			}
 
 			if (c.isInstanceOf('ui:dataGridSelectionColumn')) {
-				concrete._selectionColumns.push(c);
+				concrete._selectionData.selectionColumns.push(c);
+				
 			}
 		});
 	},
@@ -110,7 +111,7 @@
 	 */
     initializeRowData: function(concrete) {
     	var self				= this,
-    		items = concrete.get("v.items"),
+    		items = concrete.get("v.items") || [],
     		isEditMode			= false; //mode.indexOf('EDIT') === 0; not yet fully supported
     	
     	concrete._rowData = self.createRowData(concrete, items, isEditMode);
@@ -160,6 +161,7 @@
 	// TODO rework
 	handleItemsChange: function (cmp, params) {
 		var self = this,
+			concrete = cmp.getConcreteComponent(),
 			newLength;
 		
 		// If adding or removing rows, escape.
@@ -170,16 +172,18 @@
 		// Loaded once is meant to ensure the first data loaded doesn't break.
 		if (!cmp._hasDataProvider || cmp._loadedOnce) {
 			if (!params.index) {
-				newLength = params.value.length;
+				newLength = (params.value ? params.value.length : 0);
 				// Check for a larger or smaller list.
 				// TODO: concrete vs cmp?
 				if (cmp._rowData.length !== newLength) {
-					this.resize(cmp.getConcreteComponent(), newLength);
+					this.resize(concrete, newLength);
 				} else {
 					this.updateValueProvidersFromItems(cmp);
 				}
 			}
 		}
+		
+		this.selectAll(concrete, false);
 	
 		if (cmp._sorting) {
 			cmp._sorting = false;
@@ -205,10 +209,7 @@
 				c.set('v.direction', direction);
 			});
 
-			// Reset selection columns.
-			for (var i = 0; i < concrete._selectionColumns.length; i++) {
-				concrete._selectionColumns[i].set('v.selectAll', false);
-			}
+			this.selectAll(concrete, false);
 		}
 
 		// Refresh to force fetch from data provider (if available).
@@ -236,7 +237,7 @@
 			} else {
 				// Don't worry about calling 'selectOne'.
 				// hlp.selectOne(cmp, index, value);
-				this.changeSelectedItems(cmp, [cmp.get('v.items.' + index)], value);
+				this.setSelectedItems(cmp, value, [index]);
 			}
 		} else if (name && index && globalId) {
 
@@ -298,6 +299,7 @@
 		
 		if (!rowData[rowIndex]) {
 			// TODO index validation
+			$A.warning("dataGrid row index out of bounds");
 		}
 		
 		cellData = rowData[rowIndex].columnData[columnIndex];
@@ -325,21 +327,15 @@
      * ================
      */
 	
-	/** 
-	 * Changes the selected status of an individual item in the grid. 
-	 *
-	 * @param {Component} cmp
-	 * @param {Number} index zero-based index of the item 
-	 * @param {Boolean} value selected status to propagate 
-	 */ 
-	// TODO rework
-	selectOne: function (cmp, index, value) {
-		var item = cmp._rowItems[index];
-
-		if (item) {
-			item.set('selected', value);
-			this.changeSelectedItems(cmp, [item], value);
-		}
+	/**
+	 * Initializes the structures to manage dataGrid selection
+	 */
+	// TODO: See why we need selectionColumns as array
+	createSelectionData: function() {
+		return {
+			selectionColumns : [],
+			selectedIndexes : {}
+		};
 	},
 
 	/** 
@@ -350,17 +346,7 @@
 	 */
 	// TODO rework
 	selectAll: function (cmp, value) {
-		var rowData = cmp._rowData;
-
-		// Set attribute for 'global' select all.
-		cmp.set('v.selectAll', value);
-
-		// Iterate over rows contexts and set 'selected'.
-		for (var i = 0; i < rowData.length; i++) {
-			rowData[i].vp.set('selected', value);
-		}
-
-		this.changeSelectedItems(cmp, cmp.get('v.items'), value);
+		this.setSelectedItems(cmp, value);
 	},
 
 	/**
@@ -368,57 +354,48 @@
 	 * Uses an internal set to ensure items only appear once in the array. 
 	 * 
 	 * @param {Component} cmp
-	 * @param {Array} items objects to modify
-	 * @param {Boolean} value are these items selected
+	 * @param {Boolean} value Value 
+	 * @param {Array} rows (optional) Rows to apply the value to. A null or undefined value will apply the value to all rows
 	 */ 
 	// TODO rework, internal set doesn't work in preventing duplicates
-	changeSelectedItems: function (cmp, items, value) {
-		var concrete = cmp.getConcreteComponent();
-
-		// Guarantee correct value object is updated.
-		if (items) {
+	setSelectedItems: function (cmp, value, rows) {
+		var concrete = cmp.getConcreteComponent(),
+			rowData = concrete._rowData,
+			selectionData = concrete._selectionData;
+		
+		// Apply the value either to the specified rows or to all rows depending on whether the rows parameter was defined
+		var rowsLength = rows ? rows.length : rowData.length;
+		for (var i = 0; i < rowsLength; i++) {
+			var index = rows ? rows[i] : i;
 			
-			// Create a set for the selected items.
-			if (!concrete._selected) {
-				concrete._selected = {
-					items: 	items,
-					keys: 	{}
-				};
-
-				setKeys();
-				concrete.set('v.selectedItems', items);
-			} else {
-				setKeys();
-				concrete.set('v.selectedItems', replace(value ? items : []));
-			}
+			rowData[index].vp.set("selected", value);
+			selectionData.selectedIndexes[index] = value;
 		}
 
+		// Set the selected items to 
+		var items = concrete.get("v.items") || [],
+			selectedItems = rows ? retrieveSelected(selectionData.selectedIndexes, items) : (value ? items : []);
+		cmp.set("v.selectedItems", selectedItems);
+		
+		var isSelectAll = (selectedItems.length == items.length);
+		for (var i = 0; i < selectionData.selectionColumns.length; i++) {
+			selectionData.selectionColumns[i].set("v.selectAll", isSelectAll);
+		}
+		
 		/**
-		 * Replaces the existing set of selected items.
+		 * @return {Array} The selected row items on the grid.
 		 */
-		function replace(newArray) {
-			var keys = concrete._selected.keys,
-				selected = concrete._selected.items;
-
-			for (var i = 0; i < selected.length; i++)	{
-				if (keys[selected[i].id]) {
-					newArray.push(selected[i]);
+		function retrieveSelected(selectedCache, items) {
+			var selected = [];
+			for (var index in selectedCache) {
+				if (selectedCache[index]) {
+					selected.push(items[index]);
 				}
 			}
-
-			concrete._selected.items = newArray;
-			return newArray;
-		}
-
-		/**
-		 * Set the keys in the existing set.
-		 */ 
-		function setKeys() {
-			for (var i = 0; i < items.length; i++) {
-				concrete._selected.keys[items[i].id] = value;
-			}
+			return selected;
 		}
 	},
+
     
     /*
      * ================
@@ -444,6 +421,7 @@
     		rowData = {};
     		
     		rowData.vp = self.createPassthroughValue(concrete, items[rowIndex], rowIndex);
+    		rowData.classes = [];
     		rowData.columnData = [];
     		
     		for (var colIndex = 0; colIndex < concrete._columnCount; colIndex++) {
@@ -516,7 +494,7 @@
 	 */
 	removeRows: function (concrete, index, count) {
 		var tbody = concrete.find('tbody').getElement(),
-			items = concrete.get("v.items"),
+			items = concrete.get("v.items") || [],
 			node;
 
 		// Remove value providers and children which are no longer needed.
@@ -560,7 +538,7 @@
 		var self = this,
 			isEditMode = concrete.get("v.mode").indexOf('EDIT') === 0,
 			tbody = concrete.find('tbody').getElement(),
-			items = concrete.get('v.items'),
+			items = concrete.get('v.items') || [],
 			rowDataLength = concrete._rowData.length,
 			resolved = 0, realIndex, tr, node, item, newRowData, newRowElements;
 
@@ -618,7 +596,7 @@
 	// TODO rename to something more accurate
 	resize: function (concrete, length) {
 		var self = this,
-			items = concrete.get('v.items'),
+			items = concrete.get('v.items') || [],
 			itemsLength = items.length,
 			rowDataLength = concrete._rowData.length,
 			diff, index; 
@@ -639,11 +617,22 @@
 	
 	//TODO MERGE: Check merge
 	updateValueProvidersFromItems: function (concrete) {
-		var items = concrete.get('v.items');
+		var items = concrete.get('v.items') || [];
+			tbody = concrete.find("tbody").getElement();
+		
         for(var i=0;i<items.length;i++){
             var rowData=concrete._rowData[i];
+            var rowElement = tbody.rows[i];
+            
             rowData.vp.set('item',items[i]);
             rowData.vp.set('index',i);
+            rowData.vp.set('disabled', false);
+            
+            for(var j=0;j<rowData.classes.length;j++) {
+            	$A.util.toggleClass(rowElement, rowData.classes[j], false);
+            }
+            rowData.classes = [];
+            
             for(var j=0;j<rowData.columnData.length;j++){
                 var columnData=rowData.columnData[j];
                 var columns=columnData.components[columnData.cellKey];
@@ -717,7 +706,7 @@
 	// TODO: optimize column iteration
 	createTableBody: function (concrete) {
 		var self = this,
-			items = concrete.get("v.items"),
+			items = concrete.get("v.items") || [],
 			doc = document.createDocumentFragment(),
 			tr, asyncParams, rowElements;
 
@@ -823,7 +812,7 @@
 			// If no cdrs, then these columns should be destroyed
 			// TODO: collapse empty columns
 			if (!cdrs && colData) {
-				self.destroyColumnData(rowData, colIndex, tr);
+				self.destroyCellData(rowData, colIndex, tr);
 				resizeRowData = true;
 			} else {			
 				if (!colData) {
@@ -863,6 +852,52 @@
 	 * Utilities
 	 * ================
 	 */
+	/**
+	 * Updates the class on a <tr> and keeps track of which classes have been
+	 * added on the rowData so that they can be removed or reset by the datagrid
+	 */
+	updateRowClass: function(cmp, rowData, rowElement, params) {
+		var classIndex;
+		
+		switch (params.classOp.toLowerCase()) {
+		case "add":
+			$A.util.toggleClass(rowElement, params.className, true);
+			classIndex = rowData.classes.indexOf(params.className);
+			if (classIndex === -1) {
+				rowData.classes.push(params.className);
+			}
+			break;
+		case "remove":
+			$A.util.toggleClass(rowElement, params.className, false);
+			classIndex = rowData.classes.indexOf(params.className);
+			if (classIndex > -1) {
+				rowData.classes.splice(classIndex, 1);
+			}
+			break;
+		case "toggle":
+			$A.util.toggleClass(rowElement, params.className);
+			classIndex = rowData.classes.indexOf(params.className);
+			if (classIndex === -1) {
+				rowData.classes.push(params.className);
+			} else {
+				rowData.classes.splice(classIndex, 1);
+			}
+			break;
+		default:
+			$A.log("datagrid " + cmp.getGlobalId() + " - updateGridRows handler: unrecognized class operation. Please use \"add\", \"remove\", or \"toggle\".");
+		}
+	},
+	
+	updateValueProvider: function(cmp, rowData, attributes) {
+		for (var i=0; i<attributes.length; i++) {
+			var attr = attributes[i];
+			
+			if (attr.name == 'disabled') {
+				rowData.vp.set("disabled", attr.value);
+			}
+		}
+	},
+	
 	/**
 	 * Maps the given operation onto all the components in the grid
 	 * 
@@ -946,7 +981,8 @@
 		var rowContext = {
 				item : $A.expressionService.create(null, item),
 				selected : $A.expressionService.create(null, false),
-				index : $A.expressionService.create(null, rowIndex)
+				index : $A.expressionService.create(null, rowIndex),
+				disabled : $A.expressionService.create(null, false)
 		};
 		
 		return $A.expressionService.createPassthroughValue(rowContext, concrete);
@@ -1014,7 +1050,8 @@
 	// TODO: set all the data to nulls or empty objects
 	generateNewItemShape: function (concrete) {
     	var itemShape = concrete.get('v.itemShape'),
-			item = concrete.get("v.items")[0],
+			items = concrete.get("v.items") || [],
+			item = items[0] || {},
 			template,
 			sub, path;
 

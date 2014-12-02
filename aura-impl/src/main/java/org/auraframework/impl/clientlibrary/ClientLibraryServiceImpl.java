@@ -44,7 +44,6 @@ import org.auraframework.util.AuraTextUtil;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
-import aQute.bnd.annotation.component.Activate;
 import aQute.bnd.annotation.component.Component;
 
 /**
@@ -64,11 +63,6 @@ public class ClientLibraryServiceImpl implements ClientLibraryService {
 
 
     public ClientLibraryServiceImpl() {
-    }
-
-    @Activate
-    protected void activate() {
-        System.out.println("############# " + getClass().getName() + " Activated");
     }
 
     /**
@@ -379,24 +373,4 @@ public class ClientLibraryServiceImpl implements ClientLibraryService {
         }
         return combinable;
     }
-
-    // TODO: osgi - disabling b/c of startup concurrency problems 
-//
-//    /**
-//     * Invalidate caches on source changes
-//     */
-//    private static SourceNotifier sourceNotifier = new SourceNotifier();
-//
-//    static {
-//        Aura.getDefinitionService().subscribeToChangeNotification(sourceNotifier);
-//    }
-//
-//    private static class SourceNotifier implements SourceListener {
-//        @Override
-//        public void onSourceChanged(DefDescriptor<?> source, SourceMonitorEvent event, String filePath) {
-//            
-//            Aura.getCachingService().getClientLibraryOutputCache().invalidateAll();
-//            Aura.getCachingService().getClientLibraryUrlsCache().invalidateAll();
-//        }
-//    }
 }

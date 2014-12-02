@@ -33,6 +33,8 @@ Test.Aura.AuraClientServiceTest = function() {
 					}
 				}
 			},
+			log : function() {
+                        },
 			assert : function() {
 			},
 			util : {
@@ -114,7 +116,8 @@ Test.Aura.AuraClientServiceTest = function() {
         this.isBackground = Stubs.GetMethod(false);
         this.runDeprecated = Stubs.GetMethod();
         this.addCallbackGroup = Stubs.GetMethod();
-        this.getAbortableKey = Stubs.GetMethod();
+        this.getAbortableId = Stubs.GetMethod();
+        this.setAbortableId = Stubs.GetMethod();
         this.abort = Stubs.GetMethod();
         this.getDef = Stubs.GetMethod({
             isClientAction : Stubs.GetMethod(true),
@@ -728,7 +731,7 @@ Test.Aura.AuraClientServiceTest = function() {
 
             this.clear = function() {
                 var that = this;
-                return $A.util.createPromise(function(success, error) {
+                return new Promise(function(success, error) {
                     delete that._stubs;
                     success();
                 });
@@ -736,7 +739,7 @@ Test.Aura.AuraClientServiceTest = function() {
 
             this.get = function(key) {
                 var that = this;
-                return $A.util.createPromise(function(success, error) {
+                return new Promise(function(success, error) {
                     if (that._stubs && that._stubs.get) {
                         var value = { value : that._stubs.get[key], isExpired : false };
                         success(value);
@@ -748,7 +751,7 @@ Test.Aura.AuraClientServiceTest = function() {
 
             this.put = function(key, value) {
                 var that = this;
-                return $A.util.createPromise(function(success, error) {
+                return new Promise(function(success, error) {
                     if (that._stubs && that._stubs.put) {
                         if (value === that._stubs.put[key]) {
                             success();
@@ -763,7 +766,7 @@ Test.Aura.AuraClientServiceTest = function() {
 
             this.remove = function(key) {
                 var that = this;
-                return $A.util.createPromise(function(success, error) {
+                return new Promise(function(success, error) {
                     if (that._stubs && that._stubs.remove) {
                         if (key === that._stubs.remove){
                             success();
@@ -815,11 +818,7 @@ Test.Aura.AuraClientServiceTest = function() {
                         map: function(array, transformer, that) {
                             return array.map(transformer, that);
                         },
-                        keys: Object.keys,
-                        createPromise : function(func) {
-                            // #import aura.Promise
-                            return new $A.ns.Promise(func);
-                        }
+                        keys: Object.keys
                     },
                     run : function (cb) {
                         cb();
@@ -831,6 +830,11 @@ Test.Aura.AuraClientServiceTest = function() {
                 },
                 setTimeout : function(cb, time) {
                     cb();
+                },
+                Promise : function(func) {
+                    return {
+                        then: function(suc, err) { func(suc, err); }
+                    };
                 },
                 exp: function() {},
                 window: Object.Global()

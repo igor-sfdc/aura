@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.auraframework</groupId>
         <artifactId>aura-framework</artifactId>
-        <version>0.1530-SNAPSHOT</version>
+        <version>0.1665-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <dependencies>
@@ -42,6 +42,7 @@
         <dependency>
             <groupId>biz.aQute</groupId>
             <artifactId>bnd</artifactId>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
     <properties>

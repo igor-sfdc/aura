@@ -239,7 +239,7 @@ function(component) {
 function(component, helper) {
 		var value = component.get("v.value");
         if($A.util.isUndefinedOrNull(value)){
-            value=[];
+            value = "";
         }
         if(!($A.util.isComponent(value)||$A.util.isArray(value))){
             
@@ -261,9 +261,9 @@ function(component, helper) {
             var value = component.get("v.value");
             if(!($A.util.isComponent(value)||$A.util.isArray(value))){
                 if($A.util.isUndefinedOrNull(value)){
-                    value='';
+                    value = "";
                 }
-                if(component._lastRenderedValue){
+                if(component._lastRenderedValue && component._lastRenderedValue.isValid()){
                     
                     component._lastRenderedValue.set("v.value",value,true);
                     value=component._lastRenderedValue;

@@ -31,7 +31,7 @@ public interface Parser {
      * 
      */
     public enum Format {
-        XML, JS, CSS, JAVA, TEMPLATE_CSS, APEX
+        XML, JS, CSS, JAVA, TEMPLATE_CSS, APEX, SVG
     }
 
     <D extends Definition> D parse(DefDescriptor<D> descriptor, Source<?> source) throws QuickFixException;

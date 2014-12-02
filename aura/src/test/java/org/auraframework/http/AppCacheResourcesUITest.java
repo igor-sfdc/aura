@@ -740,11 +740,6 @@ public class AppCacheResourcesUITest extends WebDriverTestCase {
         }
     }
 
-    @Override
-    protected Mode getAuraModeForCurrentBrowser() {
-        return Mode.SELENIUM;
-    }
-
     private void updateCookie(String name, String value, Date expiry, String path) {
         SimpleDateFormat sd = new SimpleDateFormat();
         sd.setTimeZone(TimeZone.getTimeZone("GMT"));

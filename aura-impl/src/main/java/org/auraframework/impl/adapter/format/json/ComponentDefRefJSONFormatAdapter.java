@@ -27,8 +27,6 @@ import org.auraframework.impl.root.component.ComponentDefRefImpl;
 import org.auraframework.throwable.quickfix.DefinitionNotFoundException;
 import org.auraframework.util.json.JsonReader;
 
-import aQute.bnd.annotation.component.Component;
-
 import com.google.common.collect.Lists;
 
 import aQute.bnd.annotation.component.Component;

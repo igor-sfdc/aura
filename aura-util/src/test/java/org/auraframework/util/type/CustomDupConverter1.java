@@ -15,10 +15,6 @@
  */
 package org.auraframework.util.type;
 
-import org.auraframework.ds.serviceloader.AuraServiceProvider;
-
-import aQute.bnd.annotation.component.Component;
-
 public class CustomDupConverter1 implements Converter<String, CustomDupType> {
 
     @Override

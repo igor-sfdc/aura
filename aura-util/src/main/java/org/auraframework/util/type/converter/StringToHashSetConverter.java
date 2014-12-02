@@ -26,8 +26,6 @@ import aQute.bnd.annotation.component.Component;
 
 import com.google.common.collect.Sets;
 
-import aQute.bnd.annotation.component.Component;
-
 @SuppressWarnings("rawtypes")
 @Component (provide=AuraServiceProvider.class)
 public class StringToHashSetConverter implements Converter<String, HashSet> {

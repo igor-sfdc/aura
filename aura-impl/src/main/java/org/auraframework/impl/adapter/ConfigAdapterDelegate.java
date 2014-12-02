@@ -205,4 +205,9 @@ public class ConfigAdapterDelegate implements ConfigAdapter {
 		return configAdapterDelegate.get().getContentSecurityPolicy(app, request);
 	}
 
+    @Override
+    public String getEs6PromiseJSURL() {
+        return configAdapterDelegate.get().getEs6PromiseJSURL();
+    }
+
 }

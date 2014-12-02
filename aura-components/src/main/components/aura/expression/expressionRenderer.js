@@ -17,7 +17,7 @@
 	render : function(component, helper) {
 		var value = component.get("v.value");
         if($A.util.isUndefinedOrNull(value)){
-            value=[];
+            value = "";
         }
         if(!($A.util.isComponent(value)||$A.util.isArray(value))){
             // JBUCH: HALO: TODO: MIGHT BE ABLE TO RETURN THIS TO SIMPLE TEXTNODE MANAGEMENT
@@ -32,9 +32,9 @@
             var value = component.get("v.value");
             if(!($A.util.isComponent(value)||$A.util.isArray(value))){
                 if($A.util.isUndefinedOrNull(value)){
-                    value='';
+                    value = "";
                 }
-                if(component._lastRenderedValue){
+                if(component._lastRenderedValue && component._lastRenderedValue.isValid()){
                     // JBUCH: HALO: TODO: MIGHT BE ABLE TO RETURN THIS TO SIMPLE TEXTNODE MANAGEMENT
                     component._lastRenderedValue.set("v.value",value,true);
                     value=component._lastRenderedValue;

@@ -366,6 +366,7 @@ $A.ns.Util.prototype.swapClass = function(element, oldClass, newClass){
 };
 
 $A.ns.Util.prototype.setClass=function(element,newClass,remove){
+    var constructedClass='';
     if(this.isComponent(element)){
         var attribute=null;
         if(element.isInstanceOf("ui:elementInterface") || element.isInstanceOf("ui:visible")) {
@@ -376,15 +377,28 @@ $A.ns.Util.prototype.setClass=function(element,newClass,remove){
             element=element.getElement();
         }
         if(attribute){
-            var oldClass=element.get(attribute)||"";
-            var constructedClass=this.buildClass(oldClass,newClass,remove);
+            var useShadowClass=false;
+            var oldClass=element.getShadowAttribute(attribute);
+            if(oldClass!=undefined){
+                useShadowClass=true;
+            }else{
+                oldClass=element.get(attribute)||'';
+            }
+            constructedClass=this.buildClass(oldClass,newClass,remove);
             if(oldClass!==constructedClass){
-                element.set(attribute,constructedClass);
+                if(useShadowClass){
+                    element.setShadowAttribute(attribute,constructedClass?' '+constructedClass:'');
+                }else{
+                    element.set(attribute,constructedClass);
+                }
             }
         }
     }
     if(element && element.tagName){
-        element["className"] = this.buildClass(element["className"]||"",newClass,remove);
+        constructedClass=this.buildClass(element["className"]||"",newClass,remove);
+        if(element["className"]!=constructedClass) {
+            element["className"]=constructedClass;
+        }
     }
 };
 
@@ -426,7 +440,7 @@ $A.ns.Util.prototype.createElementsFromMarkup=function(markup){
     if(!this.isUndefinedOrNull(markup)) {
         var tmpNode = document.createElement("span");
         tmpNode.innerHTML = markup;
-        return Array.prototype.slice.call(tmpNode.childNodes);
+        return this.toArray(tmpNode.childNodes);
     }
     return [];
 };
@@ -727,29 +741,6 @@ $A.ns.Util.prototype.createTimeoutCallback = function(callback, toleranceMillis)
             setTimeout(timeoutCallback, toleranceMillis);
         }
     };
-};
-
-/**
- * Factory for Promise objects.
- *
- * @param func  function encapsulating your asynchronous work.
- *              Do not provide anything if you wish to use resolve and reject directly.
- */
-$A.ns.Util.prototype.createPromise = function (func) {
-    return new $A.ns.Promise(func);
-};
-
-/**
- * Factory for When promise callback wall.
- *
- * @param  variable length list of UNRESOLVED Promise objects
- */
-$A.ns.Util.prototype.when = function () {
-    if (arguments.length === 0) {
-        throw 'When must be given at least one promise.';
-    }
-
-    return $A.ns.Promise.when.apply(this, arguments);
 };
 
 /**
@@ -1892,6 +1883,32 @@ $A.ns.Util.prototype.supportsTouchEvents = function() {
  */
 $A.ns.Util.prototype.estimateSize = function(obj) {
     return this.sizeEstimator.estimateSize(obj);
+};
+
+
+/**
+ * Convert collection to a true array.
+ * When dealing with a NodeList, sometimes you'll need it to actually be an array to properly deal with it.
+ * Cannot always use Array.prototype.slice.call(), since it doesn't work in IE6/7/8 on NodeLists.
+ * @returns An empty array if you pass a null or undefined value to collection.
+ */
+$A.ns.Util.prototype.toArray = function(collection) {
+    if(this.isUndefinedOrNull(collection)) {
+        return [];
+    }
+
+    try {
+        // Done in a Try/Catch as calling this on a NodeList in IE6/7/8 throws an exception
+        return Array.prototype.slice.call(collection);
+    } catch(e) {
+        // Try to just convert the collection to a normal array using a good ole for loop.
+        var length = collection.length;
+        var newCollection = new Array(length);
+        for(var c=0;c<length;c++){
+            newCollection[c] = collection[c];
+        }
+        return newCollection;
+    }
 };
 
 //#if {"excludeModes" : ["PRODUCTION", "PRODUCTIONDEBUG"]}

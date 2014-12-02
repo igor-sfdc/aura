@@ -16,25 +16,23 @@
 package org.auraframework.test.page;
 
 import org.auraframework.def.ComponentDef;
-import org.auraframework.system.AuraContext.Mode;
-import org.auraframework.test.WebDriverUtil.BrowserType;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 
 //this is an example of AuraPageObject, it represents uiExamples:buttonExample, with a ui:button and ui:outputText
 public class SampleAuraPageObject extends AuraPageObject<ComponentDef> {
 
-	public SampleAuraPageObject(String name, Boolean isComponent, String descriptorString) {
-		super(name, isComponent, descriptorString);
-	}
+    public SampleAuraPageObject(String name, Boolean isComponent, String descriptorString, SampleUIWithPageObjectTest sampleUIWithPageObjectTest) {
+        super(name, isComponent, descriptorString, sampleUIWithPageObjectTest);
+    }
 
-	public void clickOnButton() {
-		WebElement element = getDriver().findElement(By.cssSelector(".uiButton"));
-	    element.click();
-	}
-	
-	public String getOutputText() {
-		 WebElement content = getDriver().findElement(By.cssSelector(".uiOutputText"));
-	    return content.getText();
+    public void clickOnButton() {
+        WebElement element = pageObjectTestCase.getDriver().findElement(By.cssSelector(".uiButton"));
+        element.click();
+    }
+    
+    public String getOutputText() {
+        WebElement content = pageObjectTestCase.getDriver().findElement(By.cssSelector(".uiOutputText"));
+        return content.getText();
 	}
 }

@@ -35,12 +35,12 @@ public class AttributeDesignDefHandlerTest extends AuraImplTestCase {
                 name,
                 "<design:attribute name=\""
                         + name
-                        + "\" required=\"true\" readonly=\"true\" type=\"String\" dependsOnAttribute=\"myparent\" datasource=\"one,two,three\" min=\"-100\" max=\"100\" label=\"some label\" placeholder=\"some placeholder\" />");
+                        + "\" required=\"true\" readonly=\"true\" type=\"String\" dependsOn=\"myparent\" datasource=\"one,two,three\" min=\"-100\" max=\"100\" label=\"some label\" placeholder=\"some placeholder\" />");
 
         assertTrue(element.isRequired());
         assertTrue(element.isReadOnly());
         assertEquals("String", element.getType());
-        assertEquals("myparent", element.getDependsOnAttribute());
+        assertEquals("myparent", element.getDependsOn());
         assertEquals("one,two,three", element.getDataSource());
         assertEquals("-100", element.getMin());
         assertEquals("100", element.getMax());
@@ -90,7 +90,7 @@ public class AttributeDesignDefHandlerTest extends AuraImplTestCase {
 
     private AttributeDesignDef setupAttributeDesignDef(String name, String markup) throws Exception {
         DefDescriptor<ComponentDef> cmpDesc = getAuraTestingUtil().createStringSourceDescriptor(null,
-                ComponentDef.class);
+                ComponentDef.class, null);
         String cmpBody = "<aura:attribute name='" + name + "' type='String' />";
         addSourceAutoCleanup(cmpDesc, String.format(baseComponentTag, "", cmpBody));
 

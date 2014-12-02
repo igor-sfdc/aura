@@ -18,10 +18,6 @@ package org.auraframework.util.type;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.auraframework.ds.serviceloader.AuraServiceProvider;
-
-import aQute.bnd.annotation.component.Component;
-
 public class CustomAbstractTypeConverter implements MultiConverter<CustomAbstractType> {
 
 	private static Set<Class<?>> toSet;
