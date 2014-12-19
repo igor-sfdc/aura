@@ -26,78 +26,42 @@
 		}
 	},
 
-	// Sets up window error handler, executes testFunction with provided input, then checks for uncaught error message.
-	// Can't try/catch because the error is expected in the XHR callback.
-	assertUncaughtCallbackError : function(testFunction, errorMessageStartsWith) {
-		var original = window.onerror;
-		var message;
-		window.onerror = function(msg, err) {
-			message = msg;
-			return true;
-		};
-		testFunction();
-		$A.test.addWaitForWithFailureMessage(true, function() {
-			if (!!message) {
-				// restore window error handler once an error is detected
-				// if test failed before this, then it doesn't really matter whether the handler is restored
-				window.onerror = original;
-				return true;
-			}
-			return false;
-		}, "Timed out waiting for uncaught javascript error", function(cmp) {
-			var msg = $A.test.getAuraErrorMessage();
-			if (msg.indexOf(errorMessageStartsWith) !== 0) {
-				$A.test.fail("Unexpected error message: " + msg);
-			}
-
-		});
-	},
-
 	testEnqueuedCallbackJavascriptError : {
 		test : function(cmp) {
-			this
-					.assertUncaughtCallbackError(
-							function() {
-								var a = $A.test.getAction(cmp, "c.executeInForeground", null, function() {
-									throw new Error("this is intentional");
-								});
-								$A.run(function() {
-									$A.enqueueAction(a);
-								});
-							},
-							"Error while running actionCallback[java://org.auraframework.impl.java.controller.ParallelActionTestController/ACTION$executeInForeground:{}] : Error while running java://org.auraframework.impl.java.controller.ParallelActionTestController/ACTION$executeInForeground:{}");
+		    $A.test.expectAuraError("Error while running java://org.auraframework.impl.java.controller.ParallelActionTestController/ACTION$executeInForeground:{} : this is intentional");
+		    var a = $A.test.getAction(cmp, "c.executeInForeground", null, function() {
+                throw new Error("this is intentional");
+            });
+            $A.run(function() {
+                $A.enqueueAction(a);
+            });
+            $A.test.addWaitFor(false, $A.test.isActionPending);
 		}
 	},
 
 	testRunActionsCallbackJavascriptError : {
 		test : function(cmp) {
-			this
-					.assertUncaughtCallbackError(
-							function() {
-								var a = $A.test.getAction(cmp, "c.executeInForeground", null, function() {
-									throw new Error("this is intentional");
-								});
-								$A.clientService.runActions([ a ], cmp, function() {
-								});
-							},
-							"Error while running actionCallback[java://org.auraframework.impl.java.controller.ParallelActionTestController/ACTION$executeInForeground:{}] : Error while running java://org.auraframework.impl.java.controller.ParallelActionTestController/ACTION$executeInForeground:{}");
+		    $A.test.expectAuraError("Error while running java://org.auraframework.impl.java.controller.ParallelActionTestController/ACTION$executeInForeground:{} : this is intentional");
+	        var a = $A.test.getAction(cmp, "c.executeInForeground", null, function() {
+	            throw new Error("this is intentional");
+	        });
+	        $A.clientService.runActions([ a ], cmp, function() {
+	        });
+	        $A.test.addWaitFor(false, $A.test.isActionPending);
 		}
 	},
 
-	testRunActionsGroupCallbackJavascriptError : {
-		test : function(cmp) {
-			this
-					.assertUncaughtCallbackError(
-							function() {
-								var a = $A.test.getAction(cmp, "c.executeInForeground", null, function() {
-								});
-								$A.clientService.runActions([ a ], cmp, function() {
-									throw new Error("this is intentional");
-								});
-							},
-							"Error while running actionCallback[java://org.auraframework.impl.java.controller.ParallelActionTestController/ACTION$executeInForeground:{}] : Error while running java://org.auraframework.impl.java.controller.ParallelActionTestController/ACTION$executeInForeground:{}");
-		}
-	},
+    testRunActionsGroupCallbackJavascriptError : {
+        test : function(cmp) {
+            $A.test.expectAuraError("Error while running java://org.auraframework.impl.java.controller.ParallelActionTestController/ACTION$executeInForeground:{} : this is intentional");
+            var a = $A.test.getAction(cmp, "c.executeInForeground", null, function() {
+            });
+            $A.clientService.runActions([ a ], cmp, function() {
+                throw new Error("this is intentional");
+            });
+            $A.test.addWaitFor(false, $A.test.isActionPending);
+        }
+    },
 
     testServerActionSendsError : {
         test : [ function(cmp) {
@@ -107,11 +71,10 @@
                       });
                 $A.clientService.runActions([ a ], cmp);
                 $A.test.addWaitFor(true, function() {
-                        return cmp.get("v.errorMessage") !== null;
+                        return !!cmp.get("v.errorMessage");
                     });
             }, function(cmp) {
                  var message = cmp.get("v.errorMessage");
-                 $A.test.assertTrue(message != null, "No error message from server at all");
                  $A.test.assertTrue(message.indexOf("ArrayIndexOutOfBoundsException: 42") > 0,
                      "Wrong message received from server: " + message);
             }]
