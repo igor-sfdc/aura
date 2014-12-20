@@ -55,6 +55,11 @@ public class LoadingCompletionHandlerImpl implements CompletionHandler {
     }
 
     private Process process;
+    private final HttpPortProvider servicePortProvider;
+
+    public LoadingCompletionHandlerImpl(HttpPortProvider servicePortProvider) {
+        this.servicePortProvider = servicePortProvider;
+    }
 
     @Override
     public void handleCompletion() {
@@ -67,10 +72,8 @@ public class LoadingCompletionHandlerImpl implements CompletionHandler {
     }
     
     private void startBrowser() {
-        // FIXME: Create relevant Java constants and share them with Launcher class
-        String port = System.getProperty("org.osgi.service.http.port", "8080");
-        port = (port == null || port.trim().isEmpty()) ? "" : ":" + port;
-        String auraDocsUrl = "http://localhost" + port + "/auradocs/docs.app#";
+        String port = servicePortProvider.getHttpPort();
+        String auraDocsUrl = "http://localhost:" + port + "/auradocs/docs.app#";
         AuraDSLog.get().info("Listening on HTTP Port: " + port);
         String startBrowser = System.getProperty("startBrowser");
         if (startBrowser != null && "true".equals(startBrowser)) {

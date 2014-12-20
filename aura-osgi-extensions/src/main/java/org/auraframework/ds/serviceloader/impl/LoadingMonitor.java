@@ -25,11 +25,15 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 class LoadingMonitor extends Thread {
     
-    private static final long TIMEOUT = 2000;    // Wait for 2 seconds after the last injection event to avoid false positives
+    private static final long TIMEOUT = 1000;    // Wait for 1 second after the last injection event to avoid false positives
     private final AtomicLong lastUpdate = new AtomicLong();
     private final AtomicBoolean isMonitoring = new AtomicBoolean();
-    private final CompletionHandler completionHandler = new LoadingCompletionHandlerImpl();
+    private final CompletionHandler completionHandler;
     
+    public LoadingMonitor(HttpPortProvider servicePortProvider) {
+        this.completionHandler = new LoadingCompletionHandlerImpl(servicePortProvider);
+    }
+
     void update() {
         lastUpdate.set(System.currentTimeMillis());
     }

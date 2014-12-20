@@ -24,6 +24,7 @@ import org.apache.commons.lang3.ClassUtils;
 import org.auraframework.ds.log.AuraDSLog;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
 import org.auraframework.util.ServiceLoader;
+import org.osgi.service.component.ComponentContext;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -40,13 +41,14 @@ import aQute.bnd.annotation.component.Reference;
  *
  */
 @Component (provide=ServiceLoader.class)
-public class OSGiServiceLoaderImpl implements ServiceLoader {
+public class OSGiServiceLoaderImpl implements ServiceLoader, HttpPortProvider {
     
     private static final ServiceMapHandler AURA_DS_SERVICE_HANDLER = new ServiceMapHandler();
     private final Map<Class<?>, Set<AuraServiceProvider>> serviceMap = Maps.newHashMap();
     private final Counters counters = new Counters();
-    private LoadingMonitor loadingMonitor = new LoadingMonitor();
-    
+    private final LoadingMonitor loadingMonitor = new LoadingMonitor(this);
+    private String httpPort;
+
     public OSGiServiceLoaderImpl() {
         AuraDSLog.get().info("[" + getClass().getSimpleName() + "] " + " Instantiated");
     }
@@ -62,9 +64,10 @@ public class OSGiServiceLoaderImpl implements ServiceLoader {
     }
     
     @Activate
-    protected void activate() {
-        AuraDSLog.get().info("Activated");
+    protected void activate(ComponentContext componentContext) {
+        setHttpPortValue(componentContext);
         loadingMonitor.startMonitoring();
+        AuraDSLog.get().info("Activated");
     }
     
     @Deactivate
@@ -112,7 +115,21 @@ public class OSGiServiceLoaderImpl implements ServiceLoader {
         // FIXME: osgi - When injecting service object into service map need to capture "name" annotation property
         throw new UnsupportedOperationException();
     }
-    
+
+    @Override
+    public String getHttpPort() {
+        if (httpPort == null) {
+            throw new IllegalStateException("This method must not be called before component is activated");
+        }
+        return httpPort;
+    }
+
+    private void setHttpPortValue(ComponentContext componentContext) {
+        httpPort = componentContext.getBundleContext().getProperty("org.osgi.service.http.port");
+        // FIXME: Create relevant Java constants and share them with Launcher class
+        httpPort = (httpPort == null || httpPort.trim().isEmpty()) ? "8080" : httpPort;
+    }
+
     static class ServiceMapHandler {
         
         void set(Map<Class<?>, Set<AuraServiceProvider>> serviceMap, AuraServiceProvider value, Counters counters) {
@@ -134,7 +151,7 @@ public class OSGiServiceLoaderImpl implements ServiceLoader {
         private void addImplementation(Map<Class<?>, Set<AuraServiceProvider>> serviceMap, Class<?> implementedInterfaceOrClass, AuraServiceProvider value, Counters counters) {
             Set<AuraServiceProvider> implementingServiceInstances = serviceMap.get(implementedInterfaceOrClass);
             if (implementingServiceInstances == null) {
-                implementingServiceInstances = Sets.newHashSet();;
+                implementingServiceInstances = Sets.newHashSet();
                 serviceMap.put(implementedInterfaceOrClass, implementingServiceInstances);
             }
             implementingServiceInstances.add(value);
