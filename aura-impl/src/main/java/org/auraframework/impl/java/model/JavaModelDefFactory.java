@@ -46,7 +46,8 @@ public class JavaModelDefFactory extends BaseJavaDefFactory<ModelDef> {
         if (c == null) {
             return null;
         }
-        if (!c.isAnnotationPresent(Model.class)) {
+        Model ann = c.getAnnotation(Model.class);
+        if (ann == null) {
             throw new InvalidDefinitionException(String.format(
                     "@Model annotation is required on all Models.  Not found on %s", descriptor), new Location(
                     descriptor.getName(), 0));
@@ -56,6 +57,7 @@ public class JavaModelDefFactory extends BaseJavaDefFactory<ModelDef> {
         builder.setDescriptor(descriptor);
         builder.setLocation(descriptor.getName(), 0);
         builder.setModelClass(c);
+        builder.setBean(ann.useAdapter());
         return builder;
     }
 }

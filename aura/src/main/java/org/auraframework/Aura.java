@@ -21,6 +21,7 @@ import org.auraframework.adapter.BeanAdapter;
 import org.auraframework.adapter.ConfigAdapter;
 import org.auraframework.adapter.DefinitionParserAdapter;
 import org.auraframework.adapter.ExceptionAdapter;
+import org.auraframework.adapter.ExtendedBeanAdapter;
 import org.auraframework.adapter.LocalizationAdapter;
 import org.auraframework.adapter.StyleAdapter;
 import org.auraframework.clientlibrary.ClientLibraryService;
@@ -200,9 +201,10 @@ public class Aura {
      * Get the bean adapter for aura to create controller/model beans.
      */
     public static BeanAdapter getBeanAdapter() {
-        return Aura.get(BeanAdapter.class);
+        BeanAdapter extendedBeanAdapter = Aura.get(ExtendedBeanAdapter.class);
+        return extendedBeanAdapter != null ? extendedBeanAdapter : Aura.get(BeanAdapter.class);
     }
-    
+
     public static <T extends AuraServiceProvider> T get(Class<T> type) {
         return ServiceLocator.get().get(type);
     }

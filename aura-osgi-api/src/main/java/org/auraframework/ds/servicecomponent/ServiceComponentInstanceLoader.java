@@ -13,25 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.auraframework.impl.java.model;
+package org.auraframework.ds.servicecomponent;
 
-import org.auraframework.system.Annotations.AuraEnabled;
-import org.auraframework.system.Annotations.Model;
+public interface ServiceComponentInstanceLoader {
+    Model getModelInstance(String className);
 
-@Model (useAdapter=true)
-public class TestModelBean {
-	private int counter=-1;
-	private boolean debug=false;
-	
-	public TestModelBean() {
-		this.counter = 0;
-		if(debug) System.out.println("create TestModelBean#"+this.hashCode());
-	}
-	
-	@AuraEnabled
-	public int getCounter() {
-		this.counter++;
-		if(debug) System.out.println("getCounter from TestModelBean#"+this.hashCode()+":"+this.counter);
-		return this.counter;
-	}
+    Controller getControllerInstance(String className);
+
+    Provider getProviderInstance(String className);
+
+    Access getAccessInstance(String className);
 }

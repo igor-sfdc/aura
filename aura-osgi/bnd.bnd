@@ -174,6 +174,7 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.components.ui.listView,\
     org.auraframework.components.ui.menu
 Export-Package: org.auraframework.ds.serviceloader,\
+    org.auraframework.ds.servicecomponent,\
     org.auraframework.provider.api,\
     org.auraframework.util.json,\
     org.auraframework.system,\
@@ -184,7 +185,8 @@ Export-Package: org.auraframework.ds.serviceloader,\
     org.auraframework.def,\
     org.auraframework.adapter,\
     org.auraframework,\
-    org.auraframework.ds.log
+    org.auraframework.ds.log,\
+    org.auraframework.throwable
 -runsystempackages: sun.reflect,\
     sun.misc
 Import-Package: com.sun.xml.stream;resolution:=optional,\

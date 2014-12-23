@@ -49,7 +49,7 @@ import aQute.bnd.annotation.component.Component;
 
 /**
  */
-@Component (provide=AuraServiceProvider.class)
+@Component(provide = {AuraServiceProvider.class, ContextService.class})
 public class AuraContextServiceImpl implements ContextService {
 
     private static final long serialVersionUID = 2204785781318401371L;
@@ -87,7 +87,7 @@ public class AuraContextServiceImpl implements ContextService {
             DefDescriptor<? extends BaseComponentDef> appDesc) {
         return startContext(mode, format, access, appDesc, false);
     }
-    
+
     @Override
     public AuraContext startContext(Mode mode, Format format, Authentication access,
                     DefDescriptor<? extends BaseComponentDef> appDesc,
@@ -100,7 +100,7 @@ public class AuraContextServiceImpl implements ContextService {
             DefDescriptor<? extends BaseComponentDef> appDesc) {
         return startContext(mode, loaders, format, access, appDesc, false);
     }
-    
+
     @Override
     public AuraContext startContext(Mode mode, Set<SourceLoader> loaders, Format format, Authentication access,
             DefDescriptor<? extends BaseComponentDef> appDesc, boolean isDebugToolEnabled) {
@@ -153,7 +153,7 @@ public class AuraContextServiceImpl implements ContextService {
         }
         return ret.toArray(new DefRegistry[ret.size()]);
     }
-    
+
     private Map<ValueProviderType, GlobalValueProvider> getGlobalProviders() {
         // load any @Primary GlobalValueProviderAdatper first, to give it's
         // implementations precedence
