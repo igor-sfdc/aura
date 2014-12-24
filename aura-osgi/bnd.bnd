@@ -186,7 +186,9 @@ Export-Package: org.auraframework.ds.serviceloader,\
     org.auraframework.adapter,\
     org.auraframework,\
     org.auraframework.ds.log,\
-    org.auraframework.throwable
+    org.auraframework.throwable,\
+    ui.aura.servicecomponent,\
+    ui.aura.servicecomponent.impl
 -runsystempackages: sun.reflect,\
     sun.misc
 Import-Package: com.sun.xml.stream;resolution:=optional,\

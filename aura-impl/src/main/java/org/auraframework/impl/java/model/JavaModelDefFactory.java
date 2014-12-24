@@ -20,6 +20,7 @@ import java.util.List;
 import org.auraframework.builder.DefBuilder;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.ModelDef;
+import org.auraframework.ds.servicecomponent.ServiceComponentConstants;
 import org.auraframework.impl.java.BaseJavaDefFactory;
 import org.auraframework.system.Annotations.Model;
 import org.auraframework.system.Location;
@@ -46,7 +47,7 @@ public class JavaModelDefFactory extends BaseJavaDefFactory<ModelDef> {
         if (c == null) {
             return null;
         }
-        Model ann = c.getAnnotation(Model.class);
+        Model ann = findAnnotation(c, Model.class);
         if (ann == null) {
             throw new InvalidDefinitionException(String.format(
                     "@Model annotation is required on all Models.  Not found on %s", descriptor), new Location(
@@ -57,7 +58,11 @@ public class JavaModelDefFactory extends BaseJavaDefFactory<ModelDef> {
         builder.setDescriptor(descriptor);
         builder.setLocation(descriptor.getName(), 0);
         builder.setModelClass(c);
-        builder.setBean(ann.useAdapter());
+        builder.setBean(isBean(ann, descriptor));
         return builder;
+    }
+
+    private static boolean isBean(Model ann, DefDescriptor<ModelDef> descriptor) {
+        return ann.useAdapter() == true || ServiceComponentConstants.prefix.equals(descriptor.getPrefix());
     }
 }

@@ -29,6 +29,7 @@ import org.auraframework.def.ControllerDef;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.TypeDef;
 import org.auraframework.def.ValueDef;
+import org.auraframework.ds.servicecomponent.ServiceComponentConstants;
 import org.auraframework.impl.java.BaseJavaDefFactory;
 import org.auraframework.impl.java.model.JavaValueDef;
 import org.auraframework.impl.java.type.JavaTypeDef;
@@ -74,19 +75,23 @@ public class JavaControllerDefFactory extends BaseJavaDefFactory<ControllerDef> 
         builder.setControllerClass(c);
         // FIXME = "we need an md5";
         builder.setLocation(c.getCanonicalName(), -1);
-        Controller ann = c.getAnnotation(Controller.class);
+        Controller ann = findAnnotation(c, Controller.class);
         if (ann == null) {
             throw new InvalidDefinitionException(String.format(
                     "@Controller annotation is required on all Controllers.  Not found on %s", descriptor),
                     builder.getLocation());
         }
-        builder.setBean(ann.useAdapter());
+        builder.setBean(isBean(ann, descriptor));
         try {
             builder.setActionMap(createActions(c, builder.getDescriptor(), ann.useAdapter()));
         } catch (QuickFixException qfe) {
             builder.setParseError(qfe);
         }
         return builder;
+    }
+
+    private static boolean isBean(Controller ann, DefDescriptor<ControllerDef> descriptor) {
+        return ann.useAdapter() == true || ServiceComponentConstants.prefix.equals(descriptor.getPrefix());
     }
 
     private static String formatType(Type t) {
