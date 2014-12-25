@@ -18,6 +18,7 @@ package org.auraframework.ds.serviceloader.impl;
 import org.auraframework.adapter.ExtendedBeanAdapter;
 import org.auraframework.def.JavaControllerDef;
 import org.auraframework.def.JavaModelDef;
+import org.auraframework.def.JavaProviderDef;
 import org.auraframework.ds.log.AuraDSLogService;
 import org.auraframework.ds.servicecomponent.ServiceComponentInstanceLoader;
 import org.auraframework.ds.serviceloader.AuraServiceProvider;
@@ -39,7 +40,7 @@ public class ExtendedBeanAdapterImpl implements ExtendedBeanAdapter {
 
     @Override
     public void validateModelBean(JavaModelDef def) throws QuickFixException {
-        // TODO need to implement
+        // TODO: service-component - need to implement
     }
 
     @Override
@@ -49,12 +50,23 @@ public class ExtendedBeanAdapterImpl implements ExtendedBeanAdapter {
 
     @Override
     public void validateControllerBean(JavaControllerDef def) throws QuickFixException {
-        // TODO need to implement
+        // TODO: service-component - need to implement
     }
 
     @Override
     public Object getControllerBean(JavaControllerDef def) {
         return serviceComponentInstanceLoader.getControllerInstance(toClassName(def));
+    }
+
+    @Override
+    public void validateProviderBean(JavaProviderDef def, Class<?> clazz) throws QuickFixException {
+        // TODO: service-component - need to implement
+    }
+
+    @Override
+    public <T> T getProviderBean(JavaProviderDef def, Class<T> clazz) {
+        // TODO: service-component - need to resolve this, cast is not acceptable
+        return (T)serviceComponentInstanceLoader.getProviderInstance(toClassName(def));
     }
 
     private AuraDSLogService logService;
@@ -67,6 +79,12 @@ public class ExtendedBeanAdapterImpl implements ExtendedBeanAdapter {
     @Activate
     protected void activate() {
         logService.debug("Activated new instance of: " + this.getClass().getName() + this);
+    }
+
+    // TODO: service-component - need a common JavaDef interface with a method like getJavaType()
+    private static String toClassName(JavaProviderDef def) {
+        Class<?> clazz = def.getJavaType();
+        return clazz.getName();
     }
 
     private static String toClassName(JavaControllerDef def) {

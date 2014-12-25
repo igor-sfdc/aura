@@ -43,6 +43,7 @@ public class JavaProviderDefImpl extends DefinitionImpl<JavaProviderDef> impleme
     private final Class<ComponentConfigProvider> configProvider;
     private final Class<StaticComponentConfigProvider> staticConfigProvider;
     private final Class<ComponentDescriptorProvider> descriptorProvider;
+    private final Class<?> pClazz;
 
     protected JavaProviderDefImpl(Builder builder) throws QuickFixException {
         super(builder);
@@ -50,6 +51,7 @@ public class JavaProviderDefImpl extends DefinitionImpl<JavaProviderDef> impleme
         this.configProvider = builder.configProvider;
         this.staticConfigProvider = builder.staticConfigProvider;
         this.descriptorProvider = builder.descriptorProvider;
+        this.pClazz = builder.getProviderClass();
     }
 
     /**
@@ -149,6 +151,11 @@ public class JavaProviderDefImpl extends DefinitionImpl<JavaProviderDef> impleme
     @Override
     public boolean isLocal() {
         return true;
+    }
+
+    @Override
+    public Class<?> getJavaType() {
+        return pClazz;
     }
 
     public static final class Builder extends AbstractJavaProviderDef.Builder<JavaProviderDef> {
