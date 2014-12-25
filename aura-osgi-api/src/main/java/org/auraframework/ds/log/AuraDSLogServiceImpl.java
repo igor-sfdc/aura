@@ -17,42 +17,45 @@ package org.auraframework.ds.log;
 
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.log.LogService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import aQute.bnd.annotation.component.Component;
 
 /**
- * A temporary implementation of loging API (a placehoder to be replaced 
+ * A temporary implementation of loging API (a placehoder to be replaced
  * with a more robust/OSGi standard implementation in the future)
- * 
+ *
  *
  *
  */
 @Component
 public class AuraDSLogServiceImpl implements AuraDSLogService {
     private static final int STACKTRACE_OFFSET = 4;
+    private static final Logger LOG = LoggerFactory.getLogger(AuraDSLogServiceImpl.class);
 
     enum LogLevel {
-         ERROR(LogService.LOG_ERROR),
-         WARNING(LogService.LOG_WARNING),
-         INFO(LogService.LOG_INFO),
-         DEBUG(LogService.LOG_DEBUG);
-         
-         private final int level;
-         
-         LogLevel(int level) {
-             this.level = level;
-         }
-         
-         public static LogLevel fromLogServiceLevel(int level) {
-             for (LogLevel value : LogLevel.values()) {
-                 if (value.level == level) {
-                     return value;
-                 }
-             }
-             return null;
-         }
+        ERROR(LogService.LOG_ERROR),
+        WARNING(LogService.LOG_WARNING),
+        INFO(LogService.LOG_INFO),
+        DEBUG(LogService.LOG_DEBUG);
+
+        private final int level;
+
+        LogLevel(int level) {
+            this.level = level;
+        }
+
+        public static LogLevel fromLogServiceLevel(int level) {
+            for (LogLevel value : LogLevel.values()) {
+                if (value.level == level) {
+                    return value;
+                }
+            }
+            return null;
+        }
     }
-    
+
     @Override
     public void log(int level, String message) {
         handleLog(level, message, null);
@@ -74,47 +77,89 @@ public class AuraDSLogServiceImpl implements AuraDSLogService {
         handleLog(level, "[Bundle: " + bundleName + "] " + message, null);
     }
 
-    protected static void handleLog(int level, String message, Throwable th) {
-        LogLevel logLevel = LogLevel.fromLogServiceLevel(level);
-            // Add line number
-            StackTraceElement[] stacktrace = Thread.currentThread().getStackTrace();
-            StackTraceElement caller = stacktrace[STACKTRACE_OFFSET];
-        String logLevelStr = logLevel != null ?  logLevel.toString() + " " : "";
-        String lineInfo = "[" + logLevelStr + "(" + caller.getFileName() + ":" + caller.getLineNumber() + ")] ";
-        // TODO: convert System.out.println to real log configuration
-        System.out.println(lineInfo + " " + message);
-        if (th != null) {
-            th.printStackTrace();
+    protected static void handleLog(int level, String message, Throwable throwable) {
+        switch (level) {
+        case LogService.LOG_DEBUG:
+            if (null == throwable) {
+                LOG.debug(message);
+            } else {
+                LOG.debug(message, throwable);
+            }
+            break;
+        case LogService.LOG_ERROR:
+            if (null == throwable) {
+                LOG.error(message);
+            } else {
+                LOG.error(message, throwable);
+            }
+            break;
+        case LogService.LOG_INFO:
+            if (null == throwable) {
+                LOG.info(message);
+            } else {
+                LOG.info(message, throwable);
+            }
+            break;
+        case LogService.LOG_WARNING:
+            if (null == throwable) {
+                LOG.warn(message);
+            } else {
+                LOG.warn(message, throwable);
+            }
+            break;
+        default:
+            if (null == throwable) {
+                LOG.info(message);
+            } else {
+                LOG.info(message, throwable);
+            }
+            break;
         }
+    }
+
+    private String augmentMessage(String message) {
+        // Add line number
+        StackTraceElement[] stacktrace = Thread.currentThread().getStackTrace();
+        StackTraceElement caller = stacktrace[STACKTRACE_OFFSET];
+        StringBuilder builder = new StringBuilder();
+        builder
+                .append('(')
+                .append(caller.getFileName())
+                .append(':')
+                .append(caller.getLineNumber())
+                .append(')')
+                .append(' ')
+                .append(message);
+        return builder.toString();
     }
 
     @Override
     public void info(String message) {
-        log(LOG_INFO, message);
+        LOG.info(augmentMessage(message));
     }
 
     @Override
     public void debug(String message) {
-        log(LOG_DEBUG, message);
+        LOG.debug(augmentMessage(message));
     }
 
     @Override
     public void warning(String message) {
-        log(LOG_WARNING, message);
+        LOG.warn(augmentMessage(message));
     }
 
     @Override
     public void warning(String message, Throwable th) {
-        log(LOG_WARNING, message, th);
+        LOG.warn(augmentMessage(message), th);
     }
 
     @Override
     public void error(String message) {
-        log(LOG_ERROR, message);
+        LOG.error(augmentMessage(message));
     }
 
     @Override
     public void error(String message, Throwable th) {
-        log(LOG_ERROR, message, th);
+        LOG.error(augmentMessage(message), th);
     }
 }
