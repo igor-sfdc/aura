@@ -79,28 +79,6 @@ public abstract class BaseJavaDefFactory<D extends Definition> extends DefFactor
         return null;
     }
 
-    /**
-     * Find an annotation up to two levels deep.
-     *
-     * This helper function allows us to search 'meta' annotations, at a certain cost during compilation...
-     * We do this to allow a single level of nesting for annotations. This maybe should be replaced by the
-     * ability to get an annotation from the adapter instead of trying all of them.
-     */
-    protected <T extends Annotation> T findAnnotation(Class<?> target, Class<T> annClass) {
-        T ann = target.getAnnotation(annClass);
-        if (ann != null) {
-            return ann;
-        }
-        Annotation[] annList = target.getAnnotations();
-        for (Annotation t : annList) {
-            ann = t.annotationType().getAnnotation(annClass);
-            if (ann != null) {
-                return ann;
-            }
-        }
-        return null;
-    }
-
     protected Class<?> getClazz(DefDescriptor<D> descriptor) throws QuickFixException {
         Class<?> clazz;
         if (descriptor.getNamespace() == null) {

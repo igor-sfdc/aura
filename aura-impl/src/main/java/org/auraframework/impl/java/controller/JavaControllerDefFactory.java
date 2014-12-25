@@ -81,16 +81,16 @@ public class JavaControllerDefFactory extends BaseJavaDefFactory<ControllerDef> 
                     "@Controller annotation is required on all Controllers.  Not found on %s", descriptor),
                     builder.getLocation());
         }
-        builder.setUseAdapter(ann.useAdapter());
+        builder.setUseAdapter(useAdapter(ann, descriptor));
         try {
-            builder.setActionMap(createActions(c, builder.getDescriptor(), ann.useAdapter()));
+            builder.setActionMap(createActions(c, builder.getDescriptor(), useAdapter(ann, descriptor)));
         } catch (QuickFixException qfe) {
             builder.setParseError(qfe);
         }
         return builder;
     }
 
-    private static boolean isBean(Controller ann, DefDescriptor<ControllerDef> descriptor) {
+    private static boolean useAdapter(Controller ann, DefDescriptor<ControllerDef> descriptor) {
         return ann.useAdapter() == true || ServiceComponentConstants.prefix.equals(descriptor.getPrefix());
     }
 
