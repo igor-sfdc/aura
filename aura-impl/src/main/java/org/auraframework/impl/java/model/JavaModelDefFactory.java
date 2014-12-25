@@ -23,7 +23,6 @@ import org.auraframework.def.ModelDef;
 import org.auraframework.ds.servicecomponent.ServiceComponentConstants;
 import org.auraframework.impl.java.BaseJavaDefFactory;
 import org.auraframework.system.Annotations.Model;
-import org.auraframework.system.Location;
 import org.auraframework.system.SourceLoader;
 import org.auraframework.throwable.quickfix.InvalidDefinitionException;
 import org.auraframework.throwable.quickfix.QuickFixException;
@@ -43,22 +42,21 @@ public class JavaModelDefFactory extends BaseJavaDefFactory<ModelDef> {
 
     @Override
     protected DefBuilder<?, ? extends ModelDef> getBuilder(DefDescriptor<ModelDef> descriptor) throws QuickFixException {
+        JavaModelDefImpl.Builder builder = new JavaModelDefImpl.Builder();
         Class<?> c = getClazz(descriptor);
         if (c == null) {
             return null;
         }
-        Model ann = findAnnotation(c, Model.class);
-        if (ann == null) {
-            throw new InvalidDefinitionException(String.format(
-                    "@Model annotation is required on all Models.  Not found on %s", descriptor), new Location(
-                    descriptor.getName(), 0));
-        }
-
-        JavaModelDefImpl.Builder builder = new JavaModelDefImpl.Builder();
         builder.setDescriptor(descriptor);
         builder.setLocation(descriptor.getName(), 0);
         builder.setModelClass(c);
-        builder.setBean(isBean(ann, descriptor));
+        Model ann = findAnnotation(c, Model.class);
+        if (ann == null) {
+            throw new InvalidDefinitionException(String.format(
+                    "@Model annotation is required on all Models.  Not found on %s", descriptor),
+                    builder.getLocation());
+        }
+        builder.setUseAdapter(isBean(ann, descriptor));
         return builder;
     }
 

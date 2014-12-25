@@ -13,26 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.auraframework.adapter;
+({
 
-import org.auraframework.test.MockBean;
+    onChange: function(cmp, event, helper){
+        var textarea = cmp.find("textAreaWithLabel").find("textAreaElem").getElement();
+        if(textarea.value !== cmp.get('v.value')) {
+            cmp.set("v.value",  textarea.value);
+        }
+    }
 
-/**
- * Provide a configurable ConfigAdapter for tests.
- * 
- * 
- * @since 0.0.178
- */
-public interface MockConfigAdapter extends ConfigAdapter, MockBean {
-    void setIsClientAppcacheEnabled(boolean isClientAppcacheEnabled);
-
-    void setIsProduction(boolean isProduction);
-
-    void setIsAuraJSStatic(boolean isAuraJSStatic);
-
-    void setValidateCss(boolean validateCss);
-    
-    void setContentSecurityPolicy(ContentSecurityPolicy csp);
-    
-    void setValidateCSRFTokenException(RuntimeException exception);
-}
+})

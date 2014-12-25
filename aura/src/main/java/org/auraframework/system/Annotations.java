@@ -73,6 +73,7 @@ public interface Annotations {
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.TYPE)
     public @interface Provider {
+        boolean useAdapter() default false;
     }
 
     @Retention(RetentionPolicy.RUNTIME)

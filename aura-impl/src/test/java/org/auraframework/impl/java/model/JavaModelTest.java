@@ -273,7 +273,7 @@ public class JavaModelTest extends AuraImplTestCase {
             definitionService.getDefinition(desc);
             fail("Expected exception");
         } catch (Exception e) {
-            checkExceptionStart(e, InvalidDefinitionException.class, message, "java://" + clazz.getCanonicalName());
+            checkExceptionStart(e, InvalidDefinitionException.class, message, clazz.getCanonicalName());
         }
     }
 

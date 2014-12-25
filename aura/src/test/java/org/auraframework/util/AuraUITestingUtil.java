@@ -289,7 +289,8 @@ public class AuraUITestingUtil {
         } catch (WebDriverException e) {
             // shouldn't come here that often as we are also wrapping the js
             // script being passed to us in try/catch above
-            Assert.fail("Script execution failed.\n" + "Failure Message: " + e.getMessage() + "\n" + "Arguments: ("
+            Assert.fail("Script execution failed.\n" + "Exception type: " + e.getClass().getName()
+                    + "\n" + "Failure Message: " + e.getMessage() + "\n" + "Arguments: ("
                     + Arrays.toString(args) + ")\n" + "Script:\n" + javascript + "\n");
             throw e;
         } catch (NullPointerException npe) {
@@ -594,10 +595,10 @@ public class AuraUITestingUtil {
         WebDriverWait wait = new WebDriverWait(driver, timeoutInSecs);
         return wait.withMessage(message).until(addErrorCheck(function));
     }
-    
+
     public String appCacheStatusIntToString(Integer ret) {
-    	String status = "Unknown cache state";
-    	switch (ret) {
+        String status = "Unknown cache state";
+        switch (ret) {
         case 0:
             status = "UNCACHED";
             break;
@@ -617,7 +618,7 @@ public class AuraUITestingUtil {
             status = "OBSOLETE";
             break;
         }
-    	return status;
+        return status;
     }
 
     public void waitForAppCacheReady() {
@@ -751,18 +752,31 @@ public class AuraUITestingUtil {
      * @param text Text on the found WebElement.
      * @param toBePresent True if we want text passed in as parameter to equal text on found WebElement.
      * @param message Message to display to user on timeout.
+     * @param looking for exact match or just partial
      */
-    public void waitForElementText(final By locator, final String text, final boolean toBePresent, String message) {
+    public void waitForElementText(final By locator, final String text, final boolean toBePresent, String message, final Boolean matchFullText) {
         waitForElementFunction(locator, new Function<WebElement, Boolean>() {
             @Override
             public Boolean apply(WebElement element) {
-                return toBePresent == element.getText().equals(text);
+            	if(matchFullText == true) {
+            		return toBePresent == element.getText().equals(text);
+            	} else {
+            		return toBePresent == element.getText().contains(text);
+            	}
             }
         }, message);
     }
-
+    
+    public void waitForElementText(final By locator, final String text, final boolean toBePresent, String message) {
+    	waitForElementText(locator, text, toBePresent, message, true);
+    }
+        
     public void waitForElementText(final By locator, final String text, final boolean toBePresent) {
         waitForElementText(locator, text, toBePresent, "Timeout looking for element with text: " + text);
+    }
+    
+    public void waitForElementTextContains(final By locator, final String text, final boolean toBePresent) {
+        waitForElementText(locator, text, toBePresent, "Timeout looking for element with text: " + text, false);
     }
 
     /**
@@ -841,5 +855,5 @@ public class AuraUITestingUtil {
             throw new RuntimeException(ex);
         }
     }
-    
+
 }
