@@ -18,6 +18,6 @@ package org.auraframework.ds.servicecomponent;
 /**
  * DS ServiceComponent ModelFactory marker interface
  */
-public interface ModelFactory<T extends Model> {
+public interface ModelFactory<T extends ModelInstance> {
     T modelInstance() throws ModelInitializationException;
 }

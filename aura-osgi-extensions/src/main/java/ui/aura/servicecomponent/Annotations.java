@@ -41,6 +41,10 @@ public interface Annotations {
     public @interface ServiceComponentController {
     }
 
+    /**
+     * Marker annotation for "legacy" Service Component Models
+     * with prototype scope
+     */
     @Target({ElementType.TYPE})
     @Retention(RetentionPolicy.RUNTIME)
     @Documented
@@ -48,6 +52,25 @@ public interface Annotations {
     public @interface ServiceComponentModel {
     }
 
+    /**
+     * Marker annotation for the instance (prototype scope POJO) portion of Service Component
+     * Models represented by Service Component Factory and Service Component Instance.
+     * {@link @ServiceComponentModelInstance} and {@link @ServiceComponentModelFactory}
+     * should be always used in pairs.
+     */
+    @Target({ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @Documented
+    @Model
+    public @interface ServiceComponentModelInstance {
+    }
+
+    /**
+     * Marker annotation for the factory (singleton) portion of Service Component
+     * Models represented by Service Component Factory and Service Component Instance.
+     * {@link @ServiceComponentModelInstance} and {@link @ServiceComponentModelFactory}
+     * should be always used in pairs.
+     */
     @Target({ElementType.TYPE})
     @Retention(RetentionPolicy.RUNTIME)
     @Documented

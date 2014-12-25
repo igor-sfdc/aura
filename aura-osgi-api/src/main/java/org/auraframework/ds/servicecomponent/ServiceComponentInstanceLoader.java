@@ -16,7 +16,7 @@
 package org.auraframework.ds.servicecomponent;
 
 public interface ServiceComponentInstanceLoader {
-    Model getModelInstance(String className);
+    ModelInstance getModelInstance(String className);
 
     Controller getControllerInstance(String className);
 

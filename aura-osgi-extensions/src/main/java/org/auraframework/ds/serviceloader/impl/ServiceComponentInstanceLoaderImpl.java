@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.auraframework.ds.servicecomponent.Access;
 import org.auraframework.ds.servicecomponent.Controller;
-import org.auraframework.ds.servicecomponent.Model;
+import org.auraframework.ds.servicecomponent.ModelInstance;
 import org.auraframework.ds.servicecomponent.ModelFactory;
 import org.auraframework.ds.servicecomponent.ModelInitializationException;
 import org.auraframework.ds.servicecomponent.Provider;
@@ -32,17 +32,17 @@ import aQute.bnd.annotation.component.Reference;
 @Component
 public class ServiceComponentInstanceLoaderImpl implements ServiceComponentInstanceLoader {
 
-    private final ConcurrentHashMap<String, ModelFactory<? extends Model>> modelFactoryMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ModelFactory<? extends ModelInstance>> modelFactoryMap = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Controller> controllerMap = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Provider> providerMap = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Access> accessMap = new ConcurrentHashMap<>();
 
     @Reference(multiple = true, dynamic = true, optional = true)
-    protected void addModelFactory(ModelFactory<? extends Model> modelFactory) {
+    protected void addModelFactory(ModelFactory<? extends ModelInstance> modelFactory) {
         modelFactoryMap.put(modelFactory.getClass().getName(), modelFactory);
     }
 
-    void removeModelFactory(ModelFactory<? extends Model> modelFactory) {
+    void removeModelFactory(ModelFactory<? extends ModelInstance> modelFactory) {
         String className = modelFactory.getClass().getName();
         modelFactoryMap.remove(className, modelFactory);
     }
@@ -78,8 +78,8 @@ public class ServiceComponentInstanceLoaderImpl implements ServiceComponentInsta
     }
 
     @Override
-    public Model getModelInstance(String className) {
-        ModelFactory<? extends Model> modelFactory = modelFactoryMap.get(className + "Factory");
+    public ModelInstance getModelInstance(String className) {
+        ModelFactory<? extends ModelInstance> modelFactory = modelFactoryMap.get(className + "Factory");
         try {
             return modelFactory.modelInstance();
         } catch (ModelInitializationException e) {
