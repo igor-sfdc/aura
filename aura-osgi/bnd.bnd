@@ -104,7 +104,6 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.impl.source.resource,\
     org.auraframework.impl.svg,\
     org.auraframework.impl.svg.parser,\
-    org.auraframework.impl.system,\
     org.auraframework.impl.test.util,\
     org.auraframework.impl.type,\
     org.auraframework.impl.util,\
@@ -186,6 +185,7 @@ Export-Package: org.auraframework.ds.serviceloader,\
     org.auraframework.throwable.quickfix,\
     org.auraframework.impl.controller,\
     org.auraframework.impl.root.component,\
+    org.auraframework.impl.system,\
     ui.aura.servicecomponent
     
 -runsystempackages: sun.reflect,\
