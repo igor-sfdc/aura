@@ -43,6 +43,7 @@ import org.auraframework.system.Annotations.Key;
 import org.auraframework.system.DefFactory;
 import org.auraframework.system.Location;
 import org.auraframework.system.SourceLoader;
+import org.auraframework.throwable.AuraUnhandledException;
 import org.auraframework.throwable.quickfix.InvalidDefinitionException;
 import org.auraframework.throwable.quickfix.QuickFixException;
 
@@ -86,6 +87,8 @@ public class JavaControllerDefFactory extends BaseJavaDefFactory<ControllerDef> 
             builder.setActionMap(createActions(c, builder.getDescriptor(), useAdapter(ann, descriptor)));
         } catch (QuickFixException qfe) {
             builder.setParseError(qfe);
+        } catch (NoClassDefFoundError e) {
+            throw new AuraUnhandledException("Error computing ActionMap for class: '" + c.getName() + "', descriptior: '" + descriptor.toString() + "' and useAdapter: " + useAdapter(ann, descriptor), e);
         }
         return builder;
     }

@@ -106,10 +106,6 @@ public class JavaTypeDefFactory extends BaseJavaDefFactory<TypeDef> {
             clazz = ClassProviderFactory.getClazzForName(className);
         }
 
-        if (clazz == null) {
-            // REVIEWME: osgi - the original Aura implementation wants to ignore this and return null
-            throw new AuraRuntimeException("Class not found " + className);
-        }
         return clazz;
     }
 }
