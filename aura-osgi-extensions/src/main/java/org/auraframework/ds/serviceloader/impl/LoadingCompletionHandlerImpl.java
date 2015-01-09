@@ -23,7 +23,7 @@ import org.auraframework.ds.log.AuraDSLog;
 import com.google.common.collect.Lists;
 
 /**
- * 
+ *
  * An example of how service loading completion can be handled:
  * auto-opens default browser with Auradocs URL upon loading completion.
  */
@@ -31,19 +31,19 @@ public class LoadingCompletionHandlerImpl implements CompletionHandler {
     enum BrowserExecutable {
         WINDOWS ("cmd", "/c", "start", "chrome"),
         LINUX("x-www-browser");
-        
+
         private final List<String> commandELements = Lists.newArrayList();
-        
+
         BrowserExecutable(String... elements) {
             for (String commandElement : elements) {
                 this.commandELements.add(commandElement);
             }
         }
-        
+
         List<String> toList() {
             return Lists.newArrayList(commandELements);
         }
-        
+
         public static BrowserExecutable get() {
             String os = System.getenv("OS");
             if (os != null && os.toLowerCase().contains("win")) {
@@ -63,14 +63,14 @@ public class LoadingCompletionHandlerImpl implements CompletionHandler {
 
     @Override
     public void handleCompletion() {
-        AuraDSLog.get().info("######################################################################");
-        AuraDSLog.get().info("#                                                                    #");
-        AuraDSLog.get().info("#                     Aura application is ready                      #");
-        AuraDSLog.get().info("#                                                                    #");
-        AuraDSLog.get().info("######################################################################");
+        AuraDSLog.get().debug("######################################################################");
+        AuraDSLog.get().debug("#                                                                    #");
+        AuraDSLog.get().debug("#                     Aura application is ready                      #");
+        AuraDSLog.get().debug("#                                                                    #");
+        AuraDSLog.get().debug("######################################################################");
         startBrowser();
     }
-    
+
     private void startBrowser() {
         String port = servicePortProvider.getHttpPort();
         String auraDocsUrl = "http://localhost:" + port + "/auradocs/docs.app#";
@@ -90,7 +90,7 @@ public class LoadingCompletionHandlerImpl implements CompletionHandler {
             AuraDSLog.get().info("Open this URL " + auraDocsUrl + " in your browser");
         }
     }
-    
+
     /**
      * Not sure if we ever want to terminate browser process but here is a method for that...
      */

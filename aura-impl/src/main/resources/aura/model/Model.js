@@ -23,18 +23,16 @@
  * @returns {Function}
  */
 function Model(def, data, component){
-    if(!data){
-        data={};
-    }
     this.def=def;
-    this.data=data;
+    this.data=$A.util.apply({}, data, true, true);
     this.component=component;
+    this.errors = {};
     if(def){
         var members=def.getMembers();
         for(var i=0;i<members.length;i++){
             var name=members[i].getName();
-            if(!data.hasOwnProperty(name)){
-                data[name]=null;
+            if(!this.data.hasOwnProperty(name)){
+                this.data[name]=null;
             }
         }
     }
@@ -71,6 +69,30 @@ Model.prototype.set=function(key,value){
     }
 };
 
+// JF: HALO: TODO: TEMPORARY VALID/ERROR MANAGEMENT - REMOVE WHEN POSSIBLE
+Model.prototype.isValid = function(expression) {
+    return !this.errors.hasOwnProperty(expression);
+};
+Model.prototype.setValid = function(expression, valid) {
+    if (valid) {
+        this.clearErrors(expression);
+    } else {
+        this.addErrors(expression, []);
+    }
+};
+Model.prototype.addErrors = function(expression, errors) {
+    if (!this.errors[expression]) {
+        this.errors[expression] = [];
+    }
+    this.errors[expression] = this.errors[expression].concat(errors);
+};
+Model.prototype.clearErrors = function(expression) {
+    delete this.errors[expression];
+};
+Model.prototype.getErrors = function(expression) {
+    return this.errors[expression] || [];
+};
+
 Model.prototype.destroy=function(async){
-    this.data=this.def=this.component=null;
+    this.data = this.def = this.component = this.errors = null;
 };

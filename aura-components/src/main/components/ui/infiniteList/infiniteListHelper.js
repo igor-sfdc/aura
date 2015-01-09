@@ -123,7 +123,7 @@
     		touch = (e.touches && e.touches[0]) || e;
     		rootClassName = cmp.getElement().className || 'uiInfiniteList';
     		row = this.getRow(e.target, 'uiInfiniteListRow', rootClassName); 
-    		    		
+
     		// Only proceed if a valid row was found.
     		if (row) {                
     			this.attachListeners(cmp);
@@ -138,6 +138,7 @@
                     e.preventDefault();
                     
                     // Close the row,
+					this.fireRowClose(cmp, cmp._openRow);
                 	this.closeRowBlockAndReset(cmp, cmp._previousSwipe);
                     
                 	return;
@@ -252,36 +253,32 @@
         		
         		// Block interactions while the transition is happening.
         		cmp._isSnapping = true;
-      
-        		// If the absolute percentage moved meets the threshold, then commit to either openning or closing. 
-        		if (percentage >= this.COMMIT_PERCENTAGE) {
-        			if (swipe.diffX > 0) {
-		    			this.translateX(cmp, swipe.body, -(this.OPEN_PERCENTAGE));
-		    			
-		    			// Create '_openRow' reference after timeout 'snap' has completed.
-		    			// Creating the reference too soon could cause a 'close' animation to also occur. 
-		    			shouldSnapOpen = true; 
-		    		}
-		    		else {
-		    			this.translateX(cmp, swipe.body, 0);
-		    			$A.util.removeClass(cmp._openRow, 'open');
-		    			cmp._openRow = null;
-		    		}
-        		} else {
-        			if (swipe.diffX > 0) {
-        				this.translateX(cmp, swipe.body, 0);
-		    			$A.util.removeClass(cmp._openRow, 'open');
-		    			cmp._openRow = null;
-		    		} else {
-                        this.translateX(cmp, swipe.body, -(this.OPEN_PERCENTAGE));
-		    			
-		    			// Create '_openRow' reference after timeout 'snap' has completed.
-		    			// Creating the reference too soon could cause a 'close' animation to also occur. 
-		    			shouldSnapOpen = true; 
-		    		}
-        		}
 
-	    		setTimeout(function () {
+        		// If the absolute percentage moved meets the threshold, then commit to either opening or closing.
+				var commit = percentage >= this.COMMIT_PERCENTAGE;
+				var rightSwipe = swipe.diffX > 0;
+                if ((commit && rightSwipe) || (!commit && !rightSwipe)) {
+					this.translateX(cmp, swipe.body, -(this.OPEN_PERCENTAGE));
+
+					// Create '_openRow' reference after timeout 'snap' has completed.
+					// Creating the reference too soon could cause a 'close' animation to also occur.
+					shouldSnapOpen = true;
+
+					if (!$A.util.hasClass(swipe.row, 'open')) {
+						this.fireRowOpen(cmp, swipe.row);
+					}
+				} else {
+					this.translateX(cmp, swipe.body, 0);
+
+					if ($A.util.hasClass(cmp._openRow, 'open'))  {
+						this.fireRowClose(cmp, cmp._openRow);
+						$A.util.removeClass(cmp._openRow, 'open');
+					}
+
+					cmp._openRow = null;
+				}
+
+	    		this.setCheckedTimeout(cmp, function () {
         			cmp._isSnapping = false;
         			swipe.body.style.transition = '';
 					$A.util.removeClass(swipe.row, 'swiping');
@@ -314,7 +311,23 @@
         cmp._direction = null;
         cmp._isInteractionOnOpenRow = null;
     },
-    
+
+	fireRowOpen: function(cmp, row) {
+		cmp.get("e.onRowOpen").setParams({row: row}).fire();
+	},
+
+	fireRowClose: function(cmp, row) {
+		cmp.get("e.onRowClose").setParams({row: row}).fire();
+	},
+
+	setCheckedTimeout: function(cmp, code, delay) {
+		setTimeout(function() {
+			if (cmp && cmp.isValid() && code) {
+				code();
+			}
+		}, delay);
+	},
+
     /**
      * Closes the current row.
      */
@@ -362,7 +375,7 @@
         cmp._isClosing = true;
         this.block(cmp);
         
-        setTimeout(function () {
+        this.setCheckedTimeout(cmp, function () {
             cmp._isClosing = false;
             swipe.body.style.transition = '';
         }, this.CLOSE_TIMEOUT);
@@ -397,7 +410,7 @@
     			animate(row);
     		}
     		
-    		setTimeout(function () {
+    		this.setCheckedTimeout(component, function () {
     			rm();
     			
     			if (callback) {
