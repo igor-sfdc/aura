@@ -29,7 +29,6 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.ds.util,\
     org.auraframework.http,\
     org.auraframework.impl,\
-    org.auraframework.impl.adapter,\
     org.auraframework.impl.adapter.format,\
     org.auraframework.impl.adapter.format.css,\
     org.auraframework.impl.adapter.format.html,\
@@ -183,6 +182,7 @@ Export-Package: org.auraframework.ds.serviceloader,\
     org.auraframework.impl.expression,\
     org.auraframework.throwable,\
     org.auraframework.throwable.quickfix,\
+    org.auraframework.impl.adapter,\
     org.auraframework.impl.controller,\
     org.auraframework.impl.root.component,\
     org.auraframework.impl.system,\
