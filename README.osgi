@@ -7,10 +7,9 @@ The code is very preliminary, has not been fully tested and can be considered a 
 
 Steps to build and run Aura as an OSGi bundle:
 
-1.  Install Maven version 3.0.5 (http://apache.mirrors.pair.com/maven/maven-3/3.0.5/binaries/apache-maven-3.0.5-bin.tar.gz).
-The latest Maven version 3.1.0 has problems with one of the plugins being used here
+1.  Install Maven version 3.2.2
 
-2. Clone this repo locally then build and run Aura from command line:
+2. Clone this repo locally then build and run Aura OSGi from command line:
 
     mkdir -p <path-to-local-repo>
     cd <path-to-local-repo>
