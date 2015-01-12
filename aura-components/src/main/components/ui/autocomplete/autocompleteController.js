@@ -46,13 +46,18 @@
     
     handleFocus: function(component, event, helper) {
         var inputCmp = event.getSource();
-        var elem = inputCmp ? inputCmp.getElement() : null;
-        if (elem) {
-            elem.setAttribute("aria-activedescendant", "");
+        if (inputCmp) {
+        	inputCmp.set("v.ariaActiveDescendant", "");
         }
     },
     
     handleInputChange: function(component, event, helper) {
+        // DVAL: HALO: FIXME: This sync should be done by the input itself 
+        // before firing the event to anyone else.
+        var inputHelper = component.getDef().getHelper();
+        var value = inputHelper.getInputElement(component).value;
+        inputHelper.doUpdate(component.find('input'), value);
+
         if (component._delay) {
             component._delay(function() {
                 helper.fireInputChangeEvent(component, event);

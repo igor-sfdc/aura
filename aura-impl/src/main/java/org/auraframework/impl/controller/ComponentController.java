@@ -23,6 +23,7 @@ import org.auraframework.def.ActionDef;
 import org.auraframework.def.ApplicationDef;
 import org.auraframework.def.ComponentDef;
 import org.auraframework.def.DefDescriptor;
+import org.auraframework.def.Definition;
 import org.auraframework.impl.javascript.controller.JavascriptPseudoAction;
 import org.auraframework.instance.Action;
 import org.auraframework.instance.Application;
@@ -31,6 +32,7 @@ import org.auraframework.service.DefinitionService;
 import org.auraframework.system.Annotations.AuraEnabled;
 import org.auraframework.system.Annotations.Controller;
 import org.auraframework.system.Annotations.Key;
+import org.auraframework.system.AuraContext;
 import org.auraframework.throwable.quickfix.QuickFixException;
 
 import com.google.common.collect.Lists;
@@ -73,6 +75,22 @@ public class ComponentController {
             return jsStack;
         }
 
+    }
+
+    @AuraEnabled
+    public static Boolean loadLabels() throws QuickFixException {
+        AuraContext ctx = Aura.getContextService().getCurrentContext();
+        Map<DefDescriptor<? extends Definition>, Definition> defMap;
+
+        ctx.getDefRegistry().getDef(ctx.getApplicationDescriptor());
+        defMap = ctx.getDefRegistry().filterRegistry(null);
+        for (Map.Entry<DefDescriptor<? extends Definition>, Definition> entry : defMap.entrySet()) {
+            Definition def = entry.getValue();
+            if (def != null) {
+                def.retrieveLabels();
+            }
+        }
+        return Boolean.TRUE;
     }
 
     @AuraEnabled

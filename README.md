@@ -1,3 +1,5 @@
+## Looking for aura-osgi info? It is [here](README.osgi).
+
 ## What is Aura?
 
 Aura is a UI framework for developing dynamic web apps for mobile and desktop 

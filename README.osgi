@@ -16,12 +16,9 @@ The latest Maven version 3.1.0 has problems with one of the plugins being used h
     cd <path-to-local-repo>
     git clone https://github.com/igor-sfdc/aura
     cd <path-to-local-repo>/aura
-    mvn clean install -DskipUnitTests -DstartLauncher -DstartBrowser -DhttpPort=9090
-
-Your default browser should automatically open Auradocs application. If
-it does not then try manually navigating to: 
-
-    http://localhost:9090/auradocs/docs.app#
+    mvn clean install -DskipUnitTests -DskipComponentCompile -DstartLauncher [-DhttpPort=9090]
+    # Open auradocs using curl or a browser 
+    curl http://localhost:9090/auradocs/docs.app#
 
 3. Optionally, to include a separate Aura-note application bundle and run it alongside Aura framework replace #2 with:
 
@@ -31,36 +28,15 @@ it does not then try manually navigating to:
     cd <path-to-local-repo>/aura
     git submodule init
     git submodule update
-    mvn clean install -DskipUnitTests
+    mvn clean install -DskipUnitTests -DskipComponentCompile
     mvn clean install -f aura-note/pom.xml
-    mvn install -pl osgi-launcher -DstartLauncher -DstartBrowser -DhttpPort=9090
-
-After your default browser opens Auradocs page navigate to Aura-note:
-
-    http://localhost:9090/auranote/notes.app#
+    mvn install -pl osgi-launcher -DstartLauncher [-DhttpPort=9090]
+    curl http://localhost:9090/auranote/notes.app#
 
 
+To debug using Eclipse:
 
-To use this with Eclipse:
-
-1. Install Bndtools and m2e into your Eclipse IDE. 
-
-
-2. Create an empty Eclipse workspace in a folder
-different from <path-to-local-repo>/aura
-
-3. Import the existing cnf project as Import->General->Existing 
-Projects into the Workspace. Do not check "copy" checkbox
-
-4. Import the remaining Maven projects into Eclipse as 
-Import->Maven->Existing Maven Projects
-
-5. Now you should be able to right-click on Launcher class 
-and Run it As Java, which should start Aura in OSGi mode. If you get
-any errors run manual build steps again.
-
-
-Future steps planned:
-
-1. More rigorous testing and bug fixes
+1. Import Maven projects into Eclipse as Import->Maven->Existing Maven Projects
+2. To start Aura in OSGi mode right-click on Launcher class and select Run As->Java App
+3. Alternatively after starting Aura from build using -DstartLauncher you can attach debugger to port 1044
 

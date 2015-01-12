@@ -1,8 +1,0 @@
-{
-  "mode":"UTEST",
-  "app":"test:laxSecurity",
-  "loaded":{
-    "EVENT@markup://auratest:iwasadded":"somegenerateduid"
-  },
-  "test":"org.auraframework.impl.context.AuraContextImplTest.testSerializeWithLoaded"
-}

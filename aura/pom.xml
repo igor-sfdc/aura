@@ -137,13 +137,6 @@
                 <artifactId>maven-resources-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>copy-test-components</id>
-                        <phase>process-test-resources</phase>
-                        <configuration>
-                            <outputDirectory>target/test-classes/components_aura</outputDirectory>
-                        </configuration>
-                    </execution>
-                    <execution>
                         <id>copy-osgi-version-props</id>
                         <phase>process-resources</phase>
                         <goals>
@@ -190,15 +183,6 @@
                                 </resource>
                             </resources>
                         </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>index-test-components</id>
-                        <phase>generate-test-resources</phase>
                     </execution>
                 </executions>
             </plugin>

@@ -28,6 +28,10 @@ import org.auraframework.throwable.quickfix.QuickFixException;
  * An expression that can be evaluated on the server or the client.
  */
 public interface Expression extends Serializable {
+    /*
+    * Specify whether this expression should be passed by value, or bound bi-directionally.
+    * */
+    void setByValue(boolean byValue);
 
     /**
      * Evaluate this expression and return the result, resolving references

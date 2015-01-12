@@ -19,7 +19,6 @@
 		
 		// Use for loading logic. 
 		cmp._hasDataProvider = cmp._dataProviders && cmp._dataProviders.length > 0;
-		cmp._rendered = false;
 
 		// Attempt to extract the initial set of items. 
 		if (cmp._hasDataProvider) {
@@ -42,17 +41,20 @@
 		hlp.initializeNewColumns(cmp);
 		hlp.generateNewItemShape(cmp);
 		hlp.initializeRowData(cmp);
+		hlp.updateColumnAttributes(cmp);
 	},
 
 	handleItemsChange: function (cmp, evt, hlp) {
 		hlp.generateNewItemShape(cmp);
 		
-		if (!cmp._rendered) {
+		if (!cmp.isRendered()) {
 			hlp.initializeRowData(cmp);
+			hlp.updateColumnAttributes(cmp);
 			return;
 		}
 		
 		hlp.handleItemsChange(cmp, evt.getParams());
+		hlp.updateColumnAttributes(cmp);
 
 		var concrete = cmp.getConcreteComponent();
 		
@@ -68,10 +70,8 @@
 	},
 
 	handleColumnSortChange: function (cmp, evt, hlp) {
-		var concrete; 
-
 		if (evt) {
-			concrete = cmp.getConcreteComponent();
+			var concrete = cmp.getConcreteComponent();
 
 			concrete._sorting = true;
 			cmp.getSuper().set('v.sortBy', evt);
