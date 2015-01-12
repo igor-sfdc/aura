@@ -36,4 +36,6 @@ package org.auraframework.def;
 public interface JavaProviderDef extends ProviderDef {
     @Override
     DefDescriptor<? extends JavaProviderDef> getDescriptor();
+
+    Class<?> getJavaType();
 }

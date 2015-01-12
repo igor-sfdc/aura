@@ -16,8 +16,8 @@
 package org.auraframework.ds.servicecomponent;
 
 /**
- * DS ServiceComponent Model marker interface
+ * ServiceComponent constants
  */
-public interface Model {
-
+public interface ServiceComponentConstants {
+    String SC_PREFIX = "serviceComponent";
 }

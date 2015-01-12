@@ -45,9 +45,9 @@ public class ClassProviderFactory {
     
     public static Class<?> getClazzForName(String name) {
         Class<?> clazz = getLocalClassForName(name);
-        clazz = clazz != null ? clazz : getProviderClassForName(name);
+        clazz = clazz != null ? clazz : getProvidedClassForName(name);
         if (clazz == null) {
-            AuraDSLog.get().error("Coud not find local class " + name);
+            AuraDSLog.get().error("Coud not find LOCAL or PROVIDED class for name: " + name);
         }
         return clazz;
     }
@@ -62,16 +62,19 @@ public class ClassProviderFactory {
             return null;
         }
     }
-    private static Class<?> getProviderClassForName(String name) {
+    private static Class<?> getProvidedClassForName(String name) {
         Class<?> clazz;
         // TODO: osgi - fixme This is the most brutal way of looking for a class by iterating over all the providers. We need provider metadata to make this efficient
         for (ClassProvider classProvider : classProviders) {
             try {
                 clazz = classProvider.getClazzForName(name);
-                AuraDSLog.get().info("Loaded PROVIDER class " + name);
+                AuraDSLog.get().info("Loaded PROVIDED class " + name + " using " + classProvider.getClass().getName());
                 return clazz;
             } catch (ClassNotFoundException e) {
                 // Ignore
+            } catch (NoClassDefFoundError e) {
+                // TODO: replace with a more appropriate exception
+                throw new NoClassDefFoundError("Error loading class '" + name + "' by '" + classProvider.getClass().getName() + "', " + e.toString() + ", " + e.getMessage() + ", " + e.getStackTrace());
             }
         }
         return null;

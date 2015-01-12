@@ -49,7 +49,9 @@ import aQute.bnd.annotation.component.Component;
 
 /**
  */
-@Component (provide=AuraServiceProvider.class)
+// An example of ContextService reference can be found in aura-notes-osgi 
+// org.auraframework.demo.notes.models.NoteListModel
+@Component(provide = {AuraServiceProvider.class, ContextService.class})
 public class AuraContextServiceImpl implements ContextService {
 
     private static final long serialVersionUID = 2204785781318401371L;

@@ -29,6 +29,7 @@ import org.auraframework.def.ControllerDef;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.TypeDef;
 import org.auraframework.def.ValueDef;
+import org.auraframework.ds.servicecomponent.ServiceComponentConstants;
 import org.auraframework.impl.java.BaseJavaDefFactory;
 import org.auraframework.impl.java.model.JavaValueDef;
 import org.auraframework.impl.java.type.JavaTypeDef;
@@ -42,6 +43,7 @@ import org.auraframework.system.Annotations.Key;
 import org.auraframework.system.DefFactory;
 import org.auraframework.system.Location;
 import org.auraframework.system.SourceLoader;
+import org.auraframework.throwable.AuraUnhandledException;
 import org.auraframework.throwable.quickfix.InvalidDefinitionException;
 import org.auraframework.throwable.quickfix.QuickFixException;
 
@@ -80,13 +82,20 @@ public class JavaControllerDefFactory extends BaseJavaDefFactory<ControllerDef> 
                     "@Controller annotation is required on all Controllers.  Not found on %s", descriptor),
                     builder.getLocation());
         }
-        builder.setUseAdapter(ann.useAdapter());
+        boolean useAdapter = useAdapter(ann, descriptor);
+        builder.setUseAdapter(useAdapter);
         try {
-            builder.setActionMap(createActions(c, builder.getDescriptor(), ann.useAdapter()));
+            builder.setActionMap(createActions(c, builder.getDescriptor(), useAdapter));
         } catch (QuickFixException qfe) {
             builder.setParseError(qfe);
+        } catch (NoClassDefFoundError e) {
+            throw new AuraUnhandledException("Error computing ActionMap for class: '" + c.getName() + "', descriptior: '" + descriptor.toString() + "' and useAdapter: " + useAdapter, e);
         }
         return builder;
+    }
+
+    private static boolean useAdapter(Controller ann, DefDescriptor<ControllerDef> descriptor) {
+        return ann.useAdapter() == true || ServiceComponentConstants.SC_PREFIX.equals(descriptor.getPrefix());
     }
 
     private static String formatType(Type t) {
