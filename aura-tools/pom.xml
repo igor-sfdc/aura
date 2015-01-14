@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.auraframework</groupId>
         <artifactId>aura-framework</artifactId>
-        <version>0.1725-SNAPSHOT</version>
+        <version>0.1757-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <dependencies>
@@ -29,10 +29,6 @@
             <artifactId>aura-impl</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.auraframework</groupId>
-            <artifactId>aura-components</artifactId>
         </dependency>
         <dependency>
             <groupId>org.auraframework</groupId>

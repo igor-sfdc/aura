@@ -21,8 +21,10 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.auraframework.Aura;
 import org.auraframework.def.DefinitionAccess;
+import org.auraframework.provider.api.ClassProviderFactory;
 import org.auraframework.system.AuraContext.Access;
 import org.auraframework.system.AuraContext.Authentication;
 import org.auraframework.throwable.AuraRuntimeException;
@@ -83,29 +85,35 @@ public class DefinitionAccessImpl implements DefinitionAccess {
         }
         
         // Look for classname.methodname
+        Logger logger = Logger.getLogger(DefinitionAccessImpl.class);
         int dotPos = item.lastIndexOf('.');
         if (dotPos > 0) {
             String className = item.substring(0, dotPos);
             String methodName = item.substring(dotPos + 1);
             try {
-                Class<?> clazz = Class.forName(className);
-                Method meth = clazz.getMethod(methodName, new Class[0]);
-                if (!Modifier.isStatic(meth.getModifiers())) {
-                    throw new InvalidAccessValueException("\"" + item + "\" must be a static method");
+                Class<?> clazz = ClassProviderFactory.getClazzForName(className);
+                if (clazz != null) {
+                    Method meth = clazz.getMethod(methodName, new Class[0]);
+                    if (!Modifier.isStatic(meth.getModifiers())) {
+                        throw new InvalidAccessValueException("\"" + item + "\" must be a static method");
+                    }
+                    Class<?> retType = meth.getReturnType();
+                    if (! Access.class.equals(retType)) {
+                        throw new InvalidAccessValueException("\"" + item + "\" must return a result of type " +
+                                Access.class.getName());
+                    }
+                    if (this.accessMethod != null) {
+                        throw new InvalidAccessValueException("Access attribute may not specify more than one static method");
+                    }
+                    this.accessMethod = meth;
+                    return;
+                } else {
+                    logger.warn("Error computing access. Class '" + className + "' not found");
                 }
-                Class<?> retType = meth.getReturnType();
-                if (! Access.class.equals(retType)) {
-                    throw new InvalidAccessValueException("\"" + item + "\" must return a result of type " + 
-                        Access.class.getName());
-                }   
-                if (this.accessMethod != null) {
-                    throw new InvalidAccessValueException("Access attribute may not specify more than one static method");
-                }
-                this.accessMethod = meth;
-                return;
-            } catch (ClassNotFoundException e) {
             } catch (SecurityException e) {
+                logger.warn("Error computing access for '" + item + "'", e);
             } catch (NoSuchMethodException e) {
+                logger.warn("Error computing access for '" + item + "'", e);
             }
             throw new InvalidAccessValueException("\"" + item + "\" is not a valid public method reference");
         }

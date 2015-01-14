@@ -15,6 +15,7 @@
  */
 package org.auraframework.ds.serviceloader.impl;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +45,7 @@ import aQute.bnd.annotation.component.Reference;
 public class OSGiServiceLoaderImpl implements ServiceLoader, HttpPortProvider {
     
     private static final ServiceMapHandler AURA_DS_SERVICE_HANDLER = new ServiceMapHandler();
-    private final Map<Class<?>, Set<AuraServiceProvider>> serviceMap = Maps.newHashMap();
+    private final Map<Class<?>, Set<AuraServiceProviderValue>> serviceMap = Maps.newHashMap();
     private final Counters counters = new Counters();
     private final LoadingMonitor loadingMonitor = new LoadingMonitor(this);
     private String httpPort;
@@ -54,13 +55,14 @@ public class OSGiServiceLoaderImpl implements ServiceLoader, HttpPortProvider {
     }
 
     @Reference (multiple=true, dynamic=true)
-    protected void addAuraServiceProvider(AuraServiceProvider auraServiceProvider) {
-        AURA_DS_SERVICE_HANDLER.set(serviceMap, auraServiceProvider, counters);
+    protected void addAuraServiceProvider(AuraServiceProvider auraServiceProvider, Map<String,?> properties) {
+        // Wrap AuraServiceProvider as AuraServiceProviderValue to be able to sort in the reverse priority order (larger priority goes first)
+        AURA_DS_SERVICE_HANDLER.set(serviceMap, new AuraServiceProviderValue(auraServiceProvider, properties), counters);
         loadingMonitor.update();
     }
     
-    protected void removeAuraServiceProvider(AuraServiceProvider auraServiceProvider) {
-        AURA_DS_SERVICE_HANDLER.unset(serviceMap, auraServiceProvider);
+    protected void removeAuraServiceProvider(AuraServiceProvider auraServiceProvider, Map<String,?> properties) {
+        AURA_DS_SERVICE_HANDLER.unset(serviceMap, new AuraServiceProviderValue(auraServiceProvider, properties));
     }
     
     @Activate
@@ -80,29 +82,43 @@ public class OSGiServiceLoaderImpl implements ServiceLoader, HttpPortProvider {
 
     @Override
     public <T extends AuraServiceProvider> T get(Class<T> type) {
-        @SuppressWarnings("unchecked")  // This should have been verified when the class was added to the map
-        Set<T> implementingServiceInstances = (Set<T>) serviceMap.get(type);
+        Set<AuraServiceProviderValue> instancesFound = serviceMap.get(type);
         
-        if (implementingServiceInstances == null || implementingServiceInstances.isEmpty()) {
+        if (instancesFound == null || instancesFound.isEmpty()) {
             AuraDSLog.get().warning("get(): No services found for type " + type.getName());
             return null;
-        } else if (implementingServiceInstances.size() > 1) {
+        } else if (instancesFound.size() > 1) {
             AuraDSLog.get().warning("get(): Found more than one implementation for service type " + type.getSimpleName() + ". Returning the first one: ");                
         }
         
         AuraDSLog.get().info("[" + getClass().getSimpleName() + "] " + " ->->-> Returning single instance for " + type.getSimpleName());
-        return implementingServiceInstances.iterator().next();
+
+        Object[] values = instancesFound.toArray();
+        // TODO: sorting should have been done at the point of addition. This is not big issue though  b/c the values are cached by Aura
+        Arrays.sort(values);
+        Object firstValueWrapper = values[0];
+        AuraServiceProviderValue firstValue = (AuraServiceProviderValue)firstValueWrapper;
+        
+        @SuppressWarnings("unchecked")  // This should have been verified when the class was added to the map
+        T typedValue = (T) firstValue.getValue();
+        return typedValue;
     }
 
     @Override
     public <T extends AuraServiceProvider> Set<T> getAll(Class<T> type) {
         
-        @SuppressWarnings("unchecked")  // This should have been verified when the class was added to the map
-        Set<T> implementingServiceInstances = (Set<T>) serviceMap.get(type);
-        
-        if (implementingServiceInstances == null) {
+        Set<AuraServiceProviderValue> instancesFound = serviceMap.get(type);
+        if (instancesFound == null) {
             AuraDSLog.get().warning("getAll(): No services found for type " + type.getName());
             return Collections.emptySet();
+        }
+       
+        Set<T> implementingServiceInstances = Sets.newHashSet();
+        // Transferring value from one set to another is inefficient but should be only done once, since Aura caches these values
+        for (AuraServiceProviderValue auraServiceProviderValue : instancesFound) {
+            @SuppressWarnings("unchecked")  // This should have been verified when the class was added to the map
+            T value = (T)auraServiceProviderValue.getValue();
+            implementingServiceInstances.add(value);
         }
 
         AuraDSLog.get().info("[" + getClass().getSimpleName() + "] " + " =>=>= Returning " + implementingServiceInstances.size() + " instance(s) for " + type.getSimpleName());
@@ -132,9 +148,9 @@ public class OSGiServiceLoaderImpl implements ServiceLoader, HttpPortProvider {
 
     static class ServiceMapHandler {
         
-        void set(Map<Class<?>, Set<AuraServiceProvider>> serviceMap, AuraServiceProvider value, Counters counters) {
+        void set(Map<Class<?>, Set<AuraServiceProviderValue>> serviceMap, AuraServiceProviderValue value, Counters counters) {
             counters.incrementLookedAt();
-            Class<? extends Object> objectClass = value.getClass();
+            Class<? extends Object> objectClass = value.getValue().getClass();
             List<Class<?>> implementedInterfaces = ClassUtils.getAllInterfaces(objectClass);
             
             for (Class<?> implementedInterface : implementedInterfaces) {
@@ -145,11 +161,11 @@ public class OSGiServiceLoaderImpl implements ServiceLoader, HttpPortProvider {
                 addImplementation(serviceMap, implementedInterface, value, counters);
             }
             // Now add the class itself as key
-            addImplementation(serviceMap, value.getClass(), value, counters);            
+            addImplementation(serviceMap, value.getValue().getClass(), value, counters);            
         }
 
-        private void addImplementation(Map<Class<?>, Set<AuraServiceProvider>> serviceMap, Class<?> implementedInterfaceOrClass, AuraServiceProvider value, Counters counters) {
-            Set<AuraServiceProvider> implementingServiceInstances = serviceMap.get(implementedInterfaceOrClass);
+        private void addImplementation(Map<Class<?>, Set<AuraServiceProviderValue>> serviceMap, Class<?> implementedInterfaceOrClass, AuraServiceProviderValue value, Counters counters) {
+            Set<AuraServiceProviderValue> implementingServiceInstances = serviceMap.get(implementedInterfaceOrClass);
             if (implementingServiceInstances == null) {
                 implementingServiceInstances = Sets.newHashSet();
                 serviceMap.put(implementedInterfaceOrClass, implementingServiceInstances);
@@ -159,16 +175,16 @@ public class OSGiServiceLoaderImpl implements ServiceLoader, HttpPortProvider {
             AuraDSLog.get().info("Added implementation of AuraServiceProvider->" + implementedInterfaceOrClass.getSimpleName() + " by " + value + " - " + counters.added + "/" + counters.lookedAt);                
         }
         
-        void unset(Map<Class<?>, Set<AuraServiceProvider>> serviceMap, AuraServiceProvider value) {
-            Class<?>[] implementedInterfaces = value.getClass().getInterfaces();
+        void unset(Map<Class<?>, Set<AuraServiceProviderValue>> serviceMap, AuraServiceProviderValue value) {
+            Class<?>[] implementedInterfaces = value.getValue().getClass().getInterfaces();
             for (Class<?> implementedInterface : implementedInterfaces) {
                 removeImplementation(serviceMap, implementedInterface, value);
             }
-            removeImplementation(serviceMap, value.getClass(), value);
+            removeImplementation(serviceMap, value.getValue().getClass(), value);
         }
 
-        private void removeImplementation(Map<Class<?>, Set<AuraServiceProvider>> serviceMap, Class<?> implementedInterfaceOrClass, AuraServiceProvider value) {
-            Set<AuraServiceProvider> implementingServiceInstances = serviceMap.get(implementedInterfaceOrClass);
+        private void removeImplementation(Map<Class<?>, Set<AuraServiceProviderValue>> serviceMap, Class<?> implementedInterfaceOrClass, AuraServiceProviderValue value) {
+            Set<AuraServiceProviderValue> implementingServiceInstances = serviceMap.get(implementedInterfaceOrClass);
             if (implementingServiceInstances != null) {
                 implementingServiceInstances.remove(value);
                 if (implementingServiceInstances.isEmpty()) {

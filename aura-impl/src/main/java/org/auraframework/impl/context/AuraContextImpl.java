@@ -40,6 +40,7 @@ import org.auraframework.def.BaseComponentDef;
 import org.auraframework.def.DefDescriptor;
 import org.auraframework.def.DefDescriptor.DefType;
 import org.auraframework.def.Definition;
+import org.auraframework.def.EventDef;
 import org.auraframework.def.EventType;
 import org.auraframework.def.ThemeDef;
 import org.auraframework.impl.css.ThemeListImpl;
@@ -184,29 +185,6 @@ public class AuraContextImpl implements AuraContext {
             }
 
             if (forClient) {
-                // client needs value providers, urls don't
-                boolean started = false;
-
-                for (GlobalValueProvider valueProvider : ctx.getGlobalProviders().values()) {
-                    if (!valueProvider.isEmpty()) {
-                        if (!started) {
-                            json.writeMapKey("globalValueProviders");
-                            json.writeArrayBegin();
-                            started = true;
-                        }
-                        json.writeComma();
-                        json.writeIndent();
-                        json.writeMapBegin();
-                        json.writeMapEntry("type", valueProvider.getValueProviderKey().getPrefix());
-                        json.writeMapEntry("values", valueProvider.getData());
-                        json.writeMapEnd();
-                    }
-                }
-
-                if (started) {
-                    json.writeArrayEnd();
-                }
-
                 //
                 // Now comes the tricky part, we have to serialize all of the definitions that are
                 // required on the client side, and, of all types. This way, we won't have to handle
@@ -232,6 +210,11 @@ public class AuraContextImpl implements AuraContext {
                         // that the MDR should have done when filtering.
                         //
                         if (d != null) {
+                            try {
+                                d.retrieveLabels();
+                            } catch (QuickFixException qfe) {
+                                // this should not throw a QFE
+                            }
                             if (DefType.COMPONENT.equals(dt) || DefType.APPLICATION.equals(dt)) {
                                 componentDefs.add(d);
                             } else if (DefType.EVENT.equals(dt)) {
@@ -246,6 +229,32 @@ public class AuraContextImpl implements AuraContext {
                     writeDefs(json, "libraryDefs", libraryDefs);
                 }
                 ctx.serializeAsPart(json);
+
+                //
+                // client needs value providers, urls don't
+                // Note that we do this _post_ components, because they load labels.
+                //
+                boolean started = false;
+
+                for (GlobalValueProvider valueProvider : ctx.getGlobalProviders().values()) {
+                    if (!valueProvider.isEmpty()) {
+                        if (!started) {
+                            json.writeMapKey("globalValueProviders");
+                            json.writeArrayBegin();
+                            started = true;
+                        }
+                        json.writeComma();
+                        json.writeIndent();
+                        json.writeMapBegin();
+                        json.writeMapEntry("type", valueProvider.getValueProviderKey().getPrefix());
+                        json.writeMapEntry("values", valueProvider.getData());
+                        json.writeMapEnd();
+                    }
+                }
+
+                if (started) {
+                    json.writeArrayEnd();
+                }
             }
             json.writeMapEnd();
         }
@@ -549,9 +558,11 @@ public class AuraContextImpl implements AuraContext {
     }
 
     @Override
-    public void addClientApplicationEvent(Event event) throws Exception {
+    public void addClientApplicationEvent(Event event) throws QuickFixException {
         if (event != null) {
-            if (event.getDescriptor().getDef().getEventType() != EventType.APPLICATION) {
+            DefDescriptor<EventDef> desc = event.getDescriptor();
+            EventDef def = Aura.getDefinitionService().getDefinition(desc);
+            if (def == null || def.getEventType() != EventType.APPLICATION) {
                 throw new InvalidEventTypeException(
                         String.format("%s is not an Application event. "
                                 + "Only Application events are allowed to be fired from server.",
@@ -692,10 +703,15 @@ public class AuraContextImpl implements AuraContext {
     public void addAppThemeDescriptors() {
         DefDescriptor<? extends BaseComponentDef> desc = getLoadingApplicationDescriptor();
         if (desc != null && desc.getDefType() == DefType.APPLICATION) {
+            @SuppressWarnings("unchecked")
+            DefDescriptor<ApplicationDef> appDesc = (DefDescriptor<ApplicationDef>)desc;
             try {
-                // the app themes conceptually precedes themes explicitly added to the context.
-                // this is important for the "last declared theme wins" contract
-                themes.prependAll(((ApplicationDef) desc.getDef()).getThemeDescriptors());
+                ApplicationDef app = Aura.getDefinitionService().getDefinition(appDesc);
+                if (app != null) {
+                    // the app themes conceptually precedes themes explicitly added to the context.
+                    // this is important for the "last declared theme wins" contract
+                    themes.prependAll(app.getThemeDescriptors());
+                }
             } catch (QuickFixException qfe) {
                 // either the app or a dependency is invalid, nothing we can do about getting the themes in that case.
             }

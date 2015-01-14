@@ -17,6 +17,9 @@
 -->
 <aura:component support="BETA" extensible="true" description="A scrollable view with scroll bars and pull-to-refresh support">
 
+    <!-- Library which holds the vanillaJS ScrollerJS and its plugins -->
+    <aura:import library="ui:scrollerLib" property="lib" />
+
     <!-- Exposed attributes -->
     <aura:attribute name="scroll"                type="String"  default="vertical" description="Defines the scroll direction. The string values can be either horizontal or vertical"/>
     <aura:attribute name="enabled"               type="Boolean" default="true"     description="Sets the default state of the scroller"/>
@@ -85,9 +88,7 @@
     <ui:resizeObserver onresize="{!c.refresh}"/>
     <aura:handler name="init" value="{!this}" action="{!c.init}"/>
     
-    <div aura:id="scrollWrapper" 
-        class="{!v.class + ' scrollWrapper' + (v.useNativeScroller ? ' native' : '') }" 
-        style="{! (v.width ? ('width: ' + v.width + 'px;'): '') + (v.height? ('height: ' + v.height + 'px') : '') }">
+    <div aura:id="scrollWrapper" class="{!v.class}" style="{! (v.width ? ('width: ' + v.width + 'px;'): '') + (v.height? ('height: ' + v.height + 'px') : '') }">
         <div aura:id="scrollContent" class="{!v.scrollContentClass}">
             {!v.body}
         </div>

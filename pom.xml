@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.auraframework</groupId>
     <artifactId>aura-framework</artifactId>
-    <version>0.1725-SNAPSHOT</version>
+    <version>0.1757-SNAPSHOT</version>
     <packaging>pom</packaging>
     <organization>
         <url>http://www.auraframework.org</url>
@@ -46,7 +46,7 @@
           xunit.js.engine the engine to use.
         -->
         <xunit.js.testPath />
-        <xunit.js.auraImpl>${project.build.directory}/auraImpl/src/main/resources/</xunit.js.auraImpl>
+        <xunit.js.auraImpl>${project.build.directory}/tools/src/main/resources/</xunit.js.auraImpl>
         <xunit.js.report>${project.build.directory}/surefire-reports/TEST-xunit.xml</xunit.js.report>
         <xunit.js.engine>rhino</xunit.js.engine>
         <xunit.js.console>${project.build.directory}/tools/xUnit/xUnit.js.Console.js</xunit.js.console>
@@ -88,19 +88,21 @@
         <module>aura-components</module>
         <module>aura-tools</module>
         <module>aura-resources</module>
-        <module>aura-jetty</module>
-        <module>aura-integration-test</module>
-        <module>auradocs-integration-test</module>
-        <module>aura-archetype</module>
         <module>aura-osgi-api</module>
         <module>aura-osgi-extensions</module>
         <module>aura-osgi</module>
         <module>osgi-launcher</module>
+<!--
+        <module>aura-jetty</module>
+        <module>aura-integration-test</module>
+        <module>auradocs-integration-test</module>
+        <module>aura-archetype</module
+-->
     </modules>
     <scm>
-        <connection>scm:git:git@github.com:forcedotcom/lumen-beta.git</connection>
-        <url>scm:git:git@github.com:forcedotcom/lumen-beta.git</url>
-        <developerConnection>scm:git:git@github.com:forcedotcom/lumen-beta.git</developerConnection>
+        <connection>scm:git:git@github.com:forcedotcom/aura.git</connection>
+        <url>scm:git:git@github.com:forcedotcom/aura.git</url>
+        <developerConnection>scm:git:git@github.com:forcedotcom/aura.git</developerConnection>
         <tag>HEAD</tag>
     </scm>
     <dependencies>
@@ -120,88 +122,100 @@
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-osgi-extensions</artifactId>
-                <version>0.1725-SNAPSHOT</version>
+                <version>0.1757-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-osgi</artifactId>
-                <version>0.1725-SNAPSHOT</version>
+                <version>0.1757-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura</artifactId>
-                <version>0.1725-SNAPSHOT</version>
+                <version>0.1757-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura</artifactId>
-                <version>0.1725-SNAPSHOT</version>
+                <version>0.1757-SNAPSHOT</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-util</artifactId>
-                <version>0.1725-SNAPSHOT</version>
+                <version>0.1757-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-util</artifactId>
-                <version>0.1725-SNAPSHOT</version>
+                <version>0.1757-SNAPSHOT</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-impl</artifactId>
-                <version>0.1725-SNAPSHOT</version>
+                <version>0.1757-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-impl</artifactId>
-                <version>0.1725-SNAPSHOT</version>
+                <version>0.1757-SNAPSHOT</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-impl-expression</artifactId>
-                <version>0.1725-SNAPSHOT</version>
+                <version>0.1757-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>org.auraframework</groupId>
+                <artifactId>aura-impl</artifactId>
+                <version>0.1757-SNAPSHOT</version>
+                <type>sources</type>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-impl-expression</artifactId>
-                <version>0.1725-SNAPSHOT</version>
+                <version>0.1757-SNAPSHOT</version>
                 <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-components</artifactId>
-                <version>0.1725-SNAPSHOT</version>
+                <version>0.1757-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>org.auraframework</groupId>
+                <artifactId>aura-components</artifactId>
+                <version>0.1757-SNAPSHOT</version>
+                <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-tools</artifactId>
-                <version>0.1725-SNAPSHOT</version>
+                <version>0.1757-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-resources</artifactId>
-                <version>0.1725-SNAPSHOT</version>
+                <version>0.1757-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-integration-test</artifactId>
                 <type>test-jar</type>
-                <version>0.1725-SNAPSHOT</version>
+                <version>0.1757-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>auradocs-integration-test</artifactId>
                 <type>test-jar</type>
-                <version>0.1725-SNAPSHOT</version>
+                <version>0.1757-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>org.auraframework</groupId>
                 <artifactId>aura-osgi-api</artifactId>
-                <version>0.1725-SNAPSHOT</version>
+                <version>0.1757-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>junit</groupId>
@@ -649,10 +663,10 @@
                                     <artifactItem>
                                         <groupId>org.auraframework</groupId>
                                         <artifactId>aura-impl</artifactId>
-                                        <type>sources-jar</type>
+                                        <type>test-jar</type>
                                         <overWrite>true</overWrite>
                                         <outputDirectory>${xunit.js.auraImpl}</outputDirectory>
-                                        <includes>src/main/resources/**</includes>
+                                        <includes>tools/src/main/resources/**</includes>
                                     </artifactItem>
                                 </artifactItems>
                             </configuration>
@@ -888,6 +902,38 @@
                                 </target>
                             </configuration>
                         </execution>
+                        <execution>
+                            <id>aura:compile-components</id>
+                            <phase>disabled</phase>
+                            <configuration>
+                                <target>
+                                    <java classname="org.auraframework.tools.definition.AuraCompiler" classpathref="maven.compile.classpath" fork="true" failonerror="true">
+                                        <jvmarg value="-Daura.home=${basedir}/.." />
+                                        <arg value="${basedir}/src/main/components" />
+                                        <arg value="${project.build.directory}/${component.dir}" />
+                                    </java>
+                                </target>
+                            </configuration>
+                            <goals>
+                                <goal>run</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>aura:compile-test-components</id>
+                            <phase>disabled</phase>
+                            <configuration>
+                                <target>
+                                    <java classname="org.auraframework.tools.definition.AuraCompiler" classpathref="maven.test.classpath" fork="true" failonerror="true">
+                                        <jvmarg value="-Daura.home=${basedir}/.." />
+                                        <arg value="${basedir}/src/test/components" />
+                                        <arg value="${project.build.directory}/${component.test.dir}" />
+                                    </java>
+                                </target>
+                            </configuration>
+                            <goals>
+                                <goal>run</goal>
+                            </goals>
+                        </execution>
                     </executions>
                 </plugin>
                 <plugin>
@@ -901,24 +947,6 @@
                             <version>1.6.4</version>
                         </dependency>
                     </dependencies>
-                </plugin>
-                <plugin>
-                    <groupId>org.auraframework</groupId>
-                    <artifactId>aura-tools</artifactId>
-                    <version>${project.version}</version>
-                    <executions>
-                        <execution>
-                            <id>aura:compile-components</id>
-                            <phase>disabled</phase>
-                            <configuration>
-                                <outputDir>target/generated-sources/components/</outputDir>
-                                <componentDir>src/main/components</componentDir>
-                            </configuration>
-                            <goals>
-                                <goal>compile-components</goal>
-                            </goals>
-                        </execution>
-                    </executions>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

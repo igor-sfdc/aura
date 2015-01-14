@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.auraframework</groupId>
         <artifactId>aura-framework</artifactId>
-        <version>0.1725-SNAPSHOT</version>
+        <version>0.1757-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <dependencies>
@@ -41,6 +41,17 @@
         <dependency>
             <groupId>org.auraframework</groupId>
             <artifactId>aura-resources</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.auraframework</groupId>
+            <artifactId>aura-components</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.auraframework</groupId>
+            <artifactId>aura-components</artifactId>
+            <type>test-jar</type>
             <scope>runtime</scope>
         </dependency>
         <dependency>

@@ -1,10 +1,7 @@
 Service-Component: *
 #TODO: need to keep things separate instead of using -split-package (see below)
 # (supposedly it's OK for the moment as we should have no collisions within the same package)
-Private-Package: org.auraframework;-split-package:=merge-first,\
-    org.auraframework.adapter,\
-    org.auraframework.builder,\
-    org.auraframework.builder,\
+Private-Package: \
     org.auraframework.cache,\
     org.auraframework.clientlibrary,\
     org.auraframework.components.aura,\
@@ -12,11 +9,9 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.component.auraStorage,\
     org.auraframework.component.ui,\
     org.auraframework.components,\
-    org.auraframework.components.ui,\
     org.auraframework.css,\
     org.auraframework.css.parser,\
     org.auraframework.data,\
-    org.auraframework.def,\
     org.auraframework.def.optimizer,\
     org.auraframework.docs,\
     org.auraframework.ds.component.location.providers,\
@@ -30,10 +25,7 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.ds.serviceloader,\
     org.auraframework.ds.serviceloader.impl,\
     org.auraframework.ds.util,\
-    org.auraframework.expression,\
-    org.auraframework.http,\
     org.auraframework.impl,\
-    org.auraframework.impl.adapter,\
     org.auraframework.impl.adapter.format,\
     org.auraframework.impl.adapter.format.css,\
     org.auraframework.impl.adapter.format.html,\
@@ -51,15 +43,12 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.impl.component.def,\
     org.auraframework.impl.compound.controller,\
     org.auraframework.impl.context,\
-    org.auraframework.impl.controller,\
     org.auraframework.impl.css,\
     org.auraframework.impl.css.parser,\
     org.auraframework.impl.css.style,\
     org.auraframework.impl.design,\
     org.auraframework.impl.documentation,\
     org.auraframework.impl.error,\
-    org.auraframework.impl.expression,\
-    org.auraframework.impl.expression,\
     org.auraframework.impl.expression.adapter,\
     org.auraframework.impl.expression.functions,\
     org.auraframework.impl.expression.parser,\
@@ -94,7 +83,6 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.impl.renderer,\
     org.auraframework.impl.root,\
     org.auraframework.impl.root.application,\
-    org.auraframework.impl.root.component,\
     org.auraframework.impl.root.component.attributes,\
     org.auraframework.impl.root.component.rendering,\
     org.auraframework.impl.root.event,\
@@ -112,19 +100,16 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.impl.source.resource,\
     org.auraframework.impl.svg,\
     org.auraframework.impl.svg.parser,\
-    org.auraframework.impl.system,\
     org.auraframework.impl.test.util,\
     org.auraframework.impl.type,\
     org.auraframework.impl.util,\
     org.auraframework.impl.util.json,\
     org.auraframework.impl.validation,\
-    org.auraframework.instance,\
     org.auraframework.integration,\
     org.auraframework.java.controller,\
     org.auraframework.java.securityProvider,\
     org.auraframework.provider.api,\
     org.auraframework.renderer,\
-    org.auraframework.service,\
     org.auraframework.service.testdata,\
     org.auraframework.system,\
     org.auraframework.test,\
@@ -137,11 +122,6 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.test.mock,\
     org.auraframework.test.testsetrunner,\
     org.auraframework.test.util,\
-    org.auraframework.throwable,\
-    org.auraframework.throwable.quickfix,\
-    org.auraframework.tools.definition,\
-    org.auraframework.tools.javascript,\
-    org.auraframework.util;-split-package:=merge-first,\
     org.auraframework.util.adapter,\
     org.auraframework.util.css,\
     org.auraframework.util.date,\
@@ -150,10 +130,8 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.util.javascript.directive,\
     org.auraframework.util.javascript.directive.impl,\
     org.auraframework.util.javascript.module,\
-    org.auraframework.util.json,\
     org.auraframework.util.number,\
     org.auraframework.util.perfomance,\
-    org.auraframework.util.resource,\
     org.auraframework.util.sampleServices,\
     org.auraframework.util.test,\
     org.auraframework.util.text,\
@@ -172,19 +150,36 @@ Private-Package: org.auraframework;-split-package:=merge-first,\
     org.auraframework.components.ui.dialogUITest,\
     org.auraframework.components.ui.inputDate,\
     org.auraframework.components.ui.listView,\
-    org.auraframework.components.ui.menu
-Export-Package: org.auraframework.ds.serviceloader,\
+    org.auraframework.components.ui.menu,\
+    ui.aura.servicecomponent.impl
+#TODO: Review whether we should export impl packages
+Export-Package: \
+    org.auraframework;-split-package:=merge-first,\
+    org.auraframework.ds.serviceloader,\
+    org.auraframework.ds.servicecomponent,\
     org.auraframework.provider.api,\
-    org.auraframework.util.json,\
     org.auraframework.system,\
     org.auraframework.instance,\
     org.auraframework.service,\
-    org.auraframework.util,\
+    org.auraframework.util;-split-package:=merge-first,\
+    org.auraframework.util.json,\
     org.auraframework.util.resource,\
     org.auraframework.def,\
     org.auraframework.adapter,\
-    org.auraframework,\
-    org.auraframework.ds.log
+    org.auraframework.builder,\
+    org.auraframework.components.ui,\
+    org.auraframework.ds.log,\
+    org.auraframework.expression,\
+    org.auraframework.impl.expression,\
+    org.auraframework.throwable,\
+    org.auraframework.throwable.quickfix,\
+    org.auraframework.http,\
+    org.auraframework.impl.adapter,\
+    org.auraframework.impl.controller,\
+    org.auraframework.impl.root.component,\
+    org.auraframework.impl.system,\
+    ui.aura.servicecomponent
+    
 -runsystempackages: sun.reflect,\
     sun.misc
 Import-Package: com.sun.xml.stream;resolution:=optional,\
